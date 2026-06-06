@@ -24,6 +24,7 @@ import (
 	"github.com/gmlewis/go-lxst/lxst/platforms"
 	"github.com/gmlewis/go-lxst/lxst/primitives/players"
 	"github.com/gmlewis/go-lxst/lxst/primitives/recorders"
+	"github.com/gmlewis/go-lxst/lxst/primitives/telephony"
 	"github.com/gmlewis/go-lxst/lxst/sinks"
 	"github.com/gmlewis/go-lxst/lxst/sources"
 )
@@ -108,6 +109,22 @@ var (
 	NewFilePlayer   = players.NewFilePlayer
 	NewFileRecorder  = recorders.NewFileRecorder
 	NewCallEndpoint  = call.NewCallEndpoint
+	NewTelephone     = telephony.NewTelephone
+)
+
+// Telephony profiles
+var (
+	ProfileBandwidthUltraLow = telephony.ProfileBandwidthUltraLow
+	ProfileBandwidthVeryLow  = telephony.ProfileBandwidthVeryLow
+	ProfileBandwidthLow     = telephony.ProfileBandwidthLow
+	ProfileQualityMedium   = telephony.ProfileQualityMedium
+	ProfileQualityHigh     = telephony.ProfileQualityHigh
+	ProfileQualityMax      = telephony.ProfileQualityMax
+	ProfileLatencyLow     = telephony.ProfileLatencyLow
+	ProfileLatencyUltraLow = telephony.ProfileLatencyUltraLow
+	GetCodec              = telephony.GetCodec
+	GetFrameTime          = telephony.GetFrameTime
+	NextProfile           = telephony.NextProfile
 )
 
 // Source interfaces
