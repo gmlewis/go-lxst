@@ -325,6 +325,16 @@ func (o *Opus) ValidFrameMs() []float64 {
 	return o.validFrameMs
 }
 
+// ProfileConfig returns the sample rate, channels, bitrate ceiling, and application
+// for a given profile.
+func ProfileConfig(profile int) (sampleRate int, channels int, bitrateCeiling int, application int) {
+	cfg, ok := profileConfigs[profile]
+	if !ok {
+		return 8000, 1, 6000, int(layeh_gopus.Voip)
+	}
+	return cfg.sampleRate, cfg.channels, cfg.bitrateCeiling, int(cfg.application)
+}
+
 // SetSourceSampleRate sets the source sample rate for resampling.
 func (o *Opus) SetSourceSampleRate(rate int) {
 	o.sourceSampleRate = rate

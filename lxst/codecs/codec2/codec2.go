@@ -20,13 +20,14 @@ var (
 
 // Codec2 mode constants matching Python LXST
 const (
-	CODEC2_700C  = 700
-	CODEC2_1200  = 1200
-	CODEC2_1300  = 1300
-	CODEC2_1400  = 1400
-	CODEC2_1600  = 1600
-	CODEC2_2400  = 2400
-	CODEC2_3200  = 3200
+	MODE_700C  = 700
+	MODE_1200  = 1200
+	MODE_1300  = 1300
+	MODE_1400  = 1400
+	MODE_1600  = 1600
+	MODE_2400  = 2400
+	MODE_3200  = 3200
+	MODE_700B  = 701 // 700B mode
 )
 
 const (
@@ -37,28 +38,30 @@ const (
 )
 
 var MODE_HEADERS = map[int]byte{
-	CODEC2_700C: 0x00,
-	CODEC2_1200: 0x01,
-	CODEC2_1300: 0x02,
-	CODEC2_1400: 0x03,
-	CODEC2_1600: 0x04,
-	CODEC2_2400: 0x05,
-	CODEC2_3200: 0x06,
+	MODE_700C: 0x00,
+	MODE_1200: 0x01,
+	MODE_1300: 0x02,
+	MODE_1400: 0x03,
+	MODE_1600: 0x04,
+	MODE_2400: 0x05,
+	MODE_3200: 0x06,
+	MODE_700B: 0x07,
 }
 
 var HEADER_MODES = map[byte]int{
-	0x00: CODEC2_700C,
-	0x01: CODEC2_1200,
-	0x02: CODEC2_1300,
-	0x03: CODEC2_1400,
-	0x04: CODEC2_1600,
-	0x05: CODEC2_2400,
-	0x06: CODEC2_3200,
+	0x00: MODE_700C,
+	0x01: MODE_1200,
+	0x02: MODE_1300,
+	0x03: MODE_1400,
+	0x04: MODE_1600,
+	0x05: MODE_2400,
+	0x06: MODE_3200,
+	0x07: MODE_700B,
 }
 
 var validModes = []int{
-	CODEC2_700C, CODEC2_1200, CODEC2_1300, CODEC2_1400,
-	CODEC2_1600, CODEC2_2400, CODEC2_3200,
+	MODE_700C, MODE_1200, MODE_1300, MODE_1400,
+	MODE_1600, MODE_2400, MODE_3200, MODE_700B,
 }
 
 // Codec2 implements the Codec interface for Codec2 audio.
@@ -126,7 +129,7 @@ func (c *Codec2) Encode(frame [][]float32) []byte {
 	return []byte{c.modeHeader}
 }
 
-func (c *Codec2) Decode(frameBytes []byte) [][]float32 {
+func (c *Codec2) Decode(frameBytes []byte, channelsHint int) [][]float32 {
 	if len(frameBytes) < 1 {
 		return [][]float32{}
 	}
