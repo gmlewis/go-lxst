@@ -1,0 +1,89 @@
+// Copyright 2026 Glenn Lewis. All rights reserved.
+//
+// Use of this source code is governed by the Reticulum License
+// that can be found in the LICENSE file.
+
+// Package codecs provides audio codec interfaces and implementations.
+package codecs
+
+import (
+	"encoding/binary"
+	"errors"
+	"math"
+)
+
+// CodecError represents a codec-related error.
+var CodecError = errors.New("codec error")
+
+// Codec defines the interface for audio codecs.
+type Codec interface {
+	Encode(frame [][]float32) []byte
+	Decode(data []byte, channels int) [][]float32
+	PreferredSampleRate() int
+	FrameQuantumMs() float64
+	FrameMaxMs() float64
+	ValidFrameMs() []float64
+}
+
+// NullCodec implements a passthrough codec for raw PCM.
+type NullCodec struct{}
+
+func (NullCodec) Encode(frame [][]float32) []byte {
+	if len(frame) == 0 {
+		return []byte{}
+	}
+	samples := len(frame)
+	channels := len(frame[0])
+	result := make([]byte, samples*channels*4)
+	idx := 0
+	for s := 0; s < samples; s++ {
+		for c := 0; c < channels; c++ {
+			binary.LittleEndian.PutUint32(result[idx:], math.Float32bits(frame[s][c]))
+			idx += 4
+		}
+	}
+	return result
+}
+
+func (NullCodec) Decode(data []byte, channels int) [][]float32 {
+	if len(data) == 0 {
+		return [][]float32{}
+	}
+	samples := len(data) / (channels * 4)
+	result := make([][]float32, samples)
+	for i := 0; i < samples; i++ {
+		result[i] = make([]float32, channels)
+		for c := 0; c < channels; c++ {
+			idx := (i*channels + c) * 4
+			if idx+3 < len(data) {
+				result[i][c] = math.Float32frombits(binary.LittleEndian.Uint32(data[idx : idx+4]))
+			}
+		}
+	}
+	return result
+}
+
+func (NullCodec) PreferredSampleRate() int      { return 0 }
+func (NullCodec) FrameQuantumMs() float64       { return 0 }
+func (NullCodec) FrameMaxMs() float64           { return 0 }
+func (NullCodec) ValidFrameMs() []float64       { return nil }
+
+// ResampleBytes resamples audio bytes from input_rate to output_rate.
+// Uses pydub internally in Python; Go port uses gonum or simple linear interpolation.
+func ResampleBytes(sampleBytes []byte, bitdepth, channels, inputRate, outputRate int, normalize bool) []byte {
+	// Simple pass-through for now - full implementation needs gonum DSP
+	if inputRate == outputRate {
+		return sampleBytes
+	}
+	// TODO: Implement proper resampling using gonum
+	return sampleBytes
+}
+
+// Resample resamples float32 samples from input_rate to output_rate.
+func Resample(inputSamples [][]float32, bitdepth, channels, inputRate, outputRate int, normalize bool) [][]float32 {
+	if inputRate == outputRate {
+		return inputSamples
+	}
+	// TODO: Implement proper resampling using gonum
+	return inputSamples
+}
