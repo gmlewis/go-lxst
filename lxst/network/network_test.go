@@ -12,6 +12,7 @@ import (
 	"github.com/gmlewis/go-lxst/lxst/codecs/codec2"
 	"github.com/gmlewis/go-lxst/lxst/codecs/opus"
 	"github.com/gmlewis/go-lxst/lxst/codecs/raw"
+	"github.com/gmlewis/go-lxst/lxst/sources"
 )
 
 func TestCodecHeaderByte_Raw(t *testing.T) {
@@ -159,3 +160,327 @@ func TestCodecHeaderByte_Roundtrip(t *testing.T) {
 		})
 	}
 }
+
+func TestPackData_Signalling(t *testing.T) {
+	t.Parallel()
+
+	data := map[byte]any{
+		FieldSignalling: []any{"ring"},
+	}
+	packed, err := PackData(data)
+	if err != nil {
+		t.Fatalf("PackData failed: %v", err)
+	}
+	if len(packed) == 0 {
+		t.Error("Packed data should not be empty")
+	}
+
+	unpacked, err := UnpackData(packed)
+	if err != nil {
+		t.Fatalf("UnpackData failed: %v", err)
+	}
+
+	m, ok := unpacked.(map[byte]any)
+	if !ok {
+		t.Fatal("Expected map[byte]any")
+	}
+
+	if _, exists := m[FieldSignalling]; !exists {
+		t.Error("Expected FieldSignalling in unpacked data")
+	}
+}
+
+func TestPackData_Frames(t *testing.T) {
+	t.Parallel()
+
+	frameData := []byte{CodeOpus, 0x01, 0x02, 0x03}
+	data := map[byte]any{
+		FieldFrames: frameData,
+	}
+	packed, err := PackData(data)
+	if err != nil {
+		t.Fatalf("PackData failed: %v", err)
+	}
+
+	unpacked, err := UnpackData(packed)
+	if err != nil {
+		t.Fatalf("UnpackData failed: %v", err)
+	}
+
+	m, ok := unpacked.(map[byte]any)
+	if !ok {
+		t.Fatal("Expected map[byte]any")
+	}
+
+	if _, exists := m[FieldFrames]; !exists {
+		t.Error("Expected FieldFrames in unpacked data")
+	}
+}
+
+func TestPackData_Empty(t *testing.T) {
+	t.Parallel()
+
+	data := map[byte]any{}
+	packed, err := PackData(data)
+	if err != nil {
+		t.Fatalf("PackData failed: %v", err)
+	}
+	if len(packed) != 0 {
+		t.Error("Empty map should pack to nil")
+	}
+}
+
+func TestPackData_BothFields(t *testing.T) {
+	t.Parallel()
+
+	data := map[byte]any{
+		FieldSignalling: []any{"busy"},
+		FieldFrames:     []byte{0x00, 0x01},
+	}
+	packed, err := PackData(data)
+	if err != nil {
+		t.Fatalf("PackData failed: %v", err)
+	}
+
+	unpacked, err := UnpackData(packed)
+	if err != nil {
+		t.Fatalf("UnpackData failed: %v", err)
+	}
+
+	m, ok := unpacked.(map[byte]any)
+	if !ok {
+		t.Fatal("Expected map[byte]any")
+	}
+
+	if len(m) != 2 {
+		t.Errorf("Expected 2 fields, got %d", len(m))
+	}
+}
+
+func TestSignallingReceiver_New(t *testing.T) {
+	t.Parallel()
+
+	sr := NewSignallingReceiver(nil)
+	if sr == nil {
+		t.Fatal("NewSignallingReceiver returned nil")
+	}
+}
+
+func TestSignallingReceiver_HandlePacket(t *testing.T) {
+	t.Parallel()
+
+	var receivedSignals []any
+	sr := NewSignallingReceiver(nil)
+	sr.SetSignallingHandler(func(signals []any, source any) {
+		receivedSignals = signals
+	})
+
+	data := map[byte]any{
+		FieldSignalling: []any{"ring"},
+	}
+	packed, _ := PackData(data)
+	err := sr.HandlePacket(packed, nil)
+	if err != nil {
+		t.Fatalf("HandlePacket failed: %v", err)
+	}
+
+	if len(receivedSignals) != 1 {
+		t.Errorf("Expected 1 signal, got %d", len(receivedSignals))
+	}
+}
+
+func TestSignallingReceiver_Proxy(t *testing.T) {
+	t.Parallel()
+
+	var proxiedSignals []any
+	proxy := NewSignallingReceiver(nil)
+	proxy.SetSignallingHandler(func(signals []any, source any) {
+		proxiedSignals = signals
+	})
+
+	sr := NewSignallingReceiver(proxy)
+	sr.SignallingReceived([]any{"test"}, nil)
+
+	if len(proxiedSignals) != 1 {
+		t.Errorf("Expected 1 proxied signal, got %d", len(proxiedSignals))
+	}
+}
+
+func TestPacketizer_New(t *testing.T) {
+	t.Parallel()
+
+	p := NewPacketizer(nil, nil)
+	if p == nil {
+		t.Fatal("NewPacketizer returned nil")
+	}
+}
+
+func TestPacketizer_StartStop(t *testing.T) {
+	t.Parallel()
+
+	p := NewPacketizer(nil, nil)
+
+	err := p.Start()
+	if err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	if !p.Running() {
+		t.Error("Packetizer should be running after Start()")
+	}
+
+	err = p.Stop()
+	if err != nil {
+		t.Fatalf("Stop failed: %v", err)
+	}
+	if p.Running() {
+		t.Error("Packetizer should not be running after Stop()")
+	}
+}
+
+func TestPacketizer_HandleFrame(t *testing.T) {
+	t.Parallel()
+
+	var sentData []byte
+	p := NewPacketizer(func(data []byte) error {
+		sentData = data
+		return nil
+	}, nil)
+
+	opus, err := opus.NewOpus(opus.PROFILE_VOICE_LOW)
+	if err != nil {
+		t.Skipf("Opus not available: %v", err)
+	}
+	p.SetCodec(opus)
+
+	frame := []byte{0x01, 0x02, 0x03}
+	err = p.HandleFrame(frame, nil)
+	if err != nil {
+		t.Fatalf("HandleFrame failed: %v", err)
+	}
+
+	if len(sentData) == 0 {
+		t.Error("Expected data to be sent")
+	}
+}
+
+func TestPacketizer_TransmitFailure(t *testing.T) {
+	t.Parallel()
+
+	failureCalled := false
+	p := NewPacketizer(func(data []byte) error {
+		return ErrInvalidData
+	}, func() {
+		failureCalled = true
+	})
+
+	opus, err := opus.NewOpus(opus.PROFILE_VOICE_LOW)
+	if err != nil {
+		t.Skipf("Opus not available: %v", err)
+	}
+	p.SetCodec(opus)
+
+	_ = p.HandleFrame([]byte{0x01}, nil)
+
+	if !failureCalled {
+		t.Error("Failure callback should have been called")
+	}
+}
+
+func TestLinkSource_New(t *testing.T) {
+	t.Parallel()
+
+	ls := NewLinkSource(nil, nil)
+	if ls == nil {
+		t.Fatal("NewLinkSource returned nil")
+	}
+}
+
+func TestLinkSource_StartStop(t *testing.T) {
+	t.Parallel()
+
+	ls := NewLinkSource(nil, nil)
+
+	err := ls.Start()
+	if err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	if !ls.Running() {
+		t.Error("LinkSource should be running after Start()")
+	}
+
+	err = ls.Stop()
+	if err != nil {
+		t.Fatalf("Stop failed: %v", err)
+	}
+	if ls.Running() {
+		t.Error("LinkSource should not be running after Stop()")
+	}
+}
+
+func TestLinkSource_SetCodec(t *testing.T) {
+	t.Parallel()
+
+	ls := NewLinkSource(nil, nil)
+
+	codec := codecs.NullCodec{}
+	ls.SetCodec(codec)
+
+	if ls.GetCodec() != codec {
+		t.Error("Codec should match")
+	}
+}
+
+func TestLinkSource_ReceivePacket_Frames(t *testing.T) {
+	t.Parallel()
+
+	var receivedFrames [][]float32
+	mockSink := &mockNetworkSink{
+		handleFrameFunc: func(frame [][]float32, fromSource sources.Source) error {
+			receivedFrames = frame
+			return nil
+		},
+		canReceiveVal: true,
+	}
+
+	ls := NewLinkSource(nil, mockSink)
+
+	frameData := []byte{CodeRaw, 0x01, 0x02}
+	data := map[byte]any{
+		FieldFrames: frameData,
+	}
+	packed, _ := PackData(data)
+
+	ls.ReceivePacket(packed)
+
+	_ = receivedFrames
+}
+
+func TestUnpackData_InvalidInput(t *testing.T) {
+	t.Parallel()
+
+	_, err := UnpackData([]byte{})
+	if err == nil {
+		t.Error("Expected error for empty data")
+	}
+
+	_, err = UnpackData([]byte{0xff})
+	if err == nil {
+		t.Error("Expected error for invalid data")
+	}
+}
+
+type mockNetworkSink struct {
+	handleFrameFunc func(frame [][]float32, fromSource sources.Source) error
+	canReceiveVal  bool
+}
+
+func (m *mockNetworkSink) Start() error                        { return nil }
+func (m *mockNetworkSink) Stop() error                         { return nil }
+func (m *mockNetworkSink) Running() bool                       { return true }
+func (m *mockNetworkSink) HandleFrame(frame [][]float32, fromSource sources.Source) error {
+	if m.handleFrameFunc != nil {
+		return m.handleFrameFunc(frame, fromSource)
+	}
+	return nil
+}
+func (m *mockNetworkSink) CanReceive(fromSource sources.Source) bool { return m.canReceiveVal }

@@ -11,6 +11,7 @@
 package lxst
 
 import (
+	"github.com/gmlewis/go-lxst/lxst/call"
 	"github.com/gmlewis/go-lxst/lxst/codecs"
 	"github.com/gmlewis/go-lxst/lxst/codecs/codec2"
 	"github.com/gmlewis/go-lxst/lxst/codecs/opus"
@@ -21,6 +22,8 @@ import (
 	"github.com/gmlewis/go-lxst/lxst/network"
 	"github.com/gmlewis/go-lxst/lxst/pipeline"
 	"github.com/gmlewis/go-lxst/lxst/platforms"
+	"github.com/gmlewis/go-lxst/lxst/primitives/players"
+	"github.com/gmlewis/go-lxst/lxst/primitives/recorders"
 	"github.com/gmlewis/go-lxst/lxst/sinks"
 	"github.com/gmlewis/go-lxst/lxst/sources"
 )
@@ -92,10 +95,20 @@ var NewToneSource = generators.NewToneSource
 var (
 	CodecHeaderByte    = network.CodecHeaderByte
 	CodecTypeFromHeader = network.CodecTypeFromHeader
+	NewSignallingReceiver = network.NewSignallingReceiver
+	NewPacketizer      = network.NewPacketizer
+	NewLinkSource      = network.NewLinkSource
 )
 
 // Platform backends
 var NewBackend = platforms.NewBackend
+
+// Primitives
+var (
+	NewFilePlayer   = players.NewFilePlayer
+	NewFileRecorder  = recorders.NewFileRecorder
+	NewCallEndpoint  = call.NewCallEndpoint
+)
 
 // Source interfaces
 type (
