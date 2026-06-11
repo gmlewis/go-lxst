@@ -7,6 +7,7 @@ package sinks
 
 import (
 	"errors"
+	"os"
 	"sync"
 	"time"
 
@@ -53,6 +54,7 @@ type OpusFileSink struct {
 	outputPath        string
 	opusEncoder       *opusPkg.Opus
 	preferredSamplerate int
+	outputFile        *os.File
 }
 
 func NewOpusFileSink(path string, autodigest bool, profile int) (*OpusFileSink, error) {
@@ -164,6 +166,12 @@ func (fs *OpusFileSink) Stop() error {
 	fs.shouldRun = false
 	fs.mu.Unlock()
 
+	// Close output file
+	if fs.outputFile != nil {
+		fs.outputFile.Close()
+		fs.outputFile = nil
+	}
+
 	return nil
 }
 
@@ -272,7 +280,20 @@ func (fs *OpusFileSink) digestJob() {
 			}
 
 			if fs.opusEncoder != nil {
-				_ = fs.opusEncoder.Encode(frame)
+				encoded := fs.opusEncoder.Encode(frame)
+				if len(encoded) > 0 && fs.outputFile != nil {
+					fs.outputFile.Write(encoded)
+				}
+			}
+
+			// Create output file on first encoded frame
+			if fs.outputFile == nil && fs.outputPath != "" {
+				f, err := os.Create(fs.outputPath)
+				if err != nil {
+					// Error creating file - continue without file output
+				} else {
+					fs.outputFile = f
+				}
 			}
 		} else {
 			time.Sleep(time.Duration(fs.frameTime * float64(time.Second) * 0.1))

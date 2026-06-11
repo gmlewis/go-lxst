@@ -361,3 +361,9 @@ func (src *OpusFileSource) GetSink() LocalSource {
 	defer src.mu.Unlock()
 	return src.sink
 }
+
+func (src *OpusFileSource) SetSink(sink LocalSource) {
+	src.mu.Lock()
+	defer src.mu.Unlock()
+	src.sink = sink
+}
