@@ -8,27 +8,48 @@ package platforms
 
 import (
 	"runtime"
+	"time"
 )
 
 // NewBackend creates the appropriate audio backend for the current platform.
-// Uses the null backend by default - real implementations should be provided per-platform.
+// Uses Oto backend (pure-Go, cross-platform) when available, falls back to null backend.
 func NewBackend(sampleRate, channels, bitDepth int) AudioBackend {
-	// For now, always return null backend
-	// Real implementations would use build tags to select platform-specific backends
-	return NewNullBackend(sampleRate, channels, bitDepth)
+	// Try Oto backend first (pure-Go, works on all major platforms)
+	backend := NewOtoBackend(sampleRate, channels, bitDepth)
+	
+	// Wait briefly to see if Oto initializes successfully
+	time.Sleep(100 * time.Millisecond)
+	
+	// Check if backend is usable by trying to get a recorder/player
+	// If Oto fails, fall back to NullBackend
+	_, err := backend.GetRecorder(960)
+	if err != nil {
+		backend.ReleaseRecorder()
+		return NewNullBackend(sampleRate, channels, bitDepth)
+	}
+	backend.ReleaseRecorder()
+	
+	_, err = backend.GetPlayer(960, false)
+	if err != nil {
+		backend.ReleasePlayer()
+		return NewNullBackend(sampleRate, channels, bitDepth)
+	}
+	backend.ReleasePlayer()
+	
+	return backend
 }
 
 // GetBackend returns the backend type name for the current platform.
 func GetBackend() string {
 	switch runtime.GOOS {
 	case "linux":
-		return "linux"
+		return "oto"
 	case "darwin":
-		return "darwin"
+		return "oto"
 	case "windows":
-		return "windows"
+		return "oto"
 	case "android":
-		return "android"
+		return "oto"
 	default:
 		return "null"
 	}
