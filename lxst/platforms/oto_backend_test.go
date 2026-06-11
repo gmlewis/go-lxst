@@ -3,19 +3,17 @@
 // Use of this source code is governed by the Reticulum License
 // that can be found in the LICENSE file.
 
-package platforms_oto_backend_test
+package platforms
 
 import (
 	"testing"
 	"time"
-
-	"github.com/gmlewis/go-lxst/lxst/platforms"
 )
 
 func TestOtoBackend_Creation(t *testing.T) {
 	t.Parallel()
 
-	backend := platforms.NewOtoBackend(48000, 2, 32)
+	backend := NewOtoBackend(48000, 2, 32)
 	if backend == nil {
 		t.Fatal("NewOtoBackend returned nil")
 	}
@@ -34,7 +32,7 @@ func TestOtoBackend_Creation(t *testing.T) {
 func TestOtoBackend_DeviceEnumeration(t *testing.T) {
 	t.Parallel()
 
-	backend := platforms.NewOtoBackend(48000, 2, 32)
+	backend := NewOtoBackend(48000, 2, 32)
 	if backend == nil {
 		t.Fatal("NewOtoBackend returned nil")
 	}
@@ -67,7 +65,7 @@ func TestOtoBackend_DeviceEnumeration(t *testing.T) {
 func TestOtoBackend_GetRecorder(t *testing.T) {
 	t.Parallel()
 
-	backend := platforms.NewOtoBackend(48000, 2, 32)
+	backend := NewOtoBackend(48000, 2, 32)
 	if backend == nil {
 		t.Fatal("NewOtoBackend returned nil")
 	}
@@ -101,7 +99,7 @@ func TestOtoBackend_GetRecorder(t *testing.T) {
 func TestOtoBackend_GetPlayer(t *testing.T) {
 	t.Parallel()
 
-	backend := platforms.NewOtoBackend(48000, 2, 32)
+	backend := NewOtoBackend(48000, 2, 32)
 	if backend == nil {
 		t.Fatal("NewOtoBackend returned nil")
 	}
@@ -135,7 +133,7 @@ func TestOtoBackend_GetPlayer(t *testing.T) {
 func TestOtoBackend_Flush(t *testing.T) {
 	t.Parallel()
 
-	backend := platforms.NewOtoBackend(48000, 2, 32)
+	backend := NewOtoBackend(48000, 2, 32)
 	if backend == nil {
 		t.Fatal("NewOtoBackend returned nil")
 	}
@@ -149,7 +147,7 @@ func TestOtoBackend_Flush(t *testing.T) {
 func TestOtoBackend_ReleaseRecorderPlayer(t *testing.T) {
 	t.Parallel()
 
-	backend := platforms.NewOtoBackend(48000, 2, 32)
+	backend := NewOtoBackend(48000, 2, 32)
 	if backend == nil {
 		t.Fatal("NewOtoBackend returned nil")
 	}
@@ -180,7 +178,7 @@ func TestOtoBackend_FormatConversion(t *testing.T) {
 
 	// Test with different sample rates
 	for _, sr := range []int{8000, 16000, 44100, 48000} {
-		backend := platforms.NewOtoBackend(sr, 1, 16)
+		backend := NewOtoBackend(sr, 1, 16)
 		if backend == nil {
 			t.Fatalf("NewOtoBackend failed for sample rate %d", sr)
 		}
@@ -193,7 +191,7 @@ func TestOtoBackend_FormatConversion(t *testing.T) {
 	}
 
 	// Test stereo
-	backend := platforms.NewOtoBackend(48000, 2, 32)
+	backend := NewOtoBackend(48000, 2, 32)
 	if backend == nil {
 		t.Fatal("NewOtoBackend failed for stereo")
 	}
