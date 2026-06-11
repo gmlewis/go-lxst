@@ -41,7 +41,7 @@ func TestRaw_EncodeDecode_Roundtrip(t *testing.T) {
 			for i := 0; i < frames; i++ {
 				input[i] = make([]float32, tc.channels)
 				for c := 0; c < tc.channels; c++ {
-					input[i][c] = float32(i*10 + c) * 0.1
+					input[i][c] = float32(i*10+c) * 0.1
 				}
 			}
 
@@ -231,8 +231,6 @@ func TestRaw_InvalidChannels(t *testing.T) {
 		t.Error("Expected error for >32 channels")
 	}
 }
-
-
 
 func TestRaw_Float16Encoding(t *testing.T) {
 	t.Parallel()

@@ -17,17 +17,17 @@ import (
 )
 
 type FileRecorder struct {
-	mu            sync.Mutex
-	filePath      string
-	recordDevice  string
-	profile       int
-	source        *sources.LineSource
-	sink          *sinks.OpusFileSink
-	nullCodec     codecs.NullCodec
-	filterChain   []filters.Filter
-	easeIn        float64
-	skip          float64
-	gain          float64
+	mu           sync.Mutex
+	filePath     string
+	recordDevice string
+	profile      int
+	source       *sources.LineSource
+	sink         *sinks.OpusFileSink
+	nullCodec    codecs.NullCodec
+	filterChain  []filters.Filter
+	easeIn       float64
+	skip         float64
+	gain         float64
 }
 
 func NewFileRecorder(path string, device string, profile int, gain, easeIn, skip float64) *FileRecorder {

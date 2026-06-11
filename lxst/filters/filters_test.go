@@ -196,7 +196,7 @@ func TestAGC_HandleFrame(t *testing.T) {
 
 	// Python reference: input 0.1 -> output ~0.093 (AGC attenuates toward -12dB target slowly)
 	// First frame gain is still near 1.0, so output ~ 0.1 * 0.93 = 0.093
-	if math.Abs(float64(out[0][0]) - 0.093) > 0.01 {
+	if math.Abs(float64(out[0][0])-0.093) > 0.01 {
 		t.Errorf("AGC output mismatch: got %f, expected ~0.093 (matching Python reference)", out[0][0])
 	}
 }

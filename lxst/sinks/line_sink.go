@@ -20,29 +20,29 @@ const (
 )
 
 type LineSink struct {
-	mu                 sync.Mutex
-	insertLock         sync.Mutex
-	digestLock         sync.Mutex
-	preferredDevice    string
-	shouldRun          bool
-	digestThread       *digestThreadInfo
-	frameDeque         [][][]float32
-	underrunAt        *time.Time
-	frameTimeout       int
-	autodigest        bool
-	autostartMin       int
-	bufferMaxHeight    int
-	lowLatency        bool
+	mu                  sync.Mutex
+	insertLock          sync.Mutex
+	digestLock          sync.Mutex
+	preferredDevice     string
+	shouldRun           bool
+	digestThread        *digestThreadInfo
+	frameDeque          [][][]float32
+	underrunAt          *time.Time
+	frameTimeout        int
+	autodigest          bool
+	autostartMin        int
+	bufferMaxHeight     int
+	lowLatency          bool
 	preferredSamplerate int
-	backend            platforms.AudioBackend
-	player             platforms.AudioPlayer
-	samplerate         int
-	channels           int
-	samplesPerFrame    int
-	frameTime          float64
-	outputLatency      float64
-	maxLatency         float64
-	wantsLowLatency    bool
+	backend             platforms.AudioBackend
+	player              platforms.AudioPlayer
+	samplerate          int
+	channels            int
+	samplesPerFrame     int
+	frameTime           float64
+	outputLatency       float64
+	maxLatency          float64
+	wantsLowLatency     bool
 }
 
 type digestThreadInfo struct {
@@ -51,20 +51,20 @@ type digestThreadInfo struct {
 }
 
 func NewLineSink(preferredDevice string, autodigest bool, lowLatency bool) *LineSink {
-	backend := platforms.NewBackend(48000, 2, 32)
+	backend := platforms.NewBackendWithDevice(48000, 2, 32, preferredDevice)
 
 	ls := &LineSink{
-		preferredDevice:    preferredDevice,
-		shouldRun:          false,
-		frameDeque:         make([][][]float32, 0, LineSinkMaxFrames),
-		frameTimeout:       LineSinkFrameTimeout,
-		autodigest:         autodigest,
-		autostartMin:       LineSinkAutostartMin,
-		bufferMaxHeight:    LineSinkMaxFrames - 3,
-		lowLatency:         lowLatency,
+		preferredDevice:     preferredDevice,
+		shouldRun:           false,
+		frameDeque:          make([][][]float32, 0, LineSinkMaxFrames),
+		frameTimeout:        LineSinkFrameTimeout,
+		autodigest:          autodigest,
+		autostartMin:        LineSinkAutostartMin,
+		bufferMaxHeight:     LineSinkMaxFrames - 3,
+		lowLatency:          lowLatency,
 		preferredSamplerate: 48000,
-		backend:            backend,
-		channels:           2,
+		backend:             backend,
+		channels:            2,
 	}
 
 	if backend != nil {
@@ -254,3 +254,22 @@ func (ls *LineSink) digestJob() {
 
 // Ensure LineSink implements sources.LocalSource
 var _ sources.LocalSource = (*LineSink)(nil)
+
+// PreferredDevice returns the preferred audio output device name.
+func (ls *LineSink) PreferredDevice() string {
+	ls.mu.Lock()
+	defer ls.mu.Unlock()
+	return ls.preferredDevice
+}
+
+// AvailableSpeakers returns the list of available speaker device names
+// from the audio backend.
+func (ls *LineSink) AvailableSpeakers() []string {
+	ls.mu.Lock()
+	backend := ls.backend
+	ls.mu.Unlock()
+	if backend == nil {
+		return nil
+	}
+	return backend.AllSpeakers()
+}

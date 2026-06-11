@@ -18,13 +18,13 @@ import (
 )
 
 var (
-	ErrInvalidSampleRate    = errors.New("invalid sample rate")
-	ErrNoBackend            = errors.New("no audio backend available")
+	ErrInvalidSampleRate = errors.New("invalid sample rate")
+	ErrNoBackend         = errors.New("no audio backend available")
 )
 
 const (
-	LineSourceMaxFrames       = 128
-	LineSourceDefaultFrameMs  = 80.0
+	LineSourceMaxFrames      = 128
+	LineSourceDefaultFrameMs = 80.0
 )
 
 // LineSource implements audio input from a microphone/line input.
@@ -48,15 +48,15 @@ type LineSource struct {
 	recorder        platforms.AudioRecorder
 	samplesPerFrame int
 	frameTime       float64
-	
+
 	// Ease-in state
 	easeInCompleted bool
 	currentGain     float64
 	targetGain      float64
-	
+
 	// Skip state
-	skipCompleted   bool
-	skipStartTime   time.Time
+	skipCompleted bool
+	skipStartTime time.Time
 }
 
 type threadInfo struct {
@@ -68,7 +68,7 @@ func NewLineSource(preferredDevice string, targetFrameMs float64, codec codecs.C
 	if targetFrameMs <= 0 {
 		targetFrameMs = LineSourceDefaultFrameMs
 	}
-	
+
 	ls := &LineSource{
 		preferredDevice: preferredDevice,
 		targetFrameMs:   targetFrameMs,
@@ -81,45 +81,45 @@ func NewLineSource(preferredDevice string, targetFrameMs float64, codec codecs.C
 		targetGain:      math.Pow(10, gain/10.0),
 		currentGain:     1.0,
 	}
-	
+
 	if easeIn > 0 {
 		ls.currentGain = 0.0
 	}
-	
+
 	if skip > 0 {
 		ls.skipCompleted = false
 	} else {
 		ls.skipCompleted = true
 	}
-	
+
 	return ls
 }
 
 func (ls *LineSource) Start() error {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
-	
+
 	if ls.shouldRun {
 		return ErrSourceAlreadyRunning
 	}
-	
-	// Get platform backend
-	ls.backend = platforms.NewBackend(48000, 2, 32)
+
+	// Get platform backend with preferred device
+	ls.backend = platforms.NewBackendWithDevice(48000, 2, 32, ls.preferredDevice)
 	if ls.backend == nil {
 		return ErrNoBackend
 	}
-	
+
 	// Apply codec frame constraints
 	if ls.codec != nil {
 		ls.applyCodecConstraints()
 	}
-	
+
 	ls.samplerate = ls.backend.SampleRate()
 	ls.channels = ls.backend.Channels()
 	ls.bitdepth = 32 // Default to float32 internal
 	ls.samplesPerFrame = int(math.Ceil((ls.targetFrameMs / 1000.0) * float64(ls.samplerate)))
 	ls.frameTime = float64(ls.samplesPerFrame) / float64(ls.samplerate)
-	
+
 	// Get recorder
 	var err error
 	backendSamplesPerFrame := ls.samplesPerFrame
@@ -131,47 +131,47 @@ func (ls *LineSource) Start() error {
 	if err != nil {
 		return err
 	}
-	
+
 	ls.shouldRun = true
 	ls.easeInCompleted = (ls.easeIn <= 0)
 	ls.skipCompleted = (ls.skip <= 0)
 	ls.skipStartTime = time.Now()
-	
+
 	ls.ingestThread = &threadInfo{
 		done: make(chan struct{}),
 	}
 	ls.ingestThread.wg.Add(1)
 	go ls.ingestJob()
-	
+
 	return nil
 }
 
 func (ls *LineSource) Stop() error {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
-	
+
 	running := ls.shouldRun
 	if !running {
 		return nil
 	}
-	
+
 	ls.shouldRun = false
-	
+
 	if ls.ingestThread != nil {
 		close(ls.ingestThread.done)
 		ls.ingestThread.wg.Wait()
 		ls.ingestThread = nil
 	}
-	
+
 	if ls.recorder != nil {
 		ls.recorder.Close()
 		ls.recorder = nil
 	}
-	
+
 	if ls.backend != nil {
 		ls.backend.ReleaseRecorder()
 	}
-	
+
 	return nil
 }
 
@@ -185,19 +185,19 @@ func (ls *LineSource) applyCodecConstraints() {
 	if ls.codec == nil {
 		return
 	}
-	
+
 	// Frame quanta
 	if quanta := ls.codec.FrameQuantumMs(); quanta > 0 {
 		if math.Mod(ls.targetFrameMs, quanta) != 0 {
 			ls.targetFrameMs = math.Ceil(ls.targetFrameMs/quanta) * quanta
 		}
 	}
-	
+
 	// Frame max
 	if maxMs := ls.codec.FrameMaxMs(); maxMs > 0 && ls.targetFrameMs > maxMs {
 		ls.targetFrameMs = maxMs
 	}
-	
+
 	// Valid frame times
 	if valid := ls.codec.ValidFrameMs(); len(valid) > 0 {
 		closest := valid[0]
@@ -211,7 +211,7 @@ func (ls *LineSource) applyCodecConstraints() {
 		}
 		ls.targetFrameMs = closest
 	}
-	
+
 	// Preferred sample rate
 	if pref := ls.codec.PreferredSampleRate(); pref > 0 {
 		ls.samplerate = pref
@@ -220,10 +220,10 @@ func (ls *LineSource) applyCodecConstraints() {
 
 func (ls *LineSource) ingestJob() {
 	defer ls.ingestThread.wg.Done()
-	
+
 	ls.recordingLock.Lock()
 	defer ls.recordingLock.Unlock()
-	
+
 	for {
 		select {
 		case <-ls.ingestThread.done:
@@ -232,12 +232,12 @@ func (ls *LineSource) ingestJob() {
 			if !ls.shouldRun {
 				return
 			}
-			
+
 			frame, err := ls.recorder.Record(ls.samplesPerFrame)
 			if err != nil {
 				continue
 			}
-			
+
 			if !ls.skipCompleted {
 				if time.Since(ls.skipStartTime).Seconds() > ls.skip {
 					ls.skipCompleted = true
@@ -246,12 +246,12 @@ func (ls *LineSource) ingestJob() {
 					continue
 				}
 			}
-			
+
 			// Apply filters
 			for _, f := range ls.filterChain {
 				frame = f.HandleFrame(frame, ls.samplerate)
 			}
-			
+
 			// Apply gain
 			if ls.currentGain != 1.0 {
 				for i := range frame {
@@ -260,7 +260,7 @@ func (ls *LineSource) ingestJob() {
 					}
 				}
 			}
-			
+
 			// Apply ease-in
 			if !ls.easeInCompleted && ls.easeIn > 0 {
 				elapsed := time.Since(ls.skipStartTime).Seconds()
@@ -270,7 +270,7 @@ func (ls *LineSource) ingestJob() {
 					ls.easeInCompleted = true
 				}
 			}
-			
+
 			// Encode and send to sink
 			if ls.codec != nil && ls.sink != nil {
 				encoded := ls.codec.Encode(frame)
@@ -288,19 +288,19 @@ func (ls *LineSource) ingestJob() {
 func (ls *LineSource) SetCodec(codec codecs.Codec) error {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
-	
+
 	if codec == nil {
 		ls.codec = nil
 		return nil
 	}
-	
+
 	ls.codec = codec
 	ls.applyCodecConstraints()
-	
+
 	// Recalculate samples per frame
 	ls.samplesPerFrame = int(math.Ceil((ls.targetFrameMs / 1000.0) * float64(ls.samplerate)))
 	ls.frameTime = float64(ls.samplesPerFrame) / float64(ls.samplerate)
-	
+
 	return nil
 }
 
@@ -323,4 +323,23 @@ func (ls *LineSource) GetChannels() int {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
 	return ls.channels
+}
+
+// PreferredDevice returns the preferred audio input device name.
+func (ls *LineSource) PreferredDevice() string {
+	ls.mu.Lock()
+	defer ls.mu.Unlock()
+	return ls.preferredDevice
+}
+
+// AvailableMicrophones returns the list of available microphone device names
+// from the audio backend.
+func (ls *LineSource) AvailableMicrophones() []string {
+	ls.mu.Lock()
+	backend := ls.backend
+	ls.mu.Unlock()
+	if backend == nil {
+		return nil
+	}
+	return backend.AllMicrophones()
 }

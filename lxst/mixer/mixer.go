@@ -22,21 +22,21 @@ const (
 type Mixer struct {
 	mu              sync.Mutex
 	insertLock      sync.Mutex
-	mixerLock      sync.Mutex
-	targetFrameMs  float64
+	mixerLock       sync.Mutex
+	targetFrameMs   float64
 	frameTime       float64
 	shouldRun       bool
-	mixerThread    *mixerThreadInfo
+	mixerThread     *mixerThreadInfo
 	incomingFrames  map[sources.Source]*sourceQueue
 	muted           bool
 	gain            float64
-	bitdepth       int
-	channels       int
-	samplerate     int
+	bitdepth        int
+	channels        int
+	samplerate      int
 	samplesPerFrame int
-	codec          codecs.Codec
-	sink           sources.LocalSource
-	source         sources.Source
+	codec           codecs.Codec
+	sink            sources.LocalSource
+	source          sources.Source
 }
 
 type sourceQueue struct {

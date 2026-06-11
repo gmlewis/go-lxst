@@ -41,13 +41,13 @@ type RemoteSource interface {
 }
 
 type Loopback struct {
-	mu              sync.Mutex
-	frameDeque      [][]float32
-	shouldRun       bool
-	codec           codecs.Codec
-	sink            LocalSource
-	source          Source
-	maxFrames       int
+	mu         sync.Mutex
+	frameDeque [][]float32
+	shouldRun  bool
+	codec      codecs.Codec
+	sink       LocalSource
+	source     Source
+	maxFrames  int
 }
 
 func NewLoopback(codec codecs.Codec, sink LocalSource) *Loopback {
@@ -61,7 +61,7 @@ func NewLoopback(codec codecs.Codec, sink LocalSource) *Loopback {
 func (l *Loopback) Start() error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	
+
 	if l.shouldRun {
 		return ErrSourceAlreadyRunning
 	}
@@ -92,11 +92,11 @@ func (l *Loopback) CanReceive(fromSource Source) bool {
 func (l *Loopback) HandleFrame(frame [][]float32, fromSource Source) error {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	
+
 	if !l.shouldRun {
 		return ErrSourceNotRunning
 	}
-	
+
 	if l.codec == nil || l.sink == nil {
 		return nil
 	}

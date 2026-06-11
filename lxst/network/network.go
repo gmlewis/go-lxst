@@ -63,9 +63,9 @@ func CodecTypeFromHeader(headerByte byte) (codecs.Codec, error) {
 type SignallingReceiver struct {
 	mu                sync.Mutex
 	outgoingSignals   []any
-	proxy            *SignallingReceiver
+	proxy             *SignallingReceiver
 	signallingHandler func(signals []any, source any)
-	packetSender     func(destination any, data []byte) error
+	packetSender      func(destination any, data []byte) error
 }
 
 func NewSignallingReceiver(proxy *SignallingReceiver) *SignallingReceiver {
@@ -132,18 +132,18 @@ func (sr *SignallingReceiver) SetSignallingHandler(handler func(signals []any, s
 // Packetizer sends encoded audio frames over RNS links.
 type Packetizer struct {
 	mu              sync.Mutex
-	destination    any
+	destination     any
 	shouldRun       bool
 	source          sources.Source
 	transmitFailure bool
 	failureCallback func()
-	codec          codecs.Codec
-	sendFunc       func(data []byte) error
+	codec           codecs.Codec
+	sendFunc        func(data []byte) error
 }
 
 func NewPacketizer(sendFunc func(data []byte) error, failureCallback func()) *Packetizer {
 	return &Packetizer{
-		sendFunc:       sendFunc,
+		sendFunc:        sendFunc,
 		failureCallback: failureCallback,
 	}
 }
@@ -217,11 +217,11 @@ func (p *Packetizer) SetCodec(codec codecs.Codec) {
 type LinkSource struct {
 	mu                 sync.Mutex
 	shouldRun          bool
-	sink              sources.LocalSource
-	codec            codecs.Codec
-	receiveLock       sync.Mutex
+	sink               sources.LocalSource
+	codec              codecs.Codec
+	receiveLock        sync.Mutex
 	signallingReceiver *SignallingReceiver
-	channels          int
+	channels           int
 }
 
 func NewLinkSource(signallingReceiver *SignallingReceiver, sink sources.LocalSource) *LinkSource {

@@ -169,7 +169,7 @@ func TestFilter_HighPass_DC_Removal(t *testing.T) {
 	// Create a signal with DC offset
 	frame := make([][]float32, frameSize)
 	for i := range frame {
-		frame[i] = []float32{0.5 + 0.3 * float32(math.Sin(2.0*math.Pi*1000.0*float64(i)/float64(sampleRate)))}
+		frame[i] = []float32{0.5 + 0.3*float32(math.Sin(2.0*math.Pi*1000.0*float64(i)/float64(sampleRate)))}
 	}
 
 	result := hp.HandleFrame(frame, sampleRate)

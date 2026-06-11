@@ -158,10 +158,10 @@ type mockMixerSource struct {
 	channels   int
 }
 
-func (m *mockMixerSource) Start() error    { return nil }
-func (m *mockMixerSource) Stop() error     { return nil }
-func (m *mockMixerSource) Running() bool    { return true }
-func (m *mockMixerSource) SampleRate() int  { return m.sampleRate }
-func (m *mockMixerSource) Channels() int    { return m.channels }
-func (m *mockMixerSource) CanReceive(fromSource sources.Source) bool { return true }
+func (m *mockMixerSource) Start() error                                                   { return nil }
+func (m *mockMixerSource) Stop() error                                                    { return nil }
+func (m *mockMixerSource) Running() bool                                                  { return true }
+func (m *mockMixerSource) SampleRate() int                                                { return m.sampleRate }
+func (m *mockMixerSource) Channels() int                                                  { return m.channels }
+func (m *mockMixerSource) CanReceive(fromSource sources.Source) bool                      { return true }
 func (m *mockMixerSource) HandleFrame(frame [][]float32, fromSource sources.Source) error { return nil }

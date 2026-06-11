@@ -23,11 +23,11 @@ type Opus struct {
 	profile          int
 	frameQuantumMs   float64
 	frameMaxMs       float64
-	validFrameMs    []float64
-	channels        int
+	validFrameMs     []float64
+	channels         int
 	inputChannels    int
 	outputChannels   int
-	bitdepth        int
+	bitdepth         int
 	bitrateCeiling   int
 	sourceSampleRate int
 	sinkSampleRate   int
@@ -80,10 +80,10 @@ func (o *Opus) Decode(frameBytes []byte, channelsHint int) [][]float32 {
 	return [][]float32{}
 }
 
-func (o *Opus) PreferredSampleRate() int      { return o.sourceSampleRate }
-func (o *Opus) FrameQuantumMs() float64       { return o.frameQuantumMs }
-func (o *Opus) FrameMaxMs() float64           { return o.frameMaxMs }
-func (o *Opus) ValidFrameMs() []float64       { return o.validFrameMs }
+func (o *Opus) PreferredSampleRate() int { return o.sourceSampleRate }
+func (o *Opus) FrameQuantumMs() float64  { return o.frameQuantumMs }
+func (o *Opus) FrameMaxMs() float64      { return o.frameMaxMs }
+func (o *Opus) ValidFrameMs() []float64  { return o.validFrameMs }
 
 func (o *Opus) SetSourceSampleRate(rate int) { o.sourceSampleRate = rate }
 func (o *Opus) SetSinkSampleRate(rate int)   { o.sinkSampleRate = rate }

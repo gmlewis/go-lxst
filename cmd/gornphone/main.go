@@ -99,7 +99,7 @@ func main() {
 
 func listAudioDevices() {
 	fmt.Println("\nAvailable audio devices:")
- backend := lxst.NewBackend(48000, 2, 32)
+	backend := lxst.NewBackend(48000, 2, 32)
 	if backend != nil {
 		for _, mic := range backend.AllMicrophones() {
 			fmt.Printf("  Input  : %s\n", mic)

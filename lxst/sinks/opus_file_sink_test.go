@@ -217,9 +217,11 @@ type mockSourceForSink struct {
 	sampleRate int
 }
 
-func (m *mockSourceForSink) Start() error    { return nil }
-func (m *mockSourceForSink) Stop() error     { return nil }
-func (m *mockSourceForSink) Running() bool   { return true }
-func (m *mockSourceForSink) SampleRate() int  { return m.sampleRate }
+func (m *mockSourceForSink) Start() error                              { return nil }
+func (m *mockSourceForSink) Stop() error                               { return nil }
+func (m *mockSourceForSink) Running() bool                             { return true }
+func (m *mockSourceForSink) SampleRate() int                           { return m.sampleRate }
 func (m *mockSourceForSink) CanReceive(fromSource sources.Source) bool { return true }
-func (m *mockSourceForSink) HandleFrame(frame [][]float32, fromSource sources.Source) error { return nil }
+func (m *mockSourceForSink) HandleFrame(frame [][]float32, fromSource sources.Source) error {
+	return nil
+}

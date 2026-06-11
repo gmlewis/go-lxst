@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	ToneSourceDefaultFrameMs   = 80.0
+	ToneSourceDefaultFrameMs    = 80.0
 	ToneSourceDefaultSampleRate = 48000
 	ToneSourceDefaultFrequency  = 400.0
 	ToneSourceEaseTimeMs        = 20.0
@@ -27,23 +27,23 @@ type ToneSource struct {
 	targetFrameMs   float64
 	samplerate      int
 	channels        int
-	bitdepth       int
-	frequency      float64
-	gain           float64
-	ease           bool
-	easeTimeMs     float64
-	theta          float64
-	easeGain       float64
-	easeStep       float64
-	gainStep       float64
-	currentGain    float64
-	easingOut      bool
-	shouldRun      bool
-	generateThread *generateThreadInfo
-	codec          codecs.Codec
-	sink           sources.LocalSource
+	bitdepth        int
+	frequency       float64
+	gain            float64
+	ease            bool
+	easeTimeMs      float64
+	theta           float64
+	easeGain        float64
+	easeStep        float64
+	gainStep        float64
+	currentGain     float64
+	easingOut       bool
+	shouldRun       bool
+	generateThread  *generateThreadInfo
+	codec           codecs.Codec
+	sink            sources.LocalSource
 	samplesPerFrame int
-	frameTime      float64
+	frameTime       float64
 }
 
 type generateThreadInfo struct {
@@ -65,7 +65,7 @@ func NewToneSource(frequency, gain float64, ease bool, easeTimeMs, targetFrameMs
 	ts := &ToneSource{
 		targetFrameMs: targetFrameMs,
 		samplerate:    ToneSourceDefaultSampleRate,
-		channels:       channels,
+		channels:      channels,
 		bitdepth:      32,
 		frequency:     frequency,
 		gain:          gain,

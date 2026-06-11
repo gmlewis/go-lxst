@@ -18,12 +18,12 @@ import (
 const (
 	ProfileBandwidthUltraLow byte = 0x10
 	ProfileBandwidthVeryLow  byte = 0x20
-	ProfileBandwidthLow     byte = 0x30
-	ProfileQualityMedium   byte = 0x40
-	ProfileQualityHigh     byte = 0x50
-	ProfileQualityMax      byte = 0x60
-	ProfileLatencyLow      byte = 0x70
-	ProfileLatencyUltraLow byte = 0x80
+	ProfileBandwidthLow      byte = 0x30
+	ProfileQualityMedium     byte = 0x40
+	ProfileQualityHigh       byte = 0x50
+	ProfileQualityMax        byte = 0x60
+	ProfileLatencyLow        byte = 0x70
+	ProfileLatencyUltraLow   byte = 0x80
 
 	DefaultProfile byte = ProfileQualityMedium
 )
@@ -150,13 +150,13 @@ func NextProfile(profile byte) byte {
 
 // Signalling status codes
 const (
-	SignallingBusy        byte = 0x00
-	SignallingRejected    byte = 0x01
-	SignallingCalling     byte = 0x02
-	SignallingAvailable   byte = 0x03
-	SignallingRinging     byte = 0x04
-	SignallingConnecting  byte = 0x05
-	SignallingEstablished byte = 0x06
+	SignallingBusy             byte = 0x00
+	SignallingRejected         byte = 0x01
+	SignallingCalling          byte = 0x02
+	SignallingAvailable        byte = 0x03
+	SignallingRinging          byte = 0x04
+	SignallingConnecting       byte = 0x05
+	SignallingEstablished      byte = 0x06
 	SignallingPreferredProfile byte = 0xFF
 )
 
@@ -209,7 +209,7 @@ const (
 type TelephoneState byte
 
 const (
-	StateIdle         TelephoneState = iota
+	StateIdle TelephoneState = iota
 	StateCalling
 	StateRinging
 	StateConnecting
@@ -281,7 +281,7 @@ type Telephone struct {
 	transmitMuted  bool
 	ringtonePath   string
 	speakerDevice  string
-	micDevice     string
+	micDevice      string
 	ringerDevice   string
 	lowLatency     bool
 	dialToneFreq   float64
@@ -295,12 +295,12 @@ func NewTelephone(ringTime, waitTime int, autoAnswer bool, allowed byte, receive
 		connectTime:    ConnectTime,
 		autoAnswer:     autoAnswer,
 		allowed:        allowed,
-		receiveGain:   receiveGain,
-		transmitGain:  transmitGain,
-		useAGC:        true,
-		state:         StateIdle,
+		receiveGain:    receiveGain,
+		transmitGain:   transmitGain,
+		useAGC:         true,
+		state:          StateIdle,
 		currentProfile: DefaultProfile,
-		dialToneFreq:  DialToneFrequency,
+		dialToneFreq:   DialToneFrequency,
 		dialToneEaseMs: DialToneEaseMs,
 	}
 }

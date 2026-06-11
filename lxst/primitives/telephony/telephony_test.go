@@ -186,7 +186,7 @@ func TestStatusName(t *testing.T) {
 
 	tests := []struct {
 		status byte
-		want  string
+		want   string
 	}{
 		{SignallingBusy, "Busy"},
 		{SignallingRejected, "Rejected"},

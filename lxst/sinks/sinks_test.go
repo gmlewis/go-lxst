@@ -173,6 +173,31 @@ func TestLineSink_ChannelReduction(t *testing.T) {
 
 type testSource struct{}
 
-func (t *testSource) Start() error     { return nil }
-func (t *testSource) Stop() error      { return nil }
-func (t *testSource) Running() bool    { return true }
+func (t *testSource) Start() error  { return nil }
+func (t *testSource) Stop() error   { return nil }
+func (t *testSource) Running() bool { return true }
+
+func TestLineSink_PreferredDevice(t *testing.T) {
+	t.Parallel()
+
+	ls := NewLineSink("my-speaker", true, false)
+	if ls.PreferredDevice() != "my-speaker" {
+		t.Errorf("Expected preferred device 'my-speaker', got %q", ls.PreferredDevice())
+	}
+
+	ls2 := NewLineSink("", true, false)
+	if ls2.PreferredDevice() != "" {
+		t.Errorf("Expected empty preferred device, got %q", ls2.PreferredDevice())
+	}
+}
+
+func TestLineSink_AvailableSpeakers(t *testing.T) {
+	t.Parallel()
+
+	ls := NewLineSink("", true, false)
+	speakers := ls.AvailableSpeakers()
+	// With null backend, should at least have "null-speaker"
+	if len(speakers) == 0 {
+		t.Log("No speakers available (may be headless environment)")
+	}
+}

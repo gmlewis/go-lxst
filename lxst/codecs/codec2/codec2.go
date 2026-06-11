@@ -20,14 +20,14 @@ var (
 
 // Codec2 mode constants matching Python LXST
 const (
-	MODE_700C  = 700
-	MODE_1200  = 1200
-	MODE_1300  = 1300
-	MODE_1400  = 1400
-	MODE_1600  = 1600
-	MODE_2400  = 2400
-	MODE_3200  = 3200
-	MODE_700B  = 701 // 700B mode
+	MODE_700C = 700
+	MODE_1200 = 1200
+	MODE_1300 = 1300
+	MODE_1400 = 1400
+	MODE_1600 = 1600
+	MODE_2400 = 2400
+	MODE_3200 = 3200
+	MODE_700B = 701 // 700B mode
 )
 
 const (
@@ -67,14 +67,14 @@ var validModes = []int{
 // Codec2 implements the Codec interface for Codec2 audio.
 // This is a stub - real implementation requires CGO binding to libcodec2.
 type Codec2 struct {
-	mode            int
-	frameQuantumMs  float64
-	channels        int
-	bitdepth        int
-	c2              interface{} // Would be *pycodec2.Codec2 in Python
+	mode             int
+	frameQuantumMs   float64
+	channels         int
+	bitdepth         int
+	c2               interface{} // Would be *pycodec2.Codec2 in Python
 	outputSampleRate int
-	modeHeader      byte
-	initialized     bool
+	modeHeader       byte
+	initialized      bool
 }
 
 // NewCodec2 creates a new Codec2 codec with the given mode.

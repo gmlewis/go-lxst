@@ -22,39 +22,39 @@ var (
 )
 
 const (
-	OpusFileSinkMaxFrames      = 64
-	OpusFileSinkAutostartMin   = 1
+	OpusFileSinkMaxFrames       = 64
+	OpusFileSinkAutostartMin    = 1
 	OpusFileSinkFinalizeTimeout = 2.0
-	TypeMapFactor              = 32767.0
+	TypeMapFactor               = 32767.0
 )
 
 type OpusFileSink struct {
-	mu                sync.Mutex
-	insertLock        sync.Mutex
-	digestLock        sync.Mutex
-	shouldRun         bool
-	digestThread      *digestThreadInfo
-	frameDeque        [][][]float32
-	autodigest        bool
-	autostartMin      int
-	bufferMaxHeight   int
-	profile           int
-	bitdepth          int
-	samplerate        int
-	outputSamplerate  int
-	channels          int
-	maxBytesPerFrame  int
-	samplesPerFrame   int
-	frameTime         float64
-	outputLatency     float64
-	maxLatency        float64
-	samplesWritten    int
-	recordingStopped  bool
-	finalized         bool
-	outputPath        string
-	opusEncoder       *opusPkg.Opus
+	mu                  sync.Mutex
+	insertLock          sync.Mutex
+	digestLock          sync.Mutex
+	shouldRun           bool
+	digestThread        *digestThreadInfo
+	frameDeque          [][][]float32
+	autodigest          bool
+	autostartMin        int
+	bufferMaxHeight     int
+	profile             int
+	bitdepth            int
+	samplerate          int
+	outputSamplerate    int
+	channels            int
+	maxBytesPerFrame    int
+	samplesPerFrame     int
+	frameTime           float64
+	outputLatency       float64
+	maxLatency          float64
+	samplesWritten      int
+	recordingStopped    bool
+	finalized           bool
+	outputPath          string
+	opusEncoder         *opusPkg.Opus
 	preferredSamplerate int
-	outputFile        *os.File
+	outputFile          *os.File
 }
 
 func NewOpusFileSink(path string, autodigest bool, profile int) (*OpusFileSink, error) {
@@ -74,7 +74,7 @@ func NewOpusFileSink(path string, autodigest bool, profile int) (*OpusFileSink, 
 		bitdepth:         32,
 		channels:         ch,
 		outputSamplerate: sr,
-		opusEncoder:       opus,
+		opusEncoder:      opus,
 		frameDeque:       make([][][]float32, 0, OpusFileSinkMaxFrames),
 	}
 

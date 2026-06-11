@@ -18,12 +18,12 @@ type Filter interface {
 
 // HighPass implements a high-pass filter.
 type HighPass struct {
-	cut           float64
-	samplerate    int
-	channels      int
-	filterStates  []float32
-	lastInputs    []float32
-	alpha         float32
+	cut          float64
+	samplerate   int
+	channels     int
+	filterStates []float32
+	lastInputs   []float32
+	alpha        float32
 }
 
 // NewHighPass creates a new HighPass filter with the given cutoff frequency.
@@ -106,11 +106,11 @@ func (h *HighPass) HandleFrame(frame [][]float32, samplerate int) [][]float32 {
 
 // LowPass implements a low-pass filter.
 type LowPass struct {
-	cut        float64
-	samplerate int
-	channels   int
+	cut          float64
+	samplerate   int
+	channels     int
 	filterStates []float32
-	alpha      float32
+	alpha        float32
 }
 
 // NewLowPass creates a new LowPass filter with the given cutoff frequency.
@@ -173,10 +173,10 @@ func (l *LowPass) HandleFrame(frame [][]float32, samplerate int) [][]float32 {
 
 // BandPass implements a band-pass filter (cascade of HighPass + LowPass).
 type BandPass struct {
-	lowCut    float64
-	highCut   float64
-	highPass  *HighPass
-	lowPass   *LowPass
+	lowCut   float64
+	highCut  float64
+	highPass *HighPass
+	lowPass  *LowPass
 }
 
 // NewBandPass creates a new BandPass filter with the given low and high cutoff frequencies.
@@ -185,8 +185,8 @@ func NewBandPass(lowCut, highCut float64) *BandPass {
 		panic("Low-cut frequency must be less than high-cut frequency")
 	}
 	return &BandPass{
-		lowCut:  lowCut,
-		highCut: highCut,
+		lowCut:   lowCut,
+		highCut:  highCut,
 		highPass: NewHighPass(lowCut),
 		lowPass:  NewLowPass(highCut),
 	}
@@ -203,20 +203,20 @@ func (b *BandPass) HandleFrame(frame [][]float32, samplerate int) [][]float32 {
 
 // AGC implements Automatic Gain Control.
 type AGC struct {
-	targetLevel     float64
-	maxGainDB       float64
-	attackTime      float64
-	releaseTime     float64
-	holdTime        float64
-	triggerLevel    float64
-	samplerate      int
-	channels        int
-	currentGainLin  []float32
-	holdCounter     int
-	blockTarget     float64
-	attackCoeff     float64
-	releaseCoeff    float64
-	holdSamples     int
+	targetLevel    float64
+	maxGainDB      float64
+	attackTime     float64
+	releaseTime    float64
+	holdTime       float64
+	triggerLevel   float64
+	samplerate     int
+	channels       int
+	currentGainLin []float32
+	holdCounter    int
+	blockTarget    float64
+	attackCoeff    float64
+	releaseCoeff   float64
+	holdSamples    int
 }
 
 // NewAGC creates a new AGC with the given parameters.
@@ -227,13 +227,13 @@ type AGC struct {
 // holdTime: hold time in seconds
 func NewAGC(targetLevel, maxGainDB, attackTime, releaseTime, holdTime float64) *AGC {
 	return &AGC{
-		targetLevel:    targetLevel,
-		maxGainDB:      maxGainDB,
-		attackTime:     attackTime,
-		releaseTime:    releaseTime,
-		holdTime:       holdTime,
-		triggerLevel:   0.003,
-		blockTarget:    0.01,
+		targetLevel:  targetLevel,
+		maxGainDB:    maxGainDB,
+		attackTime:   attackTime,
+		releaseTime:  releaseTime,
+		holdTime:     holdTime,
+		triggerLevel: 0.003,
+		blockTarget:  0.01,
 	}
 }
 
@@ -274,7 +274,7 @@ func (a *AGC) HandleFrame(frame [][]float32, samplerate int) [][]float32 {
 	if blockSize > samples {
 		blockSize = samples
 	}
-	
+
 	for i := 0; i < samples; i += blockSize {
 		blockEnd := min(i+blockSize, samples)
 		blockSamples := blockEnd - i

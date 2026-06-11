@@ -15,8 +15,8 @@ import (
 	"time"
 
 	"github.com/gmlewis/go-lxst/lxst/codecs"
-	"github.com/gmlewis/go-lxst/lxst/filters"
 	opusPkg "github.com/gmlewis/go-lxst/lxst/codecs/opus"
+	"github.com/gmlewis/go-lxst/lxst/filters"
 	"github.com/gmlewis/go-lxst/lxst/sinks"
 	"github.com/gmlewis/go-lxst/lxst/sources"
 )
@@ -181,7 +181,7 @@ func TestFilterPipeline_Roundtrip(t *testing.T) {
 
 	frame := make([][]float32, frameSize)
 	for i := range frame {
-		frame[i] = []float32{0.5 + 0.3 * float32(math.Sin(2.0*math.Pi*1000.0*float64(i)/float64(sampleRate)))}
+		frame[i] = []float32{0.5 + 0.3*float32(math.Sin(2.0*math.Pi*1000.0*float64(i)/float64(sampleRate)))}
 	}
 
 	// Apply HighPass to remove DC offset
@@ -244,13 +244,13 @@ func TestIntegration_LineSourceToLineSink(t *testing.T) {
 
 	// Use NullCodec for testing without actual codec
 	codec := codecs.NullCodec{}
-	
+
 	// Create a line sink that will receive frames (autodigest=true so it starts automatically)
 	lineSink := sinks.NewLineSink("", true, false)
-	
+
 	// Create a line source with the codec and sink
 	lineSrc := sources.NewLineSource("", 20.0, codec, lineSink, nil, 0, 0, 0)
-	
+
 	// Start source (sink will auto-start due to autodigest)
 	err := lineSrc.Start()
 	if err != nil {
@@ -258,18 +258,18 @@ func TestIntegration_LineSourceToLineSink(t *testing.T) {
 	}
 	defer lineSrc.Stop()
 	defer lineSink.Stop()
-	
+
 	// Give some time for frames to flow
 	time.Sleep(200 * time.Millisecond)
-	
+
 	// Verify they are running
 	if !lineSrc.Running() {
 		t.Error("LineSource should be running")
 	}
-	
+
 	// Sink might not be running yet if no frames received, but that's ok
 	// With autodigest=true and autostartMin=1, it should start once it gets a frame
-	
+
 	// Check that sink can receive (if not running, it should still accept frames)
 	if !lineSink.CanReceive(lineSrc) {
 		// This might be because the buffer is full with the null backend
@@ -281,58 +281,58 @@ func TestIntegration_LineSourceToLineSink(t *testing.T) {
 // TestIntegration_OpusFileRoundtrip tests file -> OpusFileSource -> OpusFileSink -> file
 func TestIntegration_OpusFileRoundtrip(t *testing.T) {
 	t.Parallel()
-	
+
 	// Skip if Opus is not available
 	_, err := opusPkg.NewOpus(opusPkg.PROFILE_VOICE_LOW)
 	if err != nil {
 		t.Skip("Opus not available")
 	}
-	
+
 	// Create test WAV file
 	sampleRate := 8000
 	numChannels := 1
 	sampleCount := 8000
 	path := createTestWav(t, sampleRate, numChannels, sampleCount, 440.0)
-	
+
 	// Create OpusFileSource
 	src, err := sources.NewOpusFileSource(path, 20.0, false, nil, nil, false)
 	if err != nil {
 		t.Fatalf("NewOpusFileSource failed: %v", err)
 	}
-	
+
 	// Create OpusFileSink with temp output file
 	tmpDir := t.TempDir()
 	outputPath := filepath.Join(tmpDir, "output.opus")
-	
+
 	sink, err := sinks.NewOpusFileSink(outputPath, false, opusPkg.PROFILE_VOICE_LOW)
 	if err != nil {
 		t.Fatalf("NewOpusFileSink failed: %v", err)
 	}
-	
+
 	// Connect source to sink
 	src.SetSink(sink)
-	
+
 	// Start both
 	err = sink.Start()
 	if err != nil {
 		t.Fatalf("OpusFileSink.Start failed: %v", err)
 	}
 	defer sink.Stop()
-	
+
 	err = src.Start()
 	if err != nil {
 		t.Fatalf("OpusFileSource.Start failed: %v", err)
 	}
 	defer src.Stop()
-	
+
 	// Wait for processing to complete (file length ~1 second, with some buffer)
 	time.Sleep(2 * time.Second)
-	
+
 	// Verify the output file was created
 	if _, err := os.Stat(outputPath); os.IsNotExist(err) {
 		t.Errorf("Output file not created: %s", outputPath)
 	}
-	
+
 	// Verify sink processed frames
 	if sink.FramesWaiting() < 0 {
 		t.Error("Sink should have processed frames")
@@ -342,44 +342,44 @@ func TestIntegration_OpusFileRoundtrip(t *testing.T) {
 // TestIntegration_OpusFileSourceToNullSink tests OpusFileSource with NullCodec sink
 func TestIntegration_OpusFileSourceToNullSink(t *testing.T) {
 	t.Parallel()
-	
+
 	// Use NullCodec for testing
 	codec := codecs.NullCodec{}
-	
+
 	// Create test WAV file
 	sampleRate := 8000
 	numChannels := 1
 	sampleCount := 8000
 	path := createTestWav(t, sampleRate, numChannels, sampleCount, 440.0)
-	
+
 	// Create OpusFileSource
 	src, err := sources.NewOpusFileSource(path, 20.0, false, codec, nil, false)
 	if err != nil {
 		t.Fatalf("NewOpusFileSource failed: %v", err)
 	}
-	
+
 	// Create a mock sink for testing
 	mockSink := &mockLocalSink{
 		receivedFrames: make([][][]float32, 0),
 		mu:             sync.Mutex{},
 	}
 	src.SetSink(mockSink)
-	
+
 	// Start source
 	err = src.Start()
 	if err != nil {
 		t.Fatalf("OpusFileSource.Start failed: %v", err)
 	}
 	defer src.Stop()
-	
+
 	// Wait for some frames
 	time.Sleep(300 * time.Millisecond)
-	
+
 	// Verify frames were received
 	mockSink.mu.Lock()
 	frameCount := len(mockSink.receivedFrames)
 	mockSink.mu.Unlock()
-	
+
 	if frameCount == 0 {
 		t.Error("Expected sink to receive frames")
 	}
@@ -402,6 +402,6 @@ func (m *mockLocalSink) CanReceive(fromSource sources.Source) bool {
 	return true
 }
 
-func (m *mockLocalSink) Start() error { return nil }
-func (m *mockLocalSink) Stop() error { return nil }
+func (m *mockLocalSink) Start() error  { return nil }
+func (m *mockLocalSink) Stop() error   { return nil }
 func (m *mockLocalSink) Running() bool { return true }

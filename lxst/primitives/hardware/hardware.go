@@ -52,10 +52,10 @@ type LCDInterface interface {
 
 // Keypad4x4Config holds configuration for 4x4 keypad
 type Keypad4x4Config struct {
-	RowPins   []int
-	ColPins   []int
-	KeyMap    [][]string
-	Callback  func(Keypad, KeyEvent)
+	RowPins  []int
+	ColPins  []int
+	KeyMap   [][]string
+	Callback func(Keypad, KeyEvent)
 }
 
 // Default 4x4 keypad constants
@@ -79,19 +79,19 @@ var DefaultColPins4x4 = []int{26, 19, 13, 6}
 
 // Keypad4x4 implements a 4x4 GPIO keypad
 type Keypad4x4 struct {
-	rows          int
-	cols          int
-	rowPins       []int
-	colPins       []int
-	keyMap        [][]string
-	keyStates     map[string]bool
-	callback      func(Keypad, KeyEvent)
-	hookPin       int
-	checkHook     bool
-	hookTime      time.Time
-	shouldRun     bool
-	mu            sync.Mutex
-	testPressed   map[string]bool // for testing
+	rows        int
+	cols        int
+	rowPins     []int
+	colPins     []int
+	keyMap      [][]string
+	keyStates   map[string]bool
+	callback    func(Keypad, KeyEvent)
+	hookPin     int
+	checkHook   bool
+	hookTime    time.Time
+	shouldRun   bool
+	mu          sync.Mutex
+	testPressed map[string]bool // for testing
 }
 
 func NewKeypad4x4(rowPins, colPins []int, keyMap [][]string, callback func(Keypad, KeyEvent)) *Keypad4x4 {
@@ -103,12 +103,12 @@ func NewKeypad4x4(rowPins, colPins []int, keyMap [][]string, callback func(Keypa
 	}
 
 	k := &Keypad4x4{
-		rows:       DefaultRows4x4,
-		cols:       DefaultCols4x4,
-		rowPins:    rowPins,
-		colPins:    colPins,
-		keyStates:  make(map[string]bool),
-		callback:   callback,
+		rows:        DefaultRows4x4,
+		cols:        DefaultCols4x4,
+		rowPins:     rowPins,
+		colPins:     colPins,
+		keyStates:   make(map[string]bool),
+		callback:    callback,
 		testPressed: make(map[string]bool),
 	}
 	k.setKeyMap(keyMap)
@@ -130,20 +130,20 @@ func NewKeypad4x4Custom(rows, cols int, keyMap [][]string, rowPins, colPins []in
 	}
 
 	k := &Keypad4x4{
-		rows:       rows,
-		cols:       cols,
-		rowPins:    rowPins,
-		colPins:    colPins,
-		keyStates:  make(map[string]bool),
-		callback:   callback,
+		rows:        rows,
+		cols:        cols,
+		rowPins:     rowPins,
+		colPins:     colPins,
+		keyStates:   make(map[string]bool),
+		callback:    callback,
 		testPressed: make(map[string]bool),
 	}
 	k.setKeyMap(keyMap)
 	return k
 }
 
-func (k *Keypad4x4) Rows() int { return k.rows }
-func (k *Keypad4x4) Cols() int { return k.cols }
+func (k *Keypad4x4) Rows() int          { return k.rows }
+func (k *Keypad4x4) Cols() int          { return k.cols }
 func (k *Keypad4x4) KeyMap() [][]string { return k.keyMap }
 
 func (k *Keypad4x4) setKeyMap(keyMap [][]string) {
@@ -304,9 +304,9 @@ type Keypad5x5 struct {
 }
 
 const (
-	DefaultRows5x5      = 5
-	DefaultCols5x5      = 5
-	DefaultHookPin5x5   = 11
+	DefaultRows5x5    = 5
+	DefaultCols5x5    = 5
+	DefaultHookPin5x5 = 11
 )
 
 var DefaultKeyMap5x5 = [][]string{
@@ -354,28 +354,28 @@ const (
 	LCDCols          = 16
 	LCDRows          = 2
 
-	LCDModeChr  = 0x01
-	LCDModeCmd  = 0x00
-	LCDRow1     = 0x80
-	LCDRow2     = 0xC0
+	LCDModeChr      = 0x01
+	LCDModeCmd      = 0x00
+	LCDRow1         = 0x80
+	LCDRow2         = 0xC0
 	LCDBacklightOn  = 0x08
 	LCDBacklightOff = 0x00
 	LCDFlagEnable   = 0x04
 	LCDFlagRS       = 0x01
 
-	LCDCmdInit1  = 0x33
-	LCDCmdInit2  = 0x32
-	LCDCmdClear  = 0x01
+	LCDCmdInit1 = 0x33
+	LCDCmdInit2 = 0x32
+	LCDCmdClear = 0x01
 )
 
 // LCD implements an I2C LCD1602 display
 type LCDStruct struct {
-	address   int
-	bus       int
-	row       byte
-	backlight byte
+	address    int
+	bus        int
+	row        byte
+	backlight  byte
 	isSleeping bool
-	mu        sync.Mutex
+	mu         sync.Mutex
 }
 
 func NewLCD(config *LCDConfig) *LCDStruct {
@@ -391,9 +391,9 @@ func NewLCD(config *LCDConfig) *LCDStruct {
 	}
 
 	l := &LCDStruct{
-		address: addr,
-		bus:     bus,
-		row:     LCDRow1,
+		address:   addr,
+		bus:       bus,
+		row:       LCDRow1,
 		backlight: LCDBacklightOn,
 	}
 	l.initDisplay()

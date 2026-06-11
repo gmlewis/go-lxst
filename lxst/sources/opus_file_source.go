@@ -26,7 +26,7 @@ var (
 const (
 	OpusFileSourceMaxFrames      = 128
 	OpusFileSourceDefaultFrameMs = 100.0
-	TypeMapFactor                 = 32767.0
+	TypeMapFactor                = 32767.0
 )
 
 type OpusFileSource struct {

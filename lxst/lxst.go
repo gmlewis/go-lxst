@@ -51,15 +51,15 @@ var NewRaw = raw.NewRaw
 
 // Codec2
 var (
-	Codec2Mode700C  = codec2.MODE_700C
-	Codec2Mode700B  = codec2.MODE_700B
-	Codec2Mode1200  = codec2.MODE_1200
-	Codec2Mode1300  = codec2.MODE_1300
-	Codec2Mode1400  = codec2.MODE_1400
-	Codec2Mode1600  = codec2.MODE_1600
-	Codec2Mode2400  = codec2.MODE_2400
-	Codec2Mode3200  = codec2.MODE_3200
-	NewCodec2       = codec2.NewCodec2
+	Codec2Mode700C = codec2.MODE_700C
+	Codec2Mode700B = codec2.MODE_700B
+	Codec2Mode1200 = codec2.MODE_1200
+	Codec2Mode1300 = codec2.MODE_1300
+	Codec2Mode1400 = codec2.MODE_1400
+	Codec2Mode1600 = codec2.MODE_1600
+	Codec2Mode2400 = codec2.MODE_2400
+	Codec2Mode3200 = codec2.MODE_3200
+	NewCodec2      = codec2.NewCodec2
 )
 
 // Filters
@@ -79,7 +79,7 @@ var (
 
 // Sinks
 var (
-	NewLineSink    = sinks.NewLineSink
+	NewLineSink     = sinks.NewLineSink
 	NewOpusFileSink = sinks.NewOpusFileSink
 )
 
@@ -94,11 +94,11 @@ var NewToneSource = generators.NewToneSource
 
 // Network codec headers
 var (
-	CodecHeaderByte    = network.CodecHeaderByte
-	CodecTypeFromHeader = network.CodecTypeFromHeader
+	CodecHeaderByte       = network.CodecHeaderByte
+	CodecTypeFromHeader   = network.CodecTypeFromHeader
 	NewSignallingReceiver = network.NewSignallingReceiver
-	NewPacketizer      = network.NewPacketizer
-	NewLinkSource      = network.NewLinkSource
+	NewPacketizer         = network.NewPacketizer
+	NewLinkSource         = network.NewLinkSource
 )
 
 // Platform backends
@@ -107,30 +107,30 @@ var NewBackend = platforms.NewBackend
 // Primitives
 var (
 	NewFilePlayer   = players.NewFilePlayer
-	NewFileRecorder  = recorders.NewFileRecorder
-	NewCallEndpoint  = call.NewCallEndpoint
-	NewTelephone     = telephony.NewTelephone
+	NewFileRecorder = recorders.NewFileRecorder
+	NewCallEndpoint = call.NewCallEndpoint
+	NewTelephone    = telephony.NewTelephone
 )
 
 // Telephony profiles
 var (
 	ProfileBandwidthUltraLow = telephony.ProfileBandwidthUltraLow
 	ProfileBandwidthVeryLow  = telephony.ProfileBandwidthVeryLow
-	ProfileBandwidthLow     = telephony.ProfileBandwidthLow
-	ProfileQualityMedium   = telephony.ProfileQualityMedium
-	ProfileQualityHigh     = telephony.ProfileQualityHigh
-	ProfileQualityMax      = telephony.ProfileQualityMax
-	ProfileLatencyLow     = telephony.ProfileLatencyLow
-	ProfileLatencyUltraLow = telephony.ProfileLatencyUltraLow
-	GetCodec              = telephony.GetCodec
-	GetFrameTime          = telephony.GetFrameTime
-	NextProfile           = telephony.NextProfile
+	ProfileBandwidthLow      = telephony.ProfileBandwidthLow
+	ProfileQualityMedium     = telephony.ProfileQualityMedium
+	ProfileQualityHigh       = telephony.ProfileQualityHigh
+	ProfileQualityMax        = telephony.ProfileQualityMax
+	ProfileLatencyLow        = telephony.ProfileLatencyLow
+	ProfileLatencyUltraLow   = telephony.ProfileLatencyUltraLow
+	GetCodec                 = telephony.GetCodec
+	GetFrameTime             = telephony.GetFrameTime
+	NextProfile              = telephony.NextProfile
 )
 
 // Source interfaces
 type (
-	Source      = sources.Source
-	LocalSource = sources.LocalSource
+	Source       = sources.Source
+	LocalSource  = sources.LocalSource
 	RemoteSource = sources.RemoteSource
 )
 

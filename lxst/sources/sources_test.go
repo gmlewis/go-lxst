@@ -58,22 +58,22 @@ func TestLoopback_CanReceive(t *testing.T) {
 	// With no sink, should always be able to receive
 	if !lb.CanReceive(nil) {
 		t.Error("Should be able to receive when no sink")
- 	}
+	}
 
- 	// With sink that can receive
- 	ms1 := &mockSink{canReceive: true}
- 	lb2 := NewLoopback(codecs.NullCodec{}, ms1)
- 	if !lb2.CanReceive(nil) {
- 		t.Error("Should be able to receive when sink allows")
- 	}
+	// With sink that can receive
+	ms1 := &mockSink{canReceive: true}
+	lb2 := NewLoopback(codecs.NullCodec{}, ms1)
+	if !lb2.CanReceive(nil) {
+		t.Error("Should be able to receive when sink allows")
+	}
 
- 	// With sink that cannot receive
- 	ms2 := &mockSink{canReceive: false}
- 	lb3 := NewLoopback(codecs.NullCodec{}, ms2)
- 	if lb3.CanReceive(nil) {
- 		t.Error("Should NOT be able to receive when sink denies")
- 	}
- }
+	// With sink that cannot receive
+	ms2 := &mockSink{canReceive: false}
+	lb3 := NewLoopback(codecs.NullCodec{}, ms2)
+	if lb3.CanReceive(nil) {
+		t.Error("Should NOT be able to receive when sink denies")
+	}
+}
 
 type mockSink struct {
 	canReceive bool

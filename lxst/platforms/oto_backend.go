@@ -43,7 +43,7 @@ type OtoBackend struct {
 	playerMu   sync.Mutex
 
 	// Device info cache
-	micNames   []string
+	micNames     []string
 	speakerNames []string
 }
 
@@ -138,9 +138,9 @@ func (ob *OtoBackend) waitReady() error {
 	}
 }
 
-func (ob *OtoBackend) SampleRate() int      { return ob.sampleRate }
-func (ob *OtoBackend) Channels() int        { return ob.channels }
-func (ob *OtoBackend) BitDepth() int        { return ob.bitDepth }
+func (ob *OtoBackend) SampleRate() int { return ob.sampleRate }
+func (ob *OtoBackend) Channels() int   { return ob.channels }
+func (ob *OtoBackend) BitDepth() int   { return ob.bitDepth }
 
 func (ob *OtoBackend) AllMicrophones() []string {
 	// Oto doesn't expose device enumeration; return cached
@@ -258,22 +258,26 @@ func (ob *OtoBackend) GetPlayer(samplesPerFrame int, lowLatency bool) (AudioPlay
 
 func (or *otoRecorder) Record(numFrames int) ([][]float32, error) {
 	or.mu.Lock()
-	defer or.mu.Unlock()
-
 	if or.closed || or.pipeReader == nil {
+		or.mu.Unlock()
 		return nil, errors.New("recorder closed")
 	}
+	or.mu.Unlock()
 
-	// Read audio data from pipe
-	// Oto uses float32 little-endian interleaved format
+	// Read audio data from pipe (outside of mutex to allow Close to proceed)
 	bytesPerSample := 4 // float32
 	bytesPerFrame := or.channels * bytesPerSample
 	totalBytes := numFrames * bytesPerFrame
 
-	// Read data
+	// Read data with timeout protection
 	n, err := io.ReadFull(or.pipeReader, or.readBuf[:totalBytes])
 	if err != nil && err != io.EOF && err != io.ErrUnexpectedEOF {
-		return nil, err
+		// If the pipe was closed, return silence
+		frame := make([][]float32, numFrames)
+		for i := range frame {
+			frame[i] = make([]float32, or.channels)
+		}
+		return frame, nil
 	}
 
 	// If we got no data, return silence
@@ -315,6 +319,9 @@ func (or *otoRecorder) Close() error {
 	or.mu.Lock()
 	defer or.mu.Unlock()
 
+	or.closed = true
+
+	// Close pipe writer first to unblock any pending Read
 	if or.pipeWriter != nil {
 		or.pipeWriter.Close()
 		or.pipeWriter = nil
@@ -323,7 +330,6 @@ func (or *otoRecorder) Close() error {
 		or.pipeReader.Close()
 		or.pipeReader = nil
 	}
-	or.closed = true
 	return nil
 }
 

@@ -12,7 +12,7 @@ import (
 
 // Opus profile constants matching Python LXST.
 const (
-	PROFILE_VOICE_LOW     = 0x00
+	PROFILE_VOICE_LOW    = 0x00
 	PROFILE_VOICE_MEDIUM = 0x01
 	PROFILE_VOICE_HIGH   = 0x02
 	PROFILE_VOICE_MAX    = 0x03
@@ -47,8 +47,8 @@ const (
 // ProfileConfigEntry holds the configuration for an Opus profile.
 type ProfileConfigEntry struct {
 	SampleRate     int
-	Channels      int
-	Application  int
+	Channels       int
+	Application    int
 	BitrateCeiling int
 }
 

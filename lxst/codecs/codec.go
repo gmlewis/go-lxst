@@ -63,10 +63,10 @@ func (NullCodec) Decode(data []byte, channels int) [][]float32 {
 	return result
 }
 
-func (NullCodec) PreferredSampleRate() int      { return 0 }
-func (NullCodec) FrameQuantumMs() float64       { return 0 }
-func (NullCodec) FrameMaxMs() float64           { return 0 }
-func (NullCodec) ValidFrameMs() []float64       { return nil }
+func (NullCodec) PreferredSampleRate() int { return 0 }
+func (NullCodec) FrameQuantumMs() float64  { return 0 }
+func (NullCodec) FrameMaxMs() float64      { return 0 }
+func (NullCodec) ValidFrameMs() []float64  { return nil }
 
 // ResampleBytes resamples audio bytes from input_rate to output_rate.
 // Uses pydub internally in Python; Go port uses gonum or simple linear interpolation.

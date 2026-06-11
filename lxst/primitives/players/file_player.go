@@ -18,26 +18,26 @@ import (
 )
 
 var (
-	ErrFileNotFound     = errors.New("file not found")
-	ErrNoSource         = errors.New("no source configured")
-	ErrCallbackNotFunc  = errors.New("provided callback is not callable")
+	ErrFileNotFound    = errors.New("file not found")
+	ErrNoSource        = errors.New("no source configured")
+	ErrCallbackNotFunc = errors.New("provided callback is not callable")
 )
 
 type FinishedCallback func(player *FilePlayer)
 
 type FilePlayer struct {
-	mu                sync.Mutex
-	filePath          string
-	playbackDevice    string
-	finishedCallback  FinishedCallback
-	loop              bool
-	source            *sources.OpusFileSource
-	outputPipeline    *pipeline.Pipeline
-	inputPipeline     *pipeline.Pipeline
-	sink              *sinks.LineSink
-	loopback          *sources.Loopback
-	raw               codecs.NullCodec
-	running           bool
+	mu               sync.Mutex
+	filePath         string
+	playbackDevice   string
+	finishedCallback FinishedCallback
+	loop             bool
+	source           *sources.OpusFileSource
+	outputPipeline   *pipeline.Pipeline
+	inputPipeline    *pipeline.Pipeline
+	sink             *sinks.LineSink
+	loopback         *sources.Loopback
+	raw              codecs.NullCodec
+	running          bool
 }
 
 func NewFilePlayer(path string, device string, loop bool) (*FilePlayer, error) {

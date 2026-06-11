@@ -67,7 +67,7 @@ func TestCodec2_HeaderEncoding(t *testing.T) {
 	t.Parallel()
 	// Test that mode headers match Python
 	testCases := []struct {
-		mode  int
+		mode   int
 		header byte
 	}{
 		{MODE_700C, 0x00},
@@ -93,7 +93,7 @@ func TestCodec2_HeaderEncoding(t *testing.T) {
 func TestCodec2_SetMode(t *testing.T) {
 	t.Parallel()
 	c, _ := NewCodec2(MODE_2400)
-	
+
 	err := c.SetMode(MODE_3200)
 	if err != nil {
 		t.Fatalf("SetMode failed: %v", err)
@@ -109,10 +109,10 @@ func TestCodec2_SetMode(t *testing.T) {
 func TestCodec2_Encode_ReturnsModeHeader(t *testing.T) {
 	t.Parallel()
 	c, _ := NewCodec2(MODE_2400)
-	
+
 	frame := [][]float32{{0.1}, {0.2}, {0.3}}
 	encoded := c.Encode(frame)
-	
+
 	// Should return just the mode header (stub implementation)
 	if len(encoded) != 1 {
 		t.Errorf("Expected 1 byte (mode header), got %d", len(encoded))
@@ -125,11 +125,11 @@ func TestCodec2_Encode_ReturnsModeHeader(t *testing.T) {
 func TestCodec2_Decode_HeaderSwitch(t *testing.T) {
 	t.Parallel()
 	c, _ := NewCodec2(MODE_2400)
-	
+
 	// Decode with different mode header
 	data := []byte{0x06, 0x00, 0x01} // 3200 mode header + dummy data
 	_ = c.Decode(data, 1)
-	
+
 	// Should have switched mode
 	if c.mode != MODE_3200 {
 		t.Errorf("Mode not switched: got %d, want %d", c.mode, MODE_3200)
@@ -139,7 +139,7 @@ func TestCodec2_Decode_HeaderSwitch(t *testing.T) {
 func TestCodec2_FrameQuantum(t *testing.T) {
 	t.Parallel()
 	c, _ := NewCodec2(MODE_2400)
-	
+
 	if c.FrameQuantumMs() != FRAME_QUANTA_MS {
 		t.Errorf("FrameQuantumMs: got %f, want %f", c.FrameQuantumMs(), FRAME_QUANTA_MS)
 	}
@@ -148,7 +148,7 @@ func TestCodec2_FrameQuantum(t *testing.T) {
 func TestCodec2_ValidFrameMs(t *testing.T) {
 	t.Parallel()
 	c, _ := NewCodec2(MODE_2400)
-	
+
 	valid := c.ValidFrameMs()
 	if len(valid) != 1 || valid[0] != FRAME_QUANTA_MS {
 		t.Errorf("ValidFrameMs: got %v, want [%f]", valid, FRAME_QUANTA_MS)

@@ -471,12 +471,12 @@ func TestUnpackData_InvalidInput(t *testing.T) {
 
 type mockNetworkSink struct {
 	handleFrameFunc func(frame [][]float32, fromSource sources.Source) error
-	canReceiveVal  bool
+	canReceiveVal   bool
 }
 
-func (m *mockNetworkSink) Start() error                        { return nil }
-func (m *mockNetworkSink) Stop() error                         { return nil }
-func (m *mockNetworkSink) Running() bool                       { return true }
+func (m *mockNetworkSink) Start() error  { return nil }
+func (m *mockNetworkSink) Stop() error   { return nil }
+func (m *mockNetworkSink) Running() bool { return true }
 func (m *mockNetworkSink) HandleFrame(frame [][]float32, fromSource sources.Source) error {
 	if m.handleFrameFunc != nil {
 		return m.handleFrameFunc(frame, fromSource)

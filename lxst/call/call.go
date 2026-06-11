@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	ErrNoActiveCall     = errors.New("no active call")
-	ErrCallbackNotFunc  = errors.New("callback is not callable")
+	ErrNoActiveCall    = errors.New("no active call")
+	ErrCallbackNotFunc = errors.New("callback is not callable")
 )
 
 type IncomingCallCallback func(link any)
@@ -24,8 +24,8 @@ type CallEndpoint struct {
 	destination          any
 	activeCall           any
 	autoAnswer           bool
-	receivePipeline     any
-	transmitPipeline    any
+	receivePipeline      any
+	transmitPipeline     any
 	incomingCallCallback IncomingCallCallback
 }
 

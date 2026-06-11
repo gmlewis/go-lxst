@@ -58,16 +58,16 @@ func NewNullBackend(sampleRate, channels, bitDepth int) *NullBackend {
 	}
 }
 
-func (n *NullBackend) SampleRate() int      { return n.sampleRate }
-func (n *NullBackend) Channels() int        { return n.channels }
-func (n *NullBackend) BitDepth() int        { return n.bitDepth }
-func (n *NullBackend) AllMicrophones() []string    { return []string{"null-mic"} }
-func (n *NullBackend) DefaultMicrophone() string   { return "null-mic" }
-func (n *NullBackend) AllSpeakers() []string       { return []string{"null-speaker"} }
-func (n *NullBackend) DefaultSpeaker() string      { return "null-speaker" }
-func (n *NullBackend) Flush() error                { return nil }
-func (n *NullBackend) ReleaseRecorder() error      { return nil }
-func (n *NullBackend) ReleasePlayer() error        { return nil }
+func (n *NullBackend) SampleRate() int           { return n.sampleRate }
+func (n *NullBackend) Channels() int             { return n.channels }
+func (n *NullBackend) BitDepth() int             { return n.bitDepth }
+func (n *NullBackend) AllMicrophones() []string  { return []string{"null-mic"} }
+func (n *NullBackend) DefaultMicrophone() string { return "null-mic" }
+func (n *NullBackend) AllSpeakers() []string     { return []string{"null-speaker"} }
+func (n *NullBackend) DefaultSpeaker() string    { return "null-speaker" }
+func (n *NullBackend) Flush() error              { return nil }
+func (n *NullBackend) ReleaseRecorder() error    { return nil }
+func (n *NullBackend) ReleasePlayer() error      { return nil }
 
 func (n *NullBackend) GetRecorder(samplesPerFrame int) (AudioRecorder, error) {
 	return &NullRecorder{samplesPerFrame: samplesPerFrame}, nil
@@ -95,5 +95,5 @@ func (n *NullRecorder) Close() error { return nil }
 type NullPlayer struct{}
 
 func (n *NullPlayer) Play(frame [][]float32) error { return nil }
-func (n *NullPlayer) Close() error               { return nil }
-func (n *NullPlayer) EnableLowLatency() error    { return nil }
+func (n *NullPlayer) Close() error                 { return nil }
+func (n *NullPlayer) EnableLowLatency() error      { return nil }
