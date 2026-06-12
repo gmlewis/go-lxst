@@ -3,7 +3,10 @@
 // Use of this source code is governed by the Reticulum License
 // that can be found in the LICENSE file.
 
-// Package players provides audio file playback primitives.
+// Package players provides audio file playback primitives for the LXST library.
+// It includes the FilePlayer type which reads audio from file sources
+// (Opus, FLAC, MP3, Vorbis) and streams decoded frames to a connected
+// sink with configurable repeat and timing modes.
 package players
 
 import (

@@ -3,7 +3,11 @@
 // Use of this source code is governed by the Reticulum License
 // that can be found in the LICENSE file.
 
-// Package sinks provides audio sink implementations.
+// Package sinks provides audio sink implementations for the LXST library.
+// Sinks are endpoints that consume audio frames — such as LineSink for
+// speaker playback and OpusFileSink for writing to Opus-encoded audio files.
+// Each sink implements the Sink interface and the LocalSource interface
+// for pipeline integration.
 package sinks
 
 import (

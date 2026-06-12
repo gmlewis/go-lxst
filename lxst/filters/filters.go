@@ -24,6 +24,8 @@ type HighPass struct {
 	filterStates []float32
 	lastInputs   []float32
 	alpha        float32
+	output       [][]float32
+	outputFlat   []float32
 }
 
 // NewHighPass creates a new HighPass filter with the given cutoff frequency.
@@ -38,30 +40,12 @@ func (h *HighPass) HandleFrame(frame [][]float32, samplerate int) [][]float32 {
 		return frame
 	}
 
-	// Convert to 2D if needed
-	frame2d := frame
-	if len(frame) > 0 && len(frame[0]) == 0 {
-		return frame
-	}
-	if len(frame) > 0 && len(frame[0]) == 1 && len(frame[0]) != 1 {
-		// Already 2D
-	} else if len(frame) > 0 && len(frame[0]) == 0 {
-		return frame
-	}
-
-	// Check if 1D input that needs reshaping
-	if len(frame) > 0 && len(frame[0]) == 1 && len(frame) == 1 {
-		// Single sample, multi-channel
-		frame2d = frame
-	}
-
-	samples := len(frame2d)
+	samples := len(frame)
 	if samples == 0 {
 		return frame
 	}
-	channels := len(frame2d[0])
+	channels := len(frame[0])
 
-	// Recalculate alpha if samplerate changed
 	if samplerate != h.samplerate {
 		h.samplerate = samplerate
 		dt := 1.0 / float64(h.samplerate)
@@ -69,39 +53,47 @@ func (h *HighPass) HandleFrame(frame [][]float32, samplerate int) [][]float32 {
 		h.alpha = float32(rc / (rc + dt))
 	}
 
-	// Initialize state arrays if needed
 	if h.filterStates == nil || h.channels != channels {
 		h.channels = channels
 		h.filterStates = make([]float32, channels)
 		h.lastInputs = make([]float32, channels)
 	}
 
-	output := make([][]float32, samples)
-	for i := range output {
-		output[i] = make([]float32, channels)
+	// Reuse output buffer
+	if cap(h.outputFlat) < samples*channels {
+		h.outputFlat = make([]float32, samples*channels)
+		h.output = make([][]float32, samples)
+		for i := range h.output {
+			h.output[i] = h.outputFlat[i*channels : (i+1)*channels]
+		}
+	} else {
+		h.output = h.output[:samples]
+		for i := 0; i < samples; i++ {
+			h.output[i] = h.outputFlat[i*channels : (i+1)*channels]
+		}
 	}
 
 	// First sample
 	for ch := 0; ch < channels; ch++ {
-		inputDiff := frame2d[0][ch] - h.lastInputs[ch]
-		output[0][ch] = h.alpha * (h.filterStates[ch] + inputDiff)
+		inputDiff := frame[0][ch] - h.lastInputs[ch]
+		h.output[0][ch] = h.alpha * (h.filterStates[ch] + inputDiff)
 	}
 
 	// Remaining samples
 	for i := 1; i < samples; i++ {
 		for ch := 0; ch < channels; ch++ {
-			inputDiff := frame2d[i][ch] - frame2d[i-1][ch]
-			output[i][ch] = h.alpha * (output[i-1][ch] + inputDiff)
+			inputDiff := frame[i][ch] - frame[i-1][ch]
+			h.output[i][ch] = h.alpha * (h.output[i-1][ch] + inputDiff)
 		}
 	}
 
 	// Update states
 	for ch := 0; ch < channels; ch++ {
-		h.filterStates[ch] = output[samples-1][ch]
-		h.lastInputs[ch] = frame2d[samples-1][ch]
+		h.filterStates[ch] = h.output[samples-1][ch]
+		h.lastInputs[ch] = frame[samples-1][ch]
 	}
 
-	return output
+	return h.output
 }
 
 // LowPass implements a low-pass filter.
@@ -111,6 +103,8 @@ type LowPass struct {
 	channels     int
 	filterStates []float32
 	alpha        float32
+	output       [][]float32
+	outputFlat   []float32
 }
 
 // NewLowPass creates a new LowPass filter with the given cutoff frequency.
@@ -131,7 +125,6 @@ func (l *LowPass) HandleFrame(frame [][]float32, samplerate int) [][]float32 {
 	}
 	channels := len(frame[0])
 
-	// Recalculate alpha if samplerate changed
 	if samplerate != l.samplerate {
 		l.samplerate = samplerate
 		dt := 1.0 / float64(l.samplerate)
@@ -139,36 +132,44 @@ func (l *LowPass) HandleFrame(frame [][]float32, samplerate int) [][]float32 {
 		l.alpha = float32(dt / (rc + dt))
 	}
 
-	// Initialize state array if needed
 	if l.filterStates == nil || l.channels != channels {
 		l.channels = channels
 		l.filterStates = make([]float32, channels)
 	}
 
-	output := make([][]float32, samples)
-	for i := range output {
-		output[i] = make([]float32, channels)
+	// Reuse output buffer
+	if cap(l.outputFlat) < samples*channels {
+		l.outputFlat = make([]float32, samples*channels)
+		l.output = make([][]float32, samples)
+		for i := range l.output {
+			l.output[i] = l.outputFlat[i*channels : (i+1)*channels]
+		}
+	} else {
+		l.output = l.output[:samples]
+		for i := 0; i < samples; i++ {
+			l.output[i] = l.outputFlat[i*channels : (i+1)*channels]
+		}
 	}
 
 	// First sample
 	oneMinusAlpha := 1.0 - float64(l.alpha)
 	for ch := 0; ch < channels; ch++ {
-		output[0][ch] = l.alpha*frame[0][ch] + float32(oneMinusAlpha)*l.filterStates[ch]
+		l.output[0][ch] = l.alpha*frame[0][ch] + float32(oneMinusAlpha)*l.filterStates[ch]
 	}
 
 	// Remaining samples
 	for i := 1; i < samples; i++ {
 		for ch := 0; ch < channels; ch++ {
-			output[i][ch] = l.alpha*frame[i][ch] + float32(oneMinusAlpha)*output[i-1][ch]
+			l.output[i][ch] = l.alpha*frame[i][ch] + float32(oneMinusAlpha)*l.output[i-1][ch]
 		}
 	}
 
 	// Update states
 	for ch := 0; ch < channels; ch++ {
-		l.filterStates[ch] = output[samples-1][ch]
+		l.filterStates[ch] = l.output[samples-1][ch]
 	}
 
-	return output
+	return l.output
 }
 
 // BandPass implements a band-pass filter (cascade of HighPass + LowPass).
@@ -213,10 +214,12 @@ type AGC struct {
 	channels       int
 	currentGainLin []float32
 	holdCounter    int
-	blockTarget    float64
+	blockTargetS   float64
 	attackCoeff    float64
 	releaseCoeff   float64
 	holdSamples    int
+	output         [][]float32
+	outputFlat     []float32
 }
 
 // NewAGC creates a new AGC with the given parameters.
@@ -232,8 +235,8 @@ func NewAGC(targetLevel, maxGainDB, attackTime, releaseTime, holdTime float64) *
 		attackTime:   attackTime,
 		releaseTime:  releaseTime,
 		holdTime:     holdTime,
-		triggerLevel: 0.003,
-		blockTarget:  0.01,
+		triggerLevel:  0.003,
+		blockTargetS:  0.01,
 	}
 }
 
@@ -264,39 +267,65 @@ func (a *AGC) HandleFrame(frame [][]float32, samplerate int) [][]float32 {
 		a.holdCounter = 0
 	}
 
-	output := make([][]float32, samples)
-	for i := range output {
-		output[i] = make([]float32, channels)
+	// Reuse output buffer, copy input
+	if cap(a.outputFlat) < samples*channels {
+		a.outputFlat = make([]float32, samples*channels)
+		a.output = make([][]float32, samples)
+		for i := range a.output {
+			a.output[i] = a.outputFlat[i*channels : (i+1)*channels]
+		}
+	} else {
+		a.output = a.output[:samples]
+		for i := 0; i < samples; i++ {
+			a.output[i] = a.outputFlat[i*channels : (i+1)*channels]
+		}
+	}
+	for i := 0; i < samples; i++ {
+		for ch := 0; ch < channels; ch++ {
+			a.output[i][ch] = frame[i][ch]
+		}
 	}
 
-	// Process in blocks (blockTarget is target block duration in seconds)
-	blockSize := max(1, int(float64(samples)/(a.blockTarget*float64(samplerate))))
-	if blockSize > samples {
-		blockSize = samples
+	// Process in blocks (matching C and Python implementations)
+	numBlocks := max(1, int(float64(samples)/float64(samplerate)/a.blockTargetS))
+	blockSize := samples / numBlocks
+	if blockSize < 1 {
+		blockSize = 1
 	}
 
-	for i := 0; i < samples; i += blockSize {
-		blockEnd := min(i+blockSize, samples)
-		blockSamples := blockEnd - i
+	for block := 0; block < numBlocks; block++ {
+		blockStart := block * blockSize
+		blockEnd := (block + 1) * blockSize
+		if block == numBlocks-1 {
+			blockEnd = samples
+		}
+		if blockEnd > samples {
+			blockEnd = samples
+		}
+
+		blockSamples := blockEnd - blockStart
+		if blockSamples <= 0 {
+			continue
+		}
 
 		for ch := 0; ch < channels; ch++ {
-			// Calculate RMS for this block
+			// Calculate RMS for this block (from output, which starts as input copy)
 			sumSquares := 0.0
-			for j := i; j < blockEnd; j++ {
-				val := frame[j][ch]
+			for j := blockStart; j < blockEnd; j++ {
+				val := a.output[j][ch]
 				sumSquares += float64(val * val)
 			}
 			rms := math.Sqrt(sumSquares / float64(blockSamples))
 
 			var targetGain float32
-			if rms > 1e-9 && rms > a.triggerLevel {
+			if rms > 1e-9 && rms > float64(a.triggerLevel) {
 				targetGain = float32(math.Min(a.maxGainLin(), a.targetLin()/math.Max(rms, 1e-9)))
 			} else {
 				targetGain = a.currentGainLin[ch]
 			}
 
 			// Smooth gain
-			if targetGain < a.currentGainLin[ch] {
+			if float64(targetGain) < float64(a.currentGainLin[ch]) {
 				a.currentGainLin[ch] = float32(a.attackCoeff*float64(targetGain) + (1-a.attackCoeff)*float64(a.currentGainLin[ch]))
 				a.holdCounter = a.holdSamples
 			} else {
@@ -308,8 +337,8 @@ func (a *AGC) HandleFrame(frame [][]float32, samplerate int) [][]float32 {
 			}
 
 			// Apply gain to block
-			for j := i; j < blockEnd; j++ {
-				output[j][ch] = frame[j][ch] * a.currentGainLin[ch]
+			for j := blockStart; j < blockEnd; j++ {
+				a.output[j][ch] *= a.currentGainLin[ch]
 			}
 		}
 	}
@@ -319,7 +348,7 @@ func (a *AGC) HandleFrame(frame [][]float32, samplerate int) [][]float32 {
 	for ch := 0; ch < channels; ch++ {
 		peak := 0.0
 		for i := 0; i < samples; i++ {
-			absVal := math.Abs(float64(output[i][ch]))
+			absVal := math.Abs(float64(a.output[i][ch]))
 			if absVal > peak {
 				peak = absVal
 			}
@@ -327,12 +356,12 @@ func (a *AGC) HandleFrame(frame [][]float32, samplerate int) [][]float32 {
 		if peak > peakLimit {
 			scale := peakLimit / peak
 			for i := 0; i < samples; i++ {
-				output[i][ch] *= float32(scale)
+				a.output[i][ch] *= float32(scale)
 			}
 		}
 	}
 
-	return output
+	return a.output
 }
 
 func (a *AGC) calculateCoefficients() {

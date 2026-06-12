@@ -3,7 +3,11 @@
 // Use of this source code is governed by the Reticulum License
 // that can be found in the LICENSE file.
 
-// Package sources provides audio source implementations.
+// Package sources provides audio source implementations for the LXST library.
+// Sources produce audio frames — including LineSource for microphone input,
+// OpusFileSource for reading Opus-encoded audio files, and Loopback for
+// connecting pipeline outputs back as inputs. Each source implements the
+// LocalSource interface for pipeline integration with configurable codecs.
 package sources
 
 import (

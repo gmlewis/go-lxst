@@ -3,7 +3,11 @@
 // Use of this source code is governed by the Reticulum License
 // that can be found in the LICENSE file.
 
-// Package codecs provides audio codec interfaces and implementations.
+// Package codecs provides audio codec interfaces and implementations for the
+// LXST library. It defines the Codec interface that all codecs implement,
+// along with shared utilities like Resample and ResampleBytes for sample
+// rate conversion. Supported codecs include Opus, Codec2, Raw PCM, FLAC,
+// MP3, and Vorbis.
 package codecs
 
 import (

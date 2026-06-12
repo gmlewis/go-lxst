@@ -3,7 +3,10 @@
 // Use of this source code is governed by the Reticulum License
 // that can be found in the LICENSE file.
 
-// Package pipeline provides audio pipeline management.
+// Package pipeline provides audio pipeline management for the LXST library.
+// A Pipeline connects a LocalSource (such as ToneSource or LineSource)
+// through a Codec to a Sink (such as LineSink or OpusFileSink), managing
+// the full audio processing chain from capture to output.
 package pipeline
 
 import (

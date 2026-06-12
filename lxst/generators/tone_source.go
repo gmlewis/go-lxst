@@ -3,7 +3,10 @@
 // Use of this source code is governed by the Reticulum License
 // that can be found in the LICENSE file.
 
-// Package generators provides audio signal generators.
+// Package generators provides audio signal generators for the LXST library.
+// It includes ToneSource for producing sine wave tones with configurable
+// frequency, gain, and easing parameters, supporting both mono and stereo
+// output with optional codec constraints for frame size and sample rate.
 package generators
 
 import (

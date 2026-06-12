@@ -3,7 +3,11 @@
 // Use of this source code is governed by the Reticulum License
 // that can be found in the LICENSE file.
 
-// Package telephony provides telephony primitives for audio calls over Reticulum.
+// Package telephony provides telephony primitives for audio calls over
+// Reticulum. It implements tone generation for DTMF and call signaling
+// (ringback, busy, ringtones), dialing state machines, and audio transport
+// management for establishing and maintaining voice connections between
+// Reticulum peers.
 package telephony
 
 import (

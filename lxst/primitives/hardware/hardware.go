@@ -3,7 +3,11 @@
 // Use of this source code is governed by the Reticulum License
 // that can be found in the LICENSE file.
 
-// Package hardware provides hardware interfaces (keypads, displays) for telephony applications.
+// Package hardware provides hardware interface abstractions for telephony
+// applications, including keypad input handling (GPIO and matrix keypads)
+// and I2C LCD display output. It defines the Keypad and Display interfaces
+// along with mock implementations suitable for testing without physical
+// hardware.
 package hardware
 
 import (

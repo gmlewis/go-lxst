@@ -3,6 +3,11 @@
 // Use of this source code is governed by the Reticulum License
 // that can be found in the LICENSE file.
 
+// Package network provides audio streaming over Reticulum networks.
+// It implements the NetworkSource and NetworkSink types for sending
+// and receiving audio frames over Reticulum links, with support for
+// configurable codec selection, link management, and automatic
+// reconnection handling.
 package network
 
 import (

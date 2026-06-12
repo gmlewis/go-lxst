@@ -3,6 +3,11 @@
 // Use of this source code is governed by the Reticulum License
 // that can be found in the LICENSE file.
 
+// Package opus implements the Opus audio codec for the LXST library.
+// It provides Opus encoding and decoding with multiple profile presets
+// (voice, music, low-bitrate) for different use cases. When CGO is
+// enabled, it wraps libopus for high-performance encoding/decoding.
+// When CGO is disabled, a pure-Go stub is provided for codec metadata.
 package opus
 
 import (

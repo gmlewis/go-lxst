@@ -3,7 +3,11 @@
 // Use of this source code is governed by the Reticulum License
 // that can be found in the LICENSE file.
 
-// Package mixer provides audio mixing functionality.
+// Package mixer provides audio mixing functionality for the LXST library.
+// The Mixer combines multiple audio sources into a single output stream,
+// applying per-source gain and optional codec encoding. It supports
+// configurable frame timing, codec constraints, and graceful start/stop
+// with configurable buffer sizes per source.
 package mixer
 
 import (

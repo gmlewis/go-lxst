@@ -3,7 +3,11 @@
 // Use of this source code is governed by the Reticulum License
 // that can be found in the LICENSE file.
 
-// Package recorders provides audio file recording primitives.
+// Package recorders provides audio file recording primitives for the LXST
+// library. It includes the FileRecorder type which captures audio frames
+// from a source and writes them to disk in the configured codec format,
+// supporting Opus and Raw PCM output with configurable sample rates and
+// channel counts.
 package recorders
 
 import (

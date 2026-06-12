@@ -3,7 +3,10 @@
 // Use of this source code is governed by the Reticulum License
 // that can be found in the LICENSE file.
 
-// Package raw implements the Raw PCM codec with configurable bit depths.
+// Package raw implements the Raw PCM codec for the LXST library with
+// configurable bit depths (8, 16, 24, 32) and channel counts. It provides
+// lossless encode/decode with optional sample rate conversion and dithering
+// for bit depth reduction, suitable for testing and raw audio I/O.
 package raw
 
 import (

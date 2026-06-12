@@ -3,7 +3,10 @@
 // Use of this source code is governed by the Reticulum License
 // that can be found in the LICENSE file.
 
-// Package call provides telephony call endpoint functionality.
+// Package call provides telephony call endpoint functionality for the LXST
+// library. It manages the lifecycle of audio calls including setup, teardown,
+// and state tracking between two Reticulum endpoints using LXMF messaging
+// for signaling and Reticulum links for audio transport.
 package call
 
 import (

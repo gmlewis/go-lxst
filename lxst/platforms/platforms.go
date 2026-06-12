@@ -3,7 +3,11 @@
 // Use of this source code is governed by the Reticulum License
 // that can be found in the LICENSE file.
 
-// Package platforms provides platform-specific audio I/O backends.
+// Package platforms provides platform-specific audio I/O backends for the
+// LXST library. It abstracts audio playback and recording across different
+// platforms using oto (pure-Go, CGO_ENABLED=0 compatible) as the primary
+// backend, with optional malgo support when CGO is available. It includes
+// device enumeration and selection capabilities for microphones and speakers.
 package platforms
 
 import (
