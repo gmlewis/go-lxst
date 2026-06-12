@@ -38,6 +38,19 @@ func BenchmarkNullCodec_Decode(b *testing.B) {
 	}
 }
 
+func BenchmarkNullCodecBuffered_Decode(b *testing.B) {
+	codec := &NullCodecBuffered{}
+	frame := make([][]float32, 160)
+	for i := range frame {
+		frame[i] = []float32{float32(math.Sin(float64(i) * 0.1)) * 0.5}
+	}
+	data := (&NullCodec{}).Encode(frame)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		codec.Decode(data, 1)
+	}
+}
+
 func BenchmarkOpusVoiceLow_Encode(b *testing.B) {
 	codec, err := opuspkg.NewOpus(opuspkg.PROFILE_VOICE_LOW)
 	if err != nil {

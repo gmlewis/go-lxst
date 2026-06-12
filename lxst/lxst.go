@@ -31,6 +31,7 @@ import (
 
 // Codecs
 type Codec = codecs.Codec
+type NullCodecBuffered = codecs.NullCodecBuffered
 
 // Opus codec
 var (

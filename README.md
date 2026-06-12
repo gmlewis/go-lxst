@@ -4,12 +4,12 @@ A complete Go port of the [LXST](https://github.com/markqvist/LXST) real-time au
 
 ## Features
 
-- **Pure Go** — no CGO required for the default build (`CGO_ENABLED=0`)
+- **Pure Go** — no CGO required; builds with `go build ./...`
 - **Cross-platform** — works on Linux, macOS, Windows, and Android
 - **Audio codecs** — Opus, Codec2, Raw PCM, FLAC, MP3, Vorbis
 - **Real-time filters** — HighPass, LowPass, BandPass, AGC (parity-verified against C reference)
 - **Signal processing** — RMS, Peak, VAD, Normalize, Resample, Channel conversion
-- **Audio I/O** — oto backend (pure Go) with optional malgo backend (CGO)
+- **Audio I/O** — oto backend (pure Go); optional malgo backend via CGO
 - **Pipeline architecture** — Source → Filter → Codec → Sink with staged routing
 - **Audio mixing** — N-source mixer with per-source gain control
 - **Tone generation** — Configurable frequency, gain, and easing
@@ -102,13 +102,13 @@ func main() {
 | `lxst/sources` | LineSource, OpusFileSource, Loopback |
 | `lxst/sinks` | LineSink, OpusFileSink |
 | `lxst/codecs` | Codec interface, Resample utilities |
-| `lxst/codecs/opus` | Opus codec (CGO required for encoding) |
+| `lxst/codecs/opus` | Opus codec (CGO for encoding, pure-Go stub for metadata) |
 | `lxst/codecs/raw` | Raw PCM codec |
-| `lxst/codecs/codec2` | Codec2 codec (stub, requires CGO) |
+| `lxst/codecs/codec2` | Codec2 codec (stub, CGO needed for full impl) |
 | `lxst/codecs/flac` | FLAC file decoder (pure Go) |
 | `lxst/codecs/mp3` | MP3 file decoder (pure Go) |
 | `lxst/codecs/vorbis` | Vorbis file decoder (pure Go) |
-| `lxst/platforms` | oto/malgo audio backends |
+| `lxst/platforms` | oto audio backend (malgo available via CGO) |
 | `lxst/sounds` | Embedded audio resources (ringer, soft) |
 | `lxst/call` | Telephony call endpoint management |
 | `lxst/network` | Reticulum audio streaming |
@@ -120,8 +120,8 @@ func main() {
 ## Testing
 
 ```bash
-# Run all tests (CGO_ENABLED=0 compatible)
-CGO_ENABLED=0 go test ./...
+# Run all tests
+go test ./...
 
 # Run integration/parity tests
 go test -tags=integration ./...

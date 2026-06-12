@@ -32,10 +32,12 @@ var BITDEPTHS = []string{"float16", "float32", "float64", "float128"}
 
 // Raw implements the Codec interface for raw PCM with configurable bit depth.
 type Raw struct {
-	bitdepth int
-	channels int
-	dtype    string
-	headerBD int
+	bitdepth   int
+	channels   int
+	dtype      string
+	headerBD   int
+	decBuf    []float32
+	decFrames [][]float32
 }
 
 // NewRaw creates a new Raw codec with optional channels and bitdepth.
@@ -144,25 +146,35 @@ func (r *Raw) Decode(data []byte, channelsHint int) [][]float32 {
 		return [][]float32{}
 	}
 
-	result := make([][]float32, samples)
+	totalFloats := samples * frameChannels
+	if cap(r.decBuf) < totalFloats {
+		r.decBuf = make([]float32, totalFloats)
+	} else {
+		r.decBuf = r.decBuf[:totalFloats]
+	}
+
 	idx := 0
-	for s := 0; s < samples; s++ {
-		result[s] = make([]float32, frameChannels)
-		for c := 0; c < frameChannels; c++ {
-			if idx+3 < len(sampleData) {
-				result[s][c] = math.Float32frombits(binary.LittleEndian.Uint32(sampleData[idx : idx+4]))
-				idx += 4
-			}
+	for i := 0; i < totalFloats; i++ {
+		if idx+3 < len(sampleData) {
+			r.decBuf[i] = math.Float32frombits(binary.LittleEndian.Uint32(sampleData[idx : idx+4]))
+			idx += 4
 		}
 	}
 
-	// Update channels if not set
+	if cap(r.decFrames) < samples {
+		r.decFrames = make([][]float32, samples)
+	}
+	r.decFrames = r.decFrames[:samples]
+	for s := 0; s < samples; s++ {
+		r.decFrames[s] = r.decBuf[s*frameChannels : (s+1)*frameChannels]
+	}
+
 	if r.channels == 0 {
 		r.channels = frameChannels
 		r.updateDtype()
 	}
 
-	return result
+	return r.decFrames
 }
 
 func (r *Raw) PreferredSampleRate() int { return 0 }
