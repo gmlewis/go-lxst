@@ -19,6 +19,56 @@ import (
 	"github.com/gmlewis/go-lxst/lxst/sources"
 )
 
+// framePool is a package-level pool for reusable frame buffers.
+// It reduces allocations in the hot path by recycling frames
+// that are no longer in use. The pool is keyed by frame size
+// to handle different sample rates and channel counts.
+var framePool = sync.Pool{
+	New: func() any {
+		return &framePoolEntry{}
+	},
+}
+
+type framePoolEntry struct {
+	frame [][]float32
+}
+
+// getFrame retrieves a zeroed frame from the pool with the specified
+// dimensions. If no suitable frame is available, a new one is allocated.
+func getFrame(rows, cols int) [][]float32 {
+	entry := framePool.Get().(*framePoolEntry)
+	if cap(entry.frame) >= rows {
+		entry.frame = entry.frame[:rows]
+	} else {
+		entry.frame = make([][]float32, rows)
+	}
+	for i := range entry.frame {
+		if cap(entry.frame[i]) >= cols {
+			entry.frame[i] = entry.frame[i][:cols]
+		} else {
+			entry.frame[i] = make([]float32, cols)
+		}
+		for j := range entry.frame[i] {
+			entry.frame[i][j] = 0
+		}
+	}
+	frame := entry.frame
+	entry.frame = nil
+	framePool.Put(entry)
+	return frame
+}
+
+// putFrame returns a frame to the pool for reuse.
+// The frame should not be used after calling putFrame.
+func putFrame(frame [][]float32) {
+	if frame == nil {
+		return
+	}
+	entry := framePool.Get().(*framePoolEntry)
+	entry.frame = frame
+	framePool.Put(entry)
+}
+
 const (
 	MixerMaxFrames = 8
 )
@@ -273,9 +323,8 @@ func (m *Mixer) mixerJob() {
 					g := m.mixingGain()
 
 					if sourceCount == 0 {
-						mixedFrame = make([][]float32, len(nextFrame))
+						mixedFrame = getFrame(len(nextFrame), len(nextFrame[0]))
 						for i := range nextFrame {
-							mixedFrame[i] = make([]float32, len(nextFrame[i]))
 							for j := range nextFrame[i] {
 								mixedFrame[i][j] = nextFrame[i][j] * float32(g)
 							}
@@ -321,6 +370,8 @@ func (m *Mixer) mixerJob() {
 				} else if sink != nil {
 					_ = sink.HandleFrame(mixedFrame, m)
 				}
+
+				putFrame(mixedFrame)
 			} else {
 				time.Sleep(time.Duration(m.frameTime * float64(time.Second) * 0.1))
 			}
