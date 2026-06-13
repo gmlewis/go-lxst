@@ -111,7 +111,7 @@ func (fr *FileRecorder) Stop() error {
 		for fr.sink.FramesWaiting() > 0 {
 			time.Sleep(100 * time.Millisecond)
 		}
-		fr.sink.Stop()
+		_ = fr.sink.Stop()
 	}
 
 	return nil

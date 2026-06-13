@@ -72,7 +72,9 @@ func (ap *AudioPipeline) SetupTransmit(sendFunc func(data []byte) error, failure
 	ap.packetizer.SetCodec(ap.transmitCodec)
 
 	ap.transmitMixer = mixer.NewMixer(ap.targetFrameMs, ap.samplerate, nil, nil, ap.transmitGain)
-	ap.transmitMixer.SetCodec(ap.transmitCodec)
+	if err := ap.transmitMixer.SetCodec(ap.transmitCodec); err != nil {
+		return fmt.Errorf("setting transmit codec: %w", err)
+	}
 
 	ap.audioInput = sources.NewLineSource(
 		ap.micDevice,

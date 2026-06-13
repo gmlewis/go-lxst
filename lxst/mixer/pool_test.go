@@ -97,22 +97,22 @@ func BenchmarkMixer_MixingWithPool(b *testing.B) {
 
 	frame := make([][]float32, 1920)
 	for i := range frame {
-		frame[i] = []float32{float32(math.Sin(float64(i) * 0.05)) * 0.5, float32(math.Cos(float64(i) * 0.05)) * 0.3}
+		frame[i] = []float32{float32(math.Sin(float64(i)*0.05)) * 0.5, float32(math.Cos(float64(i)*0.05)) * 0.3}
 	}
 	src1 := &benchSource{frame: frame}
 	src2 := &benchSource{frame: frame}
 
-	m.HandleFrame(frame, src1)
-	m.HandleFrame(frame, src2)
+	_ = m.HandleFrame(frame, src1)
+	_ = m.HandleFrame(frame, src2)
 
 	_ = m.Start()
-	defer m.Stop()
+	defer func() { _ = m.Stop() }()
 
 	b.ResetTimer()
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		m.HandleFrame(frame, src1)
-		m.HandleFrame(frame, src2)
+		_ = m.HandleFrame(frame, src1)
+		_ = m.HandleFrame(frame, src2)
 		time.Sleep(time.Microsecond)
 	}
 }

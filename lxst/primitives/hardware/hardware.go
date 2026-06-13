@@ -234,17 +234,17 @@ func (k *Keypad4x4) run() {
 func (k *Keypad4x4) TestSimulatePress(key string) {
 	k.mu.Lock()
 	k.testPressed[key] = true
+	k.mu.Unlock()
 	// Trigger immediate scan for testing
 	k.scanLocked()
-	k.mu.Unlock()
 }
 
 func (k *Keypad4x4) TestSimulateRelease(key string) {
 	k.mu.Lock()
 	k.testPressed[key] = false
+	k.mu.Unlock()
 	// Trigger immediate scan for testing
 	k.scanLocked()
-	k.mu.Unlock()
 }
 
 func (k *Keypad4x4) scan() {
@@ -259,8 +259,34 @@ func (k *Keypad4x4) scan() {
 		}
 	}
 
-	// Real hardware scanning would go here
-	// For now, we just process test keys
+	// Hardware scanning using GPIO driver
+	driver := GetGPIODriver()
+	if driver != nil && len(k.testPressed) == 0 {
+		for row := 0; row < k.rows; row++ {
+			// Set row pin to output HIGH
+			_ = driver.Setup(k.rowPins[row], GPIOModeOutput)
+			_ = driver.SetOutput(k.rowPins[row], true)
+
+			// Read column pins
+			for col := 0; col < k.cols; col++ {
+				_ = driver.Setup(k.colPins[col], GPIOModeInput)
+				if high, err := driver.ReadInput(k.colPins[col]); err == nil && high {
+					activeKeys[k.keyMap[row][col]] = true
+				}
+			}
+
+			// Set row pin back to LOW
+			_ = driver.SetOutput(k.rowPins[row], false)
+		}
+
+		// Check hook pin if enabled
+		if k.checkHook {
+			_ = driver.Setup(k.hookPin, GPIOModeInput)
+			if low, err := driver.ReadInput(k.hookPin); err == nil && !low {
+				activeKeys["hook"] = true
+			}
+		}
+	}
 
 	k.mu.Unlock()
 
@@ -284,6 +310,9 @@ func (k *Keypad4x4) scanLocked() {
 }
 
 func (k *Keypad4x4) handle(activeKeys map[string]bool) {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+
 	var events []KeyEvent
 	for key, isDown := range k.keyStates {
 		if !isDown && activeKeys[key] {

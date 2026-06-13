@@ -23,14 +23,14 @@ type PhoneConfig struct {
 
 // TelephoneConfig holds telephone-specific settings.
 type TelephoneConfig struct {
-	Ringtone        string
-	Speaker         string
-	Microphone      string
-	Ringer          string
-	AllowedCallers  string
-	AllowPhonebook  bool
-	AllowedList     []string
-	BlockedList     []string
+	Ringtone       string
+	Speaker        string
+	Microphone     string
+	Ringer         string
+	AllowedCallers string
+	AllowPhonebook bool
+	AllowedList    []string
+	BlockedList    []string
 }
 
 // PhonebookEntry represents a single phonebook entry.

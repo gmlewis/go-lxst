@@ -255,7 +255,9 @@ func (tep *TelephoneEndpoint) Call(identityHash string, timeout time.Duration) e
 	}
 
 	if !ts.HasPath(callDest.Hash) {
-		ts.RequestPath(callDest.Hash)
+		if err := ts.RequestPath(callDest.Hash); err != nil {
+			return fmt.Errorf("requesting path: %w", err)
+		}
 		deadline := time.Now().Add(timeout)
 		for !ts.HasPath(callDest.Hash) && time.Now().Before(deadline) {
 			time.Sleep(200 * time.Millisecond)

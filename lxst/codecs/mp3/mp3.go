@@ -42,7 +42,7 @@ const (
 func DecodeMP3(r io.ReadCloser) (int, int, [][]float32, error) {
 	decoder, err := mp3dec.NewDecoder(r)
 	if err != nil {
-		r.Close()
+		_ = r.Close()
 		return 0, 0, nil, err
 	}
 
@@ -299,10 +299,10 @@ func (src *MP3FileSource) ingestJob() {
 				if src.codec != nil {
 					encoded := src.codec.Encode(frame)
 					if len(encoded) > 0 && src.sink != nil && src.sink.CanReceive(src) {
-						src.sink.HandleFrame(frame, src)
+						_ = src.sink.HandleFrame(frame, src)
 					}
 				} else if src.sink != nil {
-					src.sink.HandleFrame(frame, src)
+					_ = src.sink.HandleFrame(frame, src)
 				}
 			}
 		} else {

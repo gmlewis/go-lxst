@@ -29,7 +29,7 @@ func NewFramePool(rows, cols int) *FramePool {
 				for i := range frame {
 					frame[i] = make([]float32, cols)
 				}
-				return frame
+				return &frame
 			},
 		},
 	}
@@ -38,19 +38,19 @@ func NewFramePool(rows, cols int) *FramePool {
 // Get retrieves a frame from the pool. The returned frame
 // is guaranteed to be zeroed and ready for use.
 func (fp *FramePool) Get() [][]float32 {
-	frame := fp.pool.Get().([][]float32)
-	for i := range frame {
-		for j := range frame[i] {
-			frame[i][j] = 0
+	frame := fp.pool.Get().(*[][]float32)
+	for i := range *frame {
+		for j := range (*frame)[i] {
+			(*frame)[i][j] = 0
 		}
 	}
-	return frame
+	return *frame
 }
 
 // Put returns a frame to the pool for reuse.
 // The frame should not be used after calling Put.
 func (fp *FramePool) Put(frame [][]float32) {
 	if cap(frame) >= fp.rows {
-		fp.pool.Put(frame[:fp.rows])
+		fp.pool.Put(&frame)
 	}
 }

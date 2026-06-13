@@ -17,7 +17,7 @@ func BenchmarkNullCodec_Encode(b *testing.B) {
 	codec := NullCodec{}
 	frame := make([][]float32, 160)
 	for i := range frame {
-		frame[i] = []float32{float32(math.Sin(float64(i) * 0.1)) * 0.5, float32(math.Cos(float64(i) * 0.1)) * 0.3}
+		frame[i] = []float32{float32(math.Sin(float64(i)*0.1)) * 0.5, float32(math.Cos(float64(i)*0.1)) * 0.3}
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -29,7 +29,7 @@ func BenchmarkNullCodec_Decode(b *testing.B) {
 	codec := NullCodec{}
 	frame := make([][]float32, 160)
 	for i := range frame {
-		frame[i] = []float32{float32(math.Sin(float64(i) * 0.1)) * 0.5}
+		frame[i] = []float32{float32(math.Sin(float64(i)*0.1)) * 0.5}
 	}
 	data := codec.Encode(frame)
 	b.ResetTimer()
@@ -42,7 +42,7 @@ func BenchmarkNullCodecBuffered_Decode(b *testing.B) {
 	codec := &NullCodecBuffered{}
 	frame := make([][]float32, 160)
 	for i := range frame {
-		frame[i] = []float32{float32(math.Sin(float64(i) * 0.1)) * 0.5}
+		frame[i] = []float32{float32(math.Sin(float64(i)*0.1)) * 0.5}
 	}
 	data := (&NullCodec{}).Encode(frame)
 	b.ResetTimer()
@@ -58,7 +58,7 @@ func BenchmarkOpusVoiceLow_Encode(b *testing.B) {
 	}
 	frame := make([][]float32, 160)
 	for i := range frame {
-		frame[i] = []float32{float32(math.Sin(float64(i) * 0.1)) * 0.5}
+		frame[i] = []float32{float32(math.Sin(float64(i)*0.1)) * 0.5}
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -73,7 +73,7 @@ func BenchmarkRawCodec_Encode(b *testing.B) {
 	}
 	frame := make([][]float32, 960)
 	for i := range frame {
-		frame[i] = []float32{float32(math.Sin(float64(i) * 0.05)) * 0.8}
+		frame[i] = []float32{float32(math.Sin(float64(i)*0.05)) * 0.8}
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -88,7 +88,7 @@ func BenchmarkRawCodec_Decode(b *testing.B) {
 	}
 	frame := make([][]float32, 960)
 	for i := range frame {
-		frame[i] = []float32{float32(math.Sin(float64(i) * 0.05)) * 0.8}
+		frame[i] = []float32{float32(math.Sin(float64(i)*0.05)) * 0.8}
 	}
 	data := codec.Encode(frame)
 	b.ResetTimer()

@@ -96,7 +96,7 @@ func TestLineSource_EaseIn(t *testing.T) {
 	}
 
 	// Target gain should be 10 (linear)
-	expectedTarget := math.Pow(10, 10.0/10.0) // = 10.0
+	expectedTarget := math.Pow(10, 1.0) // = 10.0
 	if math.Abs(ls.targetGain-expectedTarget) > 0.001 {
 		t.Errorf("Target gain mismatch: got %f, want %f", ls.targetGain, expectedTarget)
 	}

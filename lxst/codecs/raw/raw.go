@@ -32,10 +32,10 @@ var BITDEPTHS = []string{"float16", "float32", "float64", "float128"}
 
 // Raw implements the Codec interface for raw PCM with configurable bit depth.
 type Raw struct {
-	bitdepth   int
-	channels   int
-	dtype      string
-	headerBD   int
+	bitdepth  int
+	channels  int
+	dtype     string
+	headerBD  int
 	decBuf    []float32
 	decFrames [][]float32
 }

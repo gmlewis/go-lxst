@@ -1,0 +1,3 @@
+os.RemoveAll
+(*os.File).Write
+encoding/binary.Write

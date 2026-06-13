@@ -119,8 +119,10 @@ func (ob *OtoBackend) initContext() {
 
 	// Cache device names (oto doesn't provide enumeration directly,
 	// so we use generic names)
+	ob.mu.Lock()
 	ob.micNames = []string{"default"}
 	ob.speakerNames = []string{"default"}
+	ob.mu.Unlock()
 }
 
 // waitReady waits for the oto context to be initialized.
@@ -143,11 +145,14 @@ func (ob *OtoBackend) Channels() int   { return ob.channels }
 func (ob *OtoBackend) BitDepth() int   { return ob.bitDepth }
 
 func (ob *OtoBackend) AllMicrophones() []string {
-	// Oto doesn't expose device enumeration; return cached
+	ob.mu.Lock()
+	defer ob.mu.Unlock()
 	return ob.micNames
 }
 
 func (ob *OtoBackend) DefaultMicrophone() string {
+	ob.mu.Lock()
+	defer ob.mu.Unlock()
 	if len(ob.micNames) > 0 {
 		return ob.micNames[0]
 	}
@@ -155,10 +160,14 @@ func (ob *OtoBackend) DefaultMicrophone() string {
 }
 
 func (ob *OtoBackend) AllSpeakers() []string {
+	ob.mu.Lock()
+	defer ob.mu.Unlock()
 	return ob.speakerNames
 }
 
 func (ob *OtoBackend) DefaultSpeaker() string {
+	ob.mu.Lock()
+	defer ob.mu.Unlock()
 	if len(ob.speakerNames) > 0 {
 		return ob.speakerNames[0]
 	}
@@ -186,7 +195,7 @@ func (ob *OtoBackend) ReleasePlayer() error {
 	defer ob.playerMu.Unlock()
 
 	if ob.player != nil {
-		ob.player.Close()
+		_ = ob.player.Close()
 		ob.player = nil
 	}
 	return nil
@@ -262,15 +271,17 @@ func (or *otoRecorder) Record(numFrames int) ([][]float32, error) {
 		or.mu.Unlock()
 		return nil, errors.New("recorder closed")
 	}
+	// Take a local copy of pipeReader under the lock
+	pipeReader := or.pipeReader
 	or.mu.Unlock()
 
-	// Read audio data from pipe (outside of mutex to allow Close to proceed)
+	// Read audio data from pipe (using local copy to avoid race with Close)
 	bytesPerSample := 4 // float32
 	bytesPerFrame := or.channels * bytesPerSample
 	totalBytes := numFrames * bytesPerFrame
 
 	// Read data with timeout protection
-	n, err := io.ReadFull(or.pipeReader, or.readBuf[:totalBytes])
+	n, err := io.ReadFull(pipeReader, or.readBuf[:totalBytes])
 	if err != nil && err != io.EOF && err != io.ErrUnexpectedEOF {
 		// If the pipe was closed, return silence
 		frame := make([][]float32, numFrames)
@@ -323,11 +334,11 @@ func (or *otoRecorder) Close() error {
 
 	// Close pipe writer first to unblock any pending Read
 	if or.pipeWriter != nil {
-		or.pipeWriter.Close()
+		_ = or.pipeWriter.Close()
 		or.pipeWriter = nil
 	}
 	if or.pipeReader != nil {
-		or.pipeReader.Close()
+		_ = or.pipeReader.Close()
 		or.pipeReader = nil
 	}
 	return nil
@@ -337,11 +348,12 @@ func (or *otoRecorder) Close() error {
 
 func (op *otoPlayer) Play(frame [][]float32) error {
 	op.mu.Lock()
-	defer op.mu.Unlock()
-
 	if op.closed || op.pipeWriter == nil {
+		op.mu.Unlock()
 		return errors.New("player closed")
 	}
+	pw := op.pipeWriter
+	op.mu.Unlock()
 
 	if len(frame) == 0 || len(frame[0]) == 0 {
 		return nil
@@ -366,11 +378,21 @@ func (op *otoPlayer) Play(frame [][]float32) error {
 		}
 	}
 
-	_, err := op.pipeWriter.Write(buf)
+	_, err := pw.Write(buf)
 	return err
 }
 
 func (op *otoPlayer) Close() error {
+	// Close pipeWriter first to unblock any pending Write call
+	op.mu.Lock()
+	pw := op.pipeWriter
+	op.pipeWriter = nil
+	op.mu.Unlock()
+
+	if pw != nil {
+		_ = pw.Close()
+	}
+
 	op.mu.Lock()
 	defer op.mu.Unlock()
 
@@ -378,12 +400,8 @@ func (op *otoPlayer) Close() error {
 		op.player.Pause()
 		op.player = nil
 	}
-	if op.pipeWriter != nil {
-		op.pipeWriter.Close()
-		op.pipeWriter = nil
-	}
 	if op.pipeReader != nil {
-		op.pipeReader.Close()
+		_ = op.pipeReader.Close()
 		op.pipeReader = nil
 	}
 	op.closed = true

@@ -156,7 +156,7 @@ func (mb *MalgoBackend) ReleaseRecorder() error {
 	defer mb.recorderMu.Unlock()
 
 	if mb.recorder != nil {
-		mb.recorder.Close()
+		_ = mb.recorder.Close()
 		mb.recorder = nil
 	}
 	return nil
@@ -167,7 +167,7 @@ func (mb *MalgoBackend) ReleasePlayer() error {
 	defer mb.playerMu.Unlock()
 
 	if mb.player != nil {
-		mb.player.Close()
+		_ = mb.player.Close()
 		mb.player = nil
 	}
 	return nil
@@ -331,7 +331,7 @@ func (mr *malgoRecorder) Close() error {
 	defer mr.frameMu.Unlock()
 
 	if !mr.closed {
-		mr.device.Stop()
+		_ = mr.device.Stop()
 		mr.device.Uninit()
 		mr.closed = true
 	}
@@ -374,7 +374,7 @@ func (mp *malgoPlayer) Play(frame [][]float32) error {
 
 func (mp *malgoPlayer) Close() error {
 	if !mp.closed {
-		mp.device.Stop()
+		_ = mp.device.Stop()
 		mp.device.Uninit()
 		mp.closed = true
 	}

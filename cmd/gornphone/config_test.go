@@ -42,11 +42,11 @@ func TestParseConfig(t *testing.T) {
 `,
 			want: &PhoneConfig{
 				Telephone: TelephoneConfig{
-					Ringtone:        "ringer.opus",
-					Speaker:         "Built-in Output",
-					Microphone:      "Built-in Input",
-					Ringer:          "Headphones",
-					AllowedCallers:  "all",
+					Ringtone:       "ringer.opus",
+					Speaker:        "Built-in Output",
+					Microphone:     "Built-in Input",
+					Ringer:         "Headphones",
+					AllowedCallers: "all",
 				},
 			},
 		},
@@ -68,8 +68,8 @@ func TestParseConfig(t *testing.T) {
 `,
 			want: &PhoneConfig{
 				Telephone: TelephoneConfig{
-					AllowedCallers:  "phonebook",
-					AllowPhonebook:  true,
+					AllowedCallers: "phonebook",
+					AllowPhonebook: true,
 				},
 			},
 		},
@@ -282,10 +282,10 @@ func TestSaveConfig(t *testing.T) {
 
 	cfg := &PhoneConfig{
 		Telephone: TelephoneConfig{
-			Ringtone:        "ringer.opus",
-			Speaker:         "Built-in Output",
-			Microphone:      "Built-in Input",
-			AllowedCallers:  "all",
+			Ringtone:       "ringer.opus",
+			Speaker:        "Built-in Output",
+			Microphone:     "Built-in Input",
+			AllowedCallers: "all",
 		},
 		Phonebook: map[string]PhonebookEntry{
 			"Alice": {Hash: "aabbccdd11223344aabbccdd11223344"},
@@ -329,10 +329,10 @@ func TestIsCallerAllowed(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name    string
-		cfg     *PhoneConfig
-		hash    string
-		want    bool
+		name string
+		cfg  *PhoneConfig
+		hash string
+		want bool
 	}{
 		{
 			name: "allow all",
@@ -548,6 +548,6 @@ func tempDir(t *testing.T) string {
 	if err != nil {
 		t.Fatalf("MkdirTemp() error = %v", err)
 	}
-	t.Cleanup(func() { os.RemoveAll(dir) })
+	t.Cleanup(func() { _ = os.RemoveAll(dir) })
 	return dir
 }

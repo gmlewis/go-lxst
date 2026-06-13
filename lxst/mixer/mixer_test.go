@@ -75,7 +75,7 @@ func TestMixer_Gain(t *testing.T) {
 		t.Errorf("Expected gain 10.0, got %f", m.Gain())
 	}
 
-	expectedGain := math.Pow(10, 10.0/10.0)
+	expectedGain := math.Pow(10, 1.0)
 	if g := m.mixingGain(); math.Abs(float64(g)-expectedGain) > 0.001 {
 		t.Errorf("10dB gain should be %f, got %f", expectedGain, g)
 	}

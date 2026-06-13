@@ -23,33 +23,61 @@ func createTestWavForPlayer(t *testing.T, sampleRate, numChannels, sampleCount i
 	if err != nil {
 		t.Fatalf("create wav: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	dataSize := sampleCount * numChannels * 2
 	byteRate := uint32(sampleRate) * uint32(numChannels) * 2
 	blockAlign := uint16(numChannels) * 2
 
-	f.Write([]byte("RIFF"))
-	binary.Write(f, binary.LittleEndian, uint32(36+dataSize))
-	f.Write([]byte("WAVE"))
+	if _, err := f.Write([]byte("RIFF")); err != nil {
+		t.Fatalf("write RIFF header: %v", err)
+	}
+	if err := binary.Write(f, binary.LittleEndian, uint32(36+dataSize)); err != nil {
+		t.Fatalf("write file size: %v", err)
+	}
+	if _, err := f.Write([]byte("WAVE")); err != nil {
+		t.Fatalf("write WAVE header: %v", err)
+	}
 
-	f.Write([]byte("fmt "))
-	binary.Write(f, binary.LittleEndian, uint32(16))
-	binary.Write(f, binary.LittleEndian, uint16(1))
-	binary.Write(f, binary.LittleEndian, uint16(numChannels))
-	binary.Write(f, binary.LittleEndian, uint32(sampleRate))
-	binary.Write(f, binary.LittleEndian, uint32(byteRate))
-	binary.Write(f, binary.LittleEndian, uint16(blockAlign))
-	binary.Write(f, binary.LittleEndian, uint16(16))
+	if _, err := f.Write([]byte("fmt ")); err != nil {
+		t.Fatalf("write fmt chunk: %v", err)
+	}
+	if err := binary.Write(f, binary.LittleEndian, uint32(16)); err != nil {
+		t.Fatalf("write fmt size: %v", err)
+	}
+	if err := binary.Write(f, binary.LittleEndian, uint16(1)); err != nil {
+		t.Fatalf("write audio format: %v", err)
+	}
+	if err := binary.Write(f, binary.LittleEndian, uint16(numChannels)); err != nil {
+		t.Fatalf("write channels: %v", err)
+	}
+	if err := binary.Write(f, binary.LittleEndian, uint32(sampleRate)); err != nil {
+		t.Fatalf("write sample rate: %v", err)
+	}
+	if err := binary.Write(f, binary.LittleEndian, uint32(byteRate)); err != nil {
+		t.Fatalf("write byte rate: %v", err)
+	}
+	if err := binary.Write(f, binary.LittleEndian, uint16(blockAlign)); err != nil {
+		t.Fatalf("write block align: %v", err)
+	}
+	if err := binary.Write(f, binary.LittleEndian, uint16(16)); err != nil {
+		t.Fatalf("write bits per sample: %v", err)
+	}
 
-	f.Write([]byte("data"))
-	binary.Write(f, binary.LittleEndian, uint32(dataSize))
+	if _, err := f.Write([]byte("data")); err != nil {
+		t.Fatalf("write data chunk: %v", err)
+	}
+	if err := binary.Write(f, binary.LittleEndian, uint32(dataSize)); err != nil {
+		t.Fatalf("write data size: %v", err)
+	}
 
 	for i := 0; i < sampleCount; i++ {
 		for ch := 0; ch < numChannels; ch++ {
 			phase := 2.0 * math.Pi * frequency * float64(i) / float64(sampleRate)
 			sample := int16(16000.0 * math.Sin(phase))
-			binary.Write(f, binary.LittleEndian, sample)
+			if err := binary.Write(f, binary.LittleEndian, sample); err != nil {
+				t.Fatalf("write sample: %v", err)
+			}
 		}
 	}
 

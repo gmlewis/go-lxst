@@ -186,8 +186,8 @@ func (ls *LineSink) digestJob() {
 	}
 	ls.player = player
 	defer func() {
-		player.Close()
-		ls.backend.ReleasePlayer()
+		_ = player.Close()
+		_ = ls.backend.ReleasePlayer()
 	}()
 
 	for {
@@ -197,7 +197,11 @@ func (ls *LineSink) digestJob() {
 		default:
 		}
 
-		if !ls.shouldRun {
+		ls.mu.Lock()
+		shouldRun := ls.shouldRun
+		ls.mu.Unlock()
+
+		if !shouldRun {
 			return
 		}
 

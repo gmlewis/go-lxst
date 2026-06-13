@@ -101,7 +101,11 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error starting playback: %v\n", err)
 		os.Exit(1)
 	}
-	defer src.Stop()
+	defer func() {
+		if err := src.Stop(); err != nil {
+			log.Printf("Error stopping playback: %v", err)
+		}
+	}()
 
 	// Wait for signal or completion
 	if *loop {

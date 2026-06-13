@@ -74,12 +74,12 @@ func TestOtoBackend_GetRecorder(t *testing.T) {
 	if err != nil {
 		// May fail in headless environments
 		t.Logf("GetRecorder failed (expected in CI): %v", err)
-		backend.ReleaseRecorder()
+		_ = backend.ReleaseRecorder()
 		return
 	}
 	defer func() {
-		recorder.Close()
-		backend.ReleaseRecorder()
+		_ = recorder.Close()
+		_ = backend.ReleaseRecorder()
 	}()
 
 	// Record with a short timeout to avoid blocking in headless environments
@@ -105,7 +105,7 @@ func TestOtoBackend_GetRecorder(t *testing.T) {
 		}
 	case <-time.After(2 * time.Second):
 		// Close recorder to unblock the goroutine
-		recorder.Close()
+		_ = recorder.Close()
 		<-done
 		t.Log("Record timed out (expected in headless environment)")
 	}
@@ -121,13 +121,18 @@ func TestOtoBackend_GetPlayer(t *testing.T) {
 
 	player, err := backend.GetPlayer(960, false)
 	if err != nil {
-		t.Logf("GetPlayer failed (expected in CI): %v", err)
-		return
+		t.Skipf("GetPlayer failed (expected in CI): %v", err)
 	}
 	if player == nil {
 		t.Fatal("GetPlayer returned nil player")
 	}
-	defer player.Close()
+	defer func() { _ = player.Close() }()
+
+	// Check if speakers are available
+	speakers := backend.AllSpeakers()
+	if len(speakers) == 0 {
+		t.Skip("No speakers available (headless environment)")
+	}
 
 	// Create test frame (silence)
 	frame := make([][]float32, 960)
@@ -135,14 +140,20 @@ func TestOtoBackend_GetPlayer(t *testing.T) {
 		frame[i] = make([]float32, 2)
 	}
 
-	err = player.Play(frame)
-	if err != nil {
-		t.Logf("Play failed (expected in CI): %v", err)
-		return
-	}
+	// Use a goroutine with timeout to avoid blocking
+	done := make(chan error, 1)
+	go func() {
+		done <- player.Play(frame)
+	}()
 
-	// Give it a moment to process
-	time.Sleep(50 * time.Millisecond)
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Logf("Play failed (expected in CI): %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Log("Play timed out (expected in headless environment)")
+	}
 }
 
 func TestOtoBackend_Flush(t *testing.T) {
@@ -170,7 +181,7 @@ func TestOtoBackend_ReleaseRecorderPlayer(t *testing.T) {
 	// Get and release recorder
 	recorder, err := backend.GetRecorder(960)
 	if err == nil && recorder != nil {
-		recorder.Close()
+		_ = recorder.Close()
 		err = backend.ReleaseRecorder()
 		if err != nil {
 			t.Errorf("ReleaseRecorder failed: %v", err)
@@ -180,7 +191,7 @@ func TestOtoBackend_ReleaseRecorderPlayer(t *testing.T) {
 	// Get and release player
 	player, err := backend.GetPlayer(960, false)
 	if err == nil && player != nil {
-		player.Close()
+		_ = player.Close()
 		err = backend.ReleasePlayer()
 		if err != nil {
 			t.Errorf("ReleasePlayer failed: %v", err)

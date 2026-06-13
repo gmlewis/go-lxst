@@ -167,9 +167,13 @@ func (fs *OpusFileSink) Stop() error {
 	fs.mu.Unlock()
 
 	// Close output file
-	if fs.outputFile != nil {
-		fs.outputFile.Close()
-		fs.outputFile = nil
+	fs.mu.Lock()
+	outputFile := fs.outputFile
+	fs.outputFile = nil
+	fs.mu.Unlock()
+
+	if outputFile != nil {
+		_ = outputFile.Close()
 	}
 
 	return nil
@@ -222,7 +226,11 @@ func (fs *OpusFileSink) digestJob() {
 		default:
 		}
 
-		if !fs.shouldRun && finalSilenceFrames <= 0 {
+		fs.mu.Lock()
+		shouldRun := fs.shouldRun
+		fs.mu.Unlock()
+
+		if !shouldRun && finalSilenceFrames <= 0 {
 			fs.finalized = true
 			return
 		}
@@ -234,7 +242,7 @@ func (fs *OpusFileSink) digestJob() {
 		processFrame := false
 		var frame [][]float32
 
-		if fs.shouldRun && framesReady > 0 {
+		if shouldRun && framesReady > 0 {
 			fs.insertLock.Lock()
 			fs.outputLatency = float64(len(fs.frameDeque)) * fs.frameTime
 			fs.maxLatency = float64(fs.bufferMaxHeight) * fs.frameTime
@@ -245,7 +253,7 @@ func (fs *OpusFileSink) digestJob() {
 			}
 			fs.insertLock.Unlock()
 			processFrame = true
-		} else if !fs.shouldRun && finalSilenceFrames > 0 {
+		} else if !shouldRun && finalSilenceFrames > 0 {
 			finalSilenceFrames--
 			frame = make([][]float32, fs.samplesPerFrame)
 			for i := range frame {
@@ -281,12 +289,16 @@ func (fs *OpusFileSink) digestJob() {
 
 			if fs.opusEncoder != nil {
 				encoded := fs.opusEncoder.Encode(frame)
-				if len(encoded) > 0 && fs.outputFile != nil {
-					fs.outputFile.Write(encoded)
+				fs.mu.Lock()
+				outputFile := fs.outputFile
+				fs.mu.Unlock()
+				if len(encoded) > 0 && outputFile != nil {
+					_, _ = outputFile.Write(encoded)
 				}
 			}
 
 			// Create output file on first encoded frame
+			fs.mu.Lock()
 			if fs.outputFile == nil && fs.outputPath != "" {
 				f, err := os.Create(fs.outputPath)
 				if err != nil {
@@ -295,8 +307,12 @@ func (fs *OpusFileSink) digestJob() {
 					fs.outputFile = f
 				}
 			}
+			fs.mu.Unlock()
 		} else {
-			time.Sleep(time.Duration(fs.frameTime * float64(time.Second) * 0.1))
+			fs.insertLock.Lock()
+			ft := fs.frameTime
+			fs.insertLock.Unlock()
+			time.Sleep(time.Duration(ft * float64(time.Second) * 0.1))
 		}
 
 		fs.insertLock.Lock()

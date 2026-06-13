@@ -82,7 +82,7 @@ func TestMalgoBackend_GetRecorder(t *testing.T) {
 	if recorder == nil {
 		t.Fatal("GetRecorder returned nil recorder")
 	}
-	defer recorder.Close()
+	defer func() { _ = recorder.Close() }()
 
 	frames, err := recorder.Record(960)
 	if err != nil {
@@ -114,7 +114,7 @@ func TestMalgoBackend_GetPlayer(t *testing.T) {
 	if player == nil {
 		t.Fatal("GetPlayer returned nil player")
 	}
-	defer player.Close()
+	defer func() { _ = player.Close() }()
 
 	frame := make([][]float32, 960)
 	for i := range frame {
@@ -152,7 +152,7 @@ func TestMalgoBackend_ReleaseRecorderPlayer(t *testing.T) {
 
 	recorder, err := backend.GetRecorder(960)
 	if err == nil && recorder != nil {
-		recorder.Close()
+		_ = recorder.Close()
 		err = backend.ReleaseRecorder()
 		if err != nil {
 			t.Errorf("ReleaseRecorder failed: %v", err)
@@ -161,7 +161,7 @@ func TestMalgoBackend_ReleaseRecorderPlayer(t *testing.T) {
 
 	player, err := backend.GetPlayer(960, false)
 	if err == nil && player != nil {
-		player.Close()
+		_ = player.Close()
 		err = backend.ReleasePlayer()
 		if err != nil {
 			t.Errorf("ReleasePlayer failed: %v", err)

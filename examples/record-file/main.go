@@ -56,7 +56,9 @@ func main() {
 		<-sigCh
 	}
 
-	rec.Stop()
+	if err := rec.Stop(); err != nil {
+		log.Printf("Error stopping recording: %v", err)
+	}
 	fmt.Printf("\nRecording saved to: %s\n", *output)
 }
 

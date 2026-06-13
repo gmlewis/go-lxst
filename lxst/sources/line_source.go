@@ -164,12 +164,12 @@ func (ls *LineSource) Stop() error {
 	}
 
 	if ls.recorder != nil {
-		ls.recorder.Close()
+		_ = ls.recorder.Close()
 		ls.recorder = nil
 	}
 
 	if ls.backend != nil {
-		ls.backend.ReleaseRecorder()
+		_ = ls.backend.ReleaseRecorder()
 	}
 
 	return nil
@@ -229,7 +229,11 @@ func (ls *LineSource) ingestJob() {
 		case <-ls.ingestThread.done:
 			return
 		default:
-			if !ls.shouldRun {
+			ls.mu.Lock()
+			shouldRun := ls.shouldRun
+			ls.mu.Unlock()
+
+			if !shouldRun {
 				return
 			}
 
@@ -275,10 +279,10 @@ func (ls *LineSource) ingestJob() {
 			if ls.codec != nil && ls.sink != nil {
 				encoded := ls.codec.Encode(frame)
 				if len(encoded) > 0 && ls.sink.CanReceive(ls) {
-					ls.sink.HandleFrame(frame, ls)
+					_ = ls.sink.HandleFrame(frame, ls)
 				}
 			} else if ls.sink != nil {
-				ls.sink.HandleFrame(frame, ls)
+				_ = ls.sink.HandleFrame(frame, ls)
 			}
 		}
 	}

@@ -19,10 +19,10 @@ const (
 )
 
 const (
-	ringTime    = 30
-	waitTime    = 60
-	pathTime    = 10
-_hwSleepTimeout = 15
+	ringTime        = 30
+	waitTime        = 60
+	pathTime        = 10
+	_hwSleepTimeout = 15
 )
 
 // Phone represents a Reticulum telephone instance with call state management.

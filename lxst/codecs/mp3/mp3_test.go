@@ -18,7 +18,7 @@ func tempDir(t *testing.T) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { os.RemoveAll(dir) })
+	t.Cleanup(func() { _ = os.RemoveAll(dir) })
 	return dir
 }
 
@@ -128,7 +128,7 @@ func generateTestMP3(path string, freq float64, duration float64, sampleRate int
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	// Write a minimal MP3 frame header + some data
 	// MPEG1, Layer 3, 128kbps, 44100Hz stereo

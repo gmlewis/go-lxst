@@ -235,8 +235,8 @@ func NewAGC(targetLevel, maxGainDB, attackTime, releaseTime, holdTime float64) *
 		attackTime:   attackTime,
 		releaseTime:  releaseTime,
 		holdTime:     holdTime,
-		triggerLevel:  0.003,
-		blockTargetS:  0.01,
+		triggerLevel: 0.003,
+		blockTargetS: 0.01,
 	}
 }
 

@@ -93,7 +93,9 @@ func (src *OpusFileSource) loadFile() error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 
 	wavReader := wav.NewReader(f)
 	fmt, err := wavReader.Format()
@@ -244,7 +246,11 @@ func (src *OpusFileSource) ingestJob() {
 		default:
 		}
 
-		if !src.shouldRun {
+		src.mu.Lock()
+		shouldRun := src.shouldRun
+		src.mu.Unlock()
+
+		if !shouldRun {
 			return
 		}
 
@@ -268,7 +274,9 @@ func (src *OpusFileSource) ingestJob() {
 					fi = 0
 					continue
 				} else {
+					src.mu.Lock()
 					src.shouldRun = false
+					src.mu.Unlock()
 					return
 				}
 			} else {
@@ -279,10 +287,10 @@ func (src *OpusFileSource) ingestJob() {
 				if src.codec != nil {
 					encoded := src.codec.Encode(frame)
 					if len(encoded) > 0 && src.sink != nil && src.sink.CanReceive(src) {
-						src.sink.HandleFrame(frame, src)
+						_ = src.sink.HandleFrame(frame, src)
 					}
 				} else if src.sink != nil {
-					src.sink.HandleFrame(frame, src)
+					_ = src.sink.HandleFrame(frame, src)
 				}
 			}
 		} else {

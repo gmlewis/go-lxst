@@ -307,13 +307,13 @@ func (ls *LinkSource) ReceivePacket(data []byte) {
 
 		if newCodec != nil && ls.sink != nil && ls.sink.CanReceive(ls) {
 			decoded := ls.codec.Decode(payload, ls.channels)
-			ls.sink.HandleFrame(decoded, ls)
+			_ = ls.sink.HandleFrame(decoded, ls)
 		}
 	}
 
 	if _, exists := m[FieldSignalling]; exists {
 		if ls.signallingReceiver != nil {
-			ls.signallingReceiver.HandlePacket(data, nil)
+			_ = ls.signallingReceiver.HandlePacket(data, nil)
 		}
 	}
 }

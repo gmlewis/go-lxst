@@ -20,8 +20,8 @@ import (
 	"github.com/gmlewis/go-lxst/lxst/codecs"
 	codec2pkg "github.com/gmlewis/go-lxst/lxst/codecs/codec2"
 	"github.com/gmlewis/go-lxst/lxst/generators"
-	"github.com/gmlewis/go-lxst/lxst/sources"
 	"github.com/gmlewis/go-lxst/lxst/sinks"
+	"github.com/gmlewis/go-lxst/lxst/sources"
 )
 
 func main() {
@@ -64,7 +64,11 @@ func main() {
 	}
 
 	sink := sinks.NewLineSink("", true, false)
-	defer sink.Stop()
+	defer func() {
+		if err := sink.Stop(); err != nil {
+			log.Printf("Error stopping sink: %v", err)
+		}
+	}()
 
 	var localSink sources.LocalSource = sink
 
@@ -88,7 +92,11 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error starting tone: %v\n", err)
 		os.Exit(1)
 	}
-	defer tone.Stop()
+	defer func() {
+		if err := tone.Stop(); err != nil {
+			log.Printf("Error stopping tone: %v", err)
+		}
+	}()
 
 	if *duration > 0 {
 		select {

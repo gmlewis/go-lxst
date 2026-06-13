@@ -38,7 +38,7 @@ const (
 func DecodeFLAC(r io.ReadCloser) (int, int, [][]float32, error) {
 	dec, err := flac.New(r)
 	if err != nil {
-		r.Close()
+		_ = r.Close()
 		return 0, 0, nil, err
 	}
 
@@ -292,10 +292,10 @@ func (src *FLACFileSource) ingestJob() {
 				if src.codec != nil {
 					encoded := src.codec.Encode(frame)
 					if len(encoded) > 0 && src.sink != nil && src.sink.CanReceive(src) {
-						src.sink.HandleFrame(frame, src)
+						_ = src.sink.HandleFrame(frame, src)
 					}
 				} else if src.sink != nil {
-					src.sink.HandleFrame(frame, src)
+					_ = src.sink.HandleFrame(frame, src)
 				}
 			}
 		} else {

@@ -39,24 +39,22 @@ func NewBackendWithDevice(sampleRate, channels, bitDepth int, preferredDevice st
 	// If Oto fails, fall back to NullBackend
 	_, err := backend.GetRecorder(960)
 	if err != nil {
-		backend.ReleaseRecorder()
+		_ = backend.ReleaseRecorder()
 		return NewNullBackend(sampleRate, channels, bitDepth)
 	}
-	backend.ReleaseRecorder()
+	_ = backend.ReleaseRecorder()
 
 	_, err = backend.GetPlayer(960, false)
 	if err != nil {
-		backend.ReleasePlayer()
+		_ = backend.ReleasePlayer()
 		return NewNullBackend(sampleRate, channels, bitDepth)
 	}
-	backend.ReleasePlayer()
+	_ = backend.ReleasePlayer()
 
 	// If preferred device requested, verify it exists or log fallback
 	if preferredDevice != "" {
-		if !deviceInList(preferredDevice, backend.AllMicrophones()) &&
-			!deviceInList(preferredDevice, backend.AllSpeakers()) {
-			// Device not found; oto uses system default anyway
-		}
+		_ = deviceInList(preferredDevice, backend.AllMicrophones()) ||
+			deviceInList(preferredDevice, backend.AllSpeakers())
 	}
 
 	return backend

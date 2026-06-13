@@ -302,7 +302,11 @@ func (m *Mixer) mixerJob() {
 		default:
 		}
 
-		if !m.shouldRun {
+		m.mu.Lock()
+		shouldRun := m.shouldRun
+		m.mu.Unlock()
+
+		if !shouldRun {
 			return
 		}
 

@@ -131,6 +131,7 @@ func (n *NullCodecBuffered) PreferredSampleRate() int { return 0 }
 func (n *NullCodecBuffered) FrameQuantumMs() float64  { return 0 }
 func (n *NullCodecBuffered) FrameMaxMs() float64      { return 0 }
 func (n *NullCodecBuffered) ValidFrameMs() []float64  { return nil }
+
 // Uses pydub internally in Python; Go port uses gonum or simple linear interpolation.
 func ResampleBytes(sampleBytes []byte, bitdepth, channels, inputRate, outputRate int, normalize bool) []byte {
 	// Simple pass-through for now - full implementation needs gonum DSP
