@@ -150,6 +150,156 @@ Source → [Filter] → [Mixer] → Codec → Network → Codec → [Filter] →
 Sources produce audio frames, filters process them, mixers combine multiple
 sources, codecs encode/decode for transport, and sinks consume the final output.
 
+## Making Phone Calls Over Reticulum
+
+### Current Status
+
+The `gornphone` CLI (`cmd/gornphone/`) provides the foundation for Reticulum
+network telephony. The RNS signaling layer (link establishment, call state
+machine, identity management) is functional. The audio I/O layer (oto backend,
+codecs, filters, mixers) is functional. However, **the audio pipeline is not
+yet wired to the RNS link layer** — meaning you cannot hear audio over a
+remote call yet. The signaling works (calls can be established and torn down),
+but no audio flows through the link.
+
+### What Works Today
+
+- **RNS identity management** — creates/loads persistent identities
+- **RNS Destination/Link** — can establish encrypted links to remote peers
+- **Call signaling** — ringing, connect, established, hangup state machine
+- **Local audio I/O** — microphone capture and speaker playback via oto
+- **Audio codecs** — Opus, Codec2, Raw PCM encoding/decoding
+- **Audio filtering** — HighPass, LowPass, BandPass, AGC (parity-verified)
+- **Cross-platform** — pure Go, works on macOS (M1/M2), Linux, Windows
+
+### What's Not Yet Connected
+
+The audio pipeline components exist (`lxst/network` Package: `Packetizer`,
+`LinkSource`, `SignallingReceiver`) but are not wired into `gornphone`'s call
+flow. Specifically:
+
+1. When a call is established, `main.go` does not start the audio pipeline
+2. Microphone audio is not encoded and sent over the RNS Link
+3. Received audio from the Link is not decoded and played through the speaker
+
+### Setting Up the Python Side (for when audio is wired)
+
+The Go `gornphone` is wire-compatible with the Python `rnphone.py` from the
+[LXST repository](https://github.com/markqvist/LXST). Both use the same
+`lxst.telephony` primitive with matching RNS destination names and signalling
+protocol.
+
+**Step 1: Install Python LXST and RNS on the other machine**
+
+```bash
+# On the other person's machine (Linux or macOS):
+pip install LXST
+# RNS should be installed automatically as a dependency
+```
+
+**Step 2: Set up a shared Reticulum network**
+
+Both machines need to be on the same Reticulum network. The simplest setup
+is a direct TCP connection:
+
+```bash
+# On Machine A (the Go phone):
+# Start gornphone — it will create a config directory at ~/.rnphone/
+gornphone
+
+# The first run creates ~/.rnphone/config and ~/.rnphone/identity
+# Note the identity hash printed on startup — you'll share this
+```
+
+```bash
+# On Machine B (the Python phone):
+rnphone --config /path/to/rnphone-config
+
+# The first run creates a default config
+# Note the identity hash printed on startup
+```
+
+**Step 3: Configure RNS transport (TCP example)**
+
+Create an RNS config file on each machine that tells RNS how to reach
+the other. For a direct LAN connection, create
+`~/.reticulum/config` (or `~/.config/reticulum/config`):
+
+```ini
+# Machine A config (~/.reticulum/config)
+[[TCPServer]]
+    tcp_address = 0.0.0.0
+    tcp_port = 2222
+```
+
+```ini
+# Machine B config (~/.reticulum/config)
+[[TCPClient]]
+    target_host = <Machine A's IP address>
+    target_port = 2222
+```
+
+Both machines must also have a shared `trusted` entry for the other's
+identity so they can form links. Alternatively, use announce + path
+discovery.
+
+**Step 4: Make a call**
+
+Once both machines are running and have discovered each other's paths:
+
+```bash
+# On Machine A (Go phone), enter Machine B's identity hash:
+> <Machine B's 32-char hex identity hash>
+
+# On Machine B (Python phone), you'll see an incoming call
+# Press Enter to answer
+```
+
+### Architecture When Audio Is Wired
+
+```
+┌──────────────┐                        ┌──────────────┐
+│  Go gornphone│                        │ Python rnphone│
+│              │  ◄─── RNS Link ───►   │              │
+│  Mic → Enc ──┼───────────────────────┼──► Dec → Speaker
+│  Speaker ◄───┼───────────────────────┼── Enc ← Mic │
+│              │      (Opus/Codec2)    │              │
+└──────────────┘                        └──────────────┘
+
+Transmit: LineSource → Mixer → Codec → Packetizer → RNS Link
+Receive:  RNS Link → LinkSource → Mixer → Codec → LineSink
+```
+
+### Audio Profile Selection
+
+`gornphone` supports the same audio profiles as Python `rnphone`:
+
+| Profile | Code | Codec | Frame Time | Use Case |
+|---------|------|-------|------------|----------|
+| Ultra Low Bandwidth | 0x10 | Codec2 700C | 400ms | Weak links |
+| Very Low Bandwidth | 0x20 | Codec2 1600 | 320ms | Narrow links |
+| Low Bandwidth | 0x30 | Codec2 3200 | 200ms | Moderate links |
+| Medium Quality | 0x40 | Opus | 60ms | Default |
+| High Quality | 0x50 | Opus | 60ms | Good links |
+| Super High Quality | 0x60 | Opus | 60ms | Excellent links |
+| Low Latency | 0x70 | Opus | 20ms | Real-time |
+| Ultra Low Latency | 0x80 | Opus | 10ms | Ultra real-time |
+
+### Bluetooth Audio on macOS
+
+On macOS with Bluetooth earbuds, the oto backend uses CoreAudio which
+automatically routes to the system's default output device. If your
+Bluetooth earbuds are set as the default audio output in System Settings,
+`gornphone` will use them. To select specific devices:
+
+```bash
+# List available devices
+gornphone -l
+
+# Use a specific speaker/mic
+gornphone --speaker "AirPods Pro" --mic "AirPods Pro"
+```
+
 ## License
 
 Reticulum License — see [LICENSE](LICENSE) for details.
