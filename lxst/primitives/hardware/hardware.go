@@ -467,8 +467,10 @@ func (l *LCDStruct) sendByte(byteVal byte, mode byte) {
 }
 
 func (l *LCDStruct) writeByte(byteVal byte) {
-	// Mock I2C write - in real implementation this would use smbus/I2C
-	// For testing, we just track state
+	driver := GetI2CDriver()
+	if driver != nil {
+		_ = driver.WriteToDevice(l.address, byteVal)
+	}
 }
 
 func (l *LCDStruct) Cols() int { return LCDCols }

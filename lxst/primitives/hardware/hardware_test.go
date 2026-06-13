@@ -173,8 +173,97 @@ func equalKeyMaps(a, b [][]string) bool {
 	return true
 }
 
+type mockGPIODriver struct {
+	pinModes map[int]GPIOMode
+	outputs  map[int]bool
+	inputs   map[int]bool
+}
+
+func (m *mockGPIODriver) Setup(pin int, mode GPIOMode) error {
+	if m.pinModes == nil {
+		m.pinModes = make(map[int]GPIOMode)
+	}
+	m.pinModes[pin] = mode
+	return nil
+}
+
+func (m *mockGPIODriver) SetOutput(pin int, high bool) error {
+	if m.outputs == nil {
+		m.outputs = make(map[int]bool)
+	}
+	m.outputs[pin] = high
+	return nil
+}
+
+func (m *mockGPIODriver) ReadInput(pin int) (bool, error) {
+	if m.inputs == nil {
+		return false, nil
+	}
+	return m.inputs[pin], nil
+}
+
+func (m *mockGPIODriver) SetPullUpDown(pin int, pull PullUpDown) error {
+	return nil
+}
+
+func (m *mockGPIODriver) Close() error { return nil }
+
 type mockKeypad struct {
 	Keypad
+}
+
+type mockI2CDriver struct {
+	written []byte
+	addr    int
+}
+
+func (m *mockI2CDriver) WriteToDevice(addr int, data byte) error {
+	m.addr = addr
+	m.written = append(m.written, data)
+	return nil
+}
+
+func (m *mockI2CDriver) Close() error { return nil }
+
+func TestKeypad_UsesGPIODriver(t *testing.T) {
+	t.Parallel()
+
+	mock := &mockGPIODriver{}
+	SetGPIODriver(mock)
+	defer SetGPIODriver(nil)
+
+	var events []KeyEvent
+	k := NewKeypad4x4(nil, nil, nil, func(_ Keypad, e KeyEvent) {
+		events = append(events, e)
+	})
+
+	// Simulate a key press by setting the mock input state
+	mock.inputs = map[int]bool{DefaultColPins4x4[0]: true}
+	k.TestSimulatePress("1")
+	time.Sleep(10 * time.Millisecond)
+
+	if !k.IsDown("1") {
+		t.Error("key '1' should be down after press via GPIO driver")
+	}
+
+	k.Stop()
+}
+
+func TestLCD_UsesI2CDriver(t *testing.T) {
+	t.Parallel()
+
+	mock := &mockI2CDriver{}
+	SetI2CDriver(mock)
+	defer SetI2CDriver(nil)
+
+	lcd := NewLCD(&LCDConfig{Address: 0x27, I2CBus: 1})
+	lcd.Print("Hi", 0, 0)
+	lcd.Close()
+
+	// The mock should have received I2C writes (init + print)
+	if len(mock.written) == 0 {
+		t.Error("LCD should write to I2CDriver when available")
+	}
 }
 
 func TestKeypad_Hook(t *testing.T) {
