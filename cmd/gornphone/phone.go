@@ -38,6 +38,7 @@ type Phone struct {
 	config                  *PhoneConfig
 	lastInput               string
 	started                 time.Time
+	endpoint                *TelephoneEndpoint
 }
 
 // NewPhone creates a new Phone with the given configuration.
@@ -47,6 +48,16 @@ func NewPhone(cfg *PhoneConfig) *Phone {
 		config:   cfg,
 		firstRun: true,
 	}
+}
+
+// SetEndpoint attaches a TelephoneEndpoint for RNS integration.
+func (p *Phone) SetEndpoint(ep *TelephoneEndpoint) {
+	p.endpoint = ep
+}
+
+// Endpoint returns the attached TelephoneEndpoint, if any.
+func (p *Phone) Endpoint() *TelephoneEndpoint {
+	return p.endpoint
 }
 
 // State returns the current phone state.
@@ -274,11 +285,27 @@ func (p *Phone) processAvailableInput(input string) bool {
 	case "r", "redial":
 		p.Redial()
 	case "i", "identity":
-		fmt.Println("(identity hash will be shown when connected)")
+		if p.endpoint != nil {
+			p.PrintIdentity(p.endpoint.IdentityHash())
+		} else {
+			fmt.Println("(identity hash will be shown when connected)")
+		}
 	case "d", "desthash":
-		fmt.Println("(destination hash will be shown when connected)")
+		if p.endpoint != nil {
+			p.PrintDestination(p.endpoint.DestinationHash())
+		} else {
+			fmt.Println("(destination hash will be shown when connected)")
+		}
 	case "a", "announce":
-		fmt.Println("Announce sent")
+		if p.endpoint != nil {
+			if err := p.endpoint.Announce(); err != nil {
+				fmt.Printf("Announce failed: %v\n", err)
+			} else {
+				fmt.Println("Announce sent")
+			}
+		} else {
+			fmt.Println("Announce sent")
+		}
 	default:
 		if len(input) == 32 {
 			p.Dial(input)

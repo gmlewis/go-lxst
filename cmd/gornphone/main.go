@@ -16,6 +16,7 @@ import (
 
 	"github.com/gmlewis/go-lxst/lxst"
 	"github.com/gmlewis/go-lxst/lxst/primitives/telephony"
+	"github.com/gmlewis/go-reticulum/rns"
 )
 
 var (
@@ -105,6 +106,41 @@ func main() {
 	}
 
 	phone := NewPhone(cfg)
+
+	// Initialize RNS transport and endpoint
+	ts := rns.NewTransportSystem(nil)
+	identity, err := rns.FromFile(*configDir+"/identity", ts.GetLogger())
+	if err != nil {
+		identity, err = rns.NewIdentity(true, ts.GetLogger())
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error creating identity: %v\n", err)
+			os.Exit(1)
+		}
+		_ = os.MkdirAll(*configDir, 0o755)
+		_ = identity.ToFile(*configDir + "/identity")
+	}
+
+	endpoint, err := NewTelephoneEndpoint(identity, ts)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error creating telephone endpoint: %v\n", err)
+		os.Exit(1)
+	}
+	phone.SetEndpoint(endpoint)
+
+	// Wire callbacks
+	endpoint.SetOnRinging(func(remoteIdentity *rns.Identity) {
+		phone.Ringing(remoteIdentity.HexHash)
+	})
+	endpoint.SetOnEstablished(func(remoteIdentity *rns.Identity) {
+		phone.CallEstablished()
+	})
+	endpoint.SetOnEnded(func(remoteIdentity *rns.Identity) {
+		phone.Hangup()
+	})
+	endpoint.SetOnBusy(func(remoteIdentity *rns.Identity) {
+		phone.Hangup()
+	})
+
 	phone.Start()
 	phone.printHelp()
 	fmt.Println()
