@@ -503,6 +503,18 @@ func (tel *Telephone) SetMicDevice(device string) {
 	tel.micDevice = device
 }
 
+func (tel *Telephone) RingerDevice() string {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	return tel.ringerDevice
+}
+
+func (tel *Telephone) SetRingerDevice(device string) {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	tel.ringerDevice = device
+}
+
 func (tel *Telephone) LowLatency() bool {
 	tel.mu.Lock()
 	defer tel.mu.Unlock()

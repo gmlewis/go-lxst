@@ -7,6 +7,7 @@ replace github.com/gmlewis/go-reticulum => ../go-reticulum
 require (
 	github.com/ebitengine/oto/v3 v3.4.0
 	github.com/gen2brain/malgo v0.11.25
+	github.com/gmlewis/go-reticulum v0.1.0
 	github.com/hajimehoshi/go-mp3 v0.3.4
 	github.com/jfreymuth/oggvorbis v1.0.5
 	github.com/mewkiz/flac v1.0.13
