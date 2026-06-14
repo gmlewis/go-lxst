@@ -340,9 +340,15 @@ func (tep *TelephoneEndpoint) Call(identityHash string, timeout time.Duration) e
 			return fmt.Errorf("requesting path: %w", err)
 		}
 		deadline := time.Now().Add(timeout)
+		spinner := []string{"⢄", "⢂", "⢁", "⡁", "⡈", "⡐", "⡠"}
+		index := 0
+		fmt.Print("Discovering path ")
 		for !ts.HasPath(callDest.Hash) && time.Now().Before(deadline) {
-			time.Sleep(200 * time.Millisecond)
+			time.Sleep(100 * time.Millisecond)
+			fmt.Printf("\b\b%v ", spinner[index])
+			index = (index + 1) % len(spinner)
 		}
+		fmt.Println()
 		if !ts.HasPath(callDest.Hash) {
 			return fmt.Errorf("path request timed out")
 		}

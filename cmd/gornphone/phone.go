@@ -310,10 +310,10 @@ func (p *Phone) processAvailableInput(input string) bool {
 		if len(input) == 32 {
 			p.Dial(input)
 		} else if input != "" {
-			alias, hash, ok := p.config.LookupAlias(input)
-			if ok {
+			if hash, _, ok := p.config.LookupName(input); ok {
 				p.Dial(hash)
-				_ = alias
+			} else if hash, _, ok := p.config.LookupAlias(input); ok {
+				p.Dial(hash)
 			} else {
 				fmt.Printf("Unknown command or invalid hash: %s\n", input)
 			}

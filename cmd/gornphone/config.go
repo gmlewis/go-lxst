@@ -233,6 +233,17 @@ func (cfg *PhoneConfig) LookupAlias(alias string) (hash, name string, ok bool) {
 	return "", "", false
 }
 
+// LookupName finds a phonebook entry by its name (case-insensitive).
+func (cfg *PhoneConfig) LookupName(name string) (hash, alias string, ok bool) {
+	lower := strings.ToLower(name)
+	for n, entry := range cfg.Phonebook {
+		if strings.ToLower(n) == lower {
+			return entry.Hash, entry.Alias, true
+		}
+	}
+	return "", "", false
+}
+
 // LoadConfigFile reads and parses a config file from the given path.
 func LoadConfigFile(path string) (*PhoneConfig, error) {
 	data, err := os.ReadFile(path)

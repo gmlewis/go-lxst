@@ -6,7 +6,9 @@
 package main
 
 import (
+	"strings"
 	"testing"
+	"time"
 )
 
 func TestNewPhone(t *testing.T) {
@@ -190,6 +192,30 @@ func TestPhoneProcessInputAliasDial(t *testing.T) {
 	}
 }
 
+func TestPhoneProcessInputNameDial(t *testing.T) {
+	t.Parallel()
+	cfg := &PhoneConfig{
+		Telephone: TelephoneConfig{
+			AllowedCallers: "all",
+		},
+		Phonebook: map[string]PhonebookEntry{
+			"Alice": {Hash: "aabbccdd11223344aabbccdd11223344", Alias: "100"},
+		},
+	}
+	phone := NewPhone(cfg)
+
+	keepGoing := phone.ProcessInput("Alice")
+	if !keepGoing {
+		t.Error("ProcessInput(name) returned false, want true")
+	}
+	if !phone.CallIsConnecting() {
+		t.Error("phone should be connecting after name dial")
+	}
+	if phone.LastDialledHash() != "aabbccdd11223344aabbccdd11223344" {
+		t.Errorf("LastDialledHash() = %q, want %q", phone.LastDialledHash(), "aabbccdd11223344aabbccdd11223344")
+	}
+}
+
 func TestPhoneAnswerFromRinging(t *testing.T) {
 	t.Parallel()
 	cfg := DefaultConfig()
@@ -283,6 +309,20 @@ func TestPhoneStatusString(t *testing.T) {
 		if got != tt.want {
 			t.Errorf("StatusString() for state %d = %q, want %q", tt.state, got, tt.want)
 		}
+	}
+}
+
+func TestPhoneStatusStringInCall(t *testing.T) {
+	t.Parallel()
+	cfg := DefaultConfig()
+	phone := NewPhone(cfg)
+
+	phone.SetState(StateInCall)
+	phone.started = time.Now().Add(-2 * time.Second)
+
+	got := phone.StatusString()
+	if !strings.HasPrefix(got, "In call for") {
+		t.Errorf("StatusString() = %q, want prefix %q", got, "In call for")
 	}
 }
 

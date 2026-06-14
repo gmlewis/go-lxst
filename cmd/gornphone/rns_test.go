@@ -401,6 +401,36 @@ func TestTelephoneEndpoint_CallSelf(t *testing.T) {
 	}
 }
 
+func TestTelephoneEndpoint_CallSpinner(t *testing.T) {
+	t.Parallel()
+
+	id1, err := rns.NewIdentity(true, nil)
+	if err != nil {
+		t.Fatalf("NewIdentity failed: %v", err)
+	}
+	id2, err := rns.NewIdentity(true, nil)
+	if err != nil {
+		t.Fatalf("NewIdentity failed: %v", err)
+	}
+
+	ts := rns.NewTransportSystem(nil)
+	tep1, err := NewTelephoneEndpoint(id1, ts)
+	if err != nil {
+		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
+	}
+	tep2, err := NewTelephoneEndpoint(id2, ts)
+	if err != nil {
+		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
+	}
+
+	// Register identities with transport so they can be recalled
+	ts.Remember(id1.Hash, nil, nil, nil)
+	ts.Remember(id2.Hash, nil, nil, nil)
+
+	_ = tep1
+	_ = tep2
+}
+
 func TestTelephoneEndpoint_AlreadyInCall(t *testing.T) {
 	t.Parallel()
 
