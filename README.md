@@ -190,8 +190,15 @@ the two machines can reach each other.
 
 ### Step 1: Configure RNS Transport
 
-Both machines need to be on the same Reticulum network. The simplest setup
-for two machines on the same LAN is a TCP connection.
+Reticulum uses `~/.reticulum/config` to define how nodes reach each other.
+**If your system already has a working RNS config** (for example, one that
+connects to an RNS testnet or another RNS node), you can skip this step —
+`gornphone` and `rnphone` will use whatever transport Reticulum already has.
+Any two Reticulum nodes that can reach each other through the network can
+make phone calls.
+
+If you don't have an existing RNS config, the simplest setup for two machines
+on the same LAN is a direct TCP connection.
 
 On **Machine A** (the machine running `gornphone`), create
 `~/.reticulum/config`:
