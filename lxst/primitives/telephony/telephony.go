@@ -1535,8 +1535,8 @@ func (tel *Telephone) SignallingReceived(signals []byte) {
 			cb := tel.busyCallback
 			tel.mu.Unlock()
 
-			go tel.PlayBusyTone()
 			tel.DisableDialTone()
+			tel.PlayBusyTone()
 			tel.Hangup()
 			if cb != nil {
 				cb()
@@ -1548,8 +1548,8 @@ func (tel *Telephone) SignallingReceived(signals []byte) {
 			cb := tel.rejectedCallback
 			tel.mu.Unlock()
 
-			go tel.PlayBusyTone()
 			tel.DisableDialTone()
+			tel.PlayBusyTone()
 			tel.Hangup()
 			if cb != nil {
 				cb()
