@@ -57,7 +57,7 @@ func main() {
 	flag.Parse()
 
 	if *showVersion {
-		fmt.Printf("gornphone %s\n", version)
+fmt.Printf("gornphone %v\n", version)
 		os.Exit(0)
 	}
 
@@ -76,7 +76,7 @@ func main() {
 		var buf strings.Builder
 		fmt.Fprintf(&buf, "Invalid profile: 0x%02x. Use one of:\n", profile)
 		for _, p := range telephony.AvailableProfiles {
-			fmt.Fprintf(&buf, "  0x%02x (%s, %s, %.0fms)\n",
+			fmt.Fprintf(&buf, "  0x%02x (%v, %v, %.0fms)\n",
 				p, telephony.ProfileName(p), telephony.ProfileAbbreviation(p),
 				telephony.GetFrameTime(p))
 		}
@@ -111,8 +111,8 @@ func main() {
 		tel.SetRingerDevice(cfg.Telephone.Ringer)
 	}
 
-	fmt.Printf("gornphone %s\n", version)
-	fmt.Printf("Profile: %s (%s)\n", telephony.ProfileName(profile), telephony.ProfileAbbreviation(profile))
+	fmt.Printf("gornphone %v\n", version)
+	fmt.Printf("Profile: %v (%v)\n", telephony.ProfileName(profile), telephony.ProfileAbbreviation(profile))
 	fmt.Printf("Frame time: %.0fms\n", telephony.GetFrameTime(profile))
 
 	codec, err := telephony.GetCodec(profile)
@@ -121,8 +121,8 @@ func main() {
 	}
 	fmt.Printf("Codec: %T\n", codec)
 
-	fmt.Printf("Audio input:  %s\n", defaultStr(tel.MicDevice(), "default"))
-	fmt.Printf("Audio output: %s\n", defaultStr(tel.SpeakerDevice(), "default"))
+	fmt.Printf("Audio input:  %v\n", defaultStr(tel.MicDevice(), "default"))
+	fmt.Printf("Audio output: %v\n", defaultStr(tel.SpeakerDevice(), "default"))
 	fmt.Printf("Auto-answer: %v\n", tel.AutoAnswer())
 	fmt.Println()
 
@@ -130,20 +130,22 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error loading identity: %v", err)
 	}
-	fmt.Printf("Identity hash: %s\n", prettyHex(identity.HexHash))
+	fmt.Printf("Identity hash: %v\n", prettyHex(identity.HexHash))
 	fmt.Println()
 
 	if *configDir != "" || cfg != nil {
-		fmt.Printf("Config directory: %s\n", *configDir)
+		fmt.Printf("Config directory: %v\n", *configDir)
 	}
 
 	phone := NewPhone(cfg)
 
-	// Initialize RNS transport and endpoint
+	// Initialize RNS transport and endpoint.
+	// When --rnsconfig is not specified, pass "" so go-reticulum
+	// resolves the default config dir (~/.reticulum, /etc/reticulum,
+	// etc.), matching Python rnphone behavior. This lets share_instance
+	// work so multiple gornphone instances communicate via the local
+	// shared instance socket.
 	rnsConfig := *rnsConfigDir
-	if rnsConfig == "" {
-		rnsConfig = ensureRNSConfig(*configDir)
-	}
 
 	rnsLogger := rns.NewLogger()
 	rnsLogger.SetLogFilePath(logPath)
@@ -157,8 +159,12 @@ func main() {
 	}
 	_ = reticulum
 
-	fmt.Printf("RNS config:   %s\n", rnsConfig)
-	fmt.Printf("RNS log:       %s\n", logPath)
+	rnsConfigDisplay := rnsConfig
+	if rnsConfigDisplay == "" {
+		rnsConfigDisplay = "default (~/.reticulum)"
+	}
+	fmt.Printf("RNS config:   %v\n", rnsConfigDisplay)
+	fmt.Printf("RNS log:       %v\n", logPath)
 
 	endpoint, err := NewTelephoneEndpoint(identity, ts)
 	if err != nil {
@@ -231,60 +237,6 @@ func loadOrCreateConfig(configDir string) *PhoneConfig {
 	return cfg
 }
 
-// ensureRNSConfig creates a per-instance RNS config directory under the
-// gornphone config dir so that multiple gornphone instances can run
-// simultaneously on the same machine. Each instance runs its own RNS
-// stack (share_instance = No). If a system RNS config exists at
-// ~/.reticulum/config, it is copied and share_instance is overridden to No
-// so the instance can reach the broader network via the same interfaces
-// (TCP testnets, etc.) that the system RNS config defines. If no system
-// config exists, a minimal config with AutoInterface is generated.
-func ensureRNSConfig(gornphoneConfigDir string) string {
-	rnsDir := gornphoneConfigDir + "/rns"
-	configPath := rnsDir + "/config"
-
-	if _, err := os.Stat(configPath); err == nil {
-		return rnsDir
-	}
-
-	_ = os.MkdirAll(rnsDir, 0o755)
-
-	home, err := os.UserHomeDir()
-	if err != nil {
-		home = ""
-	}
-
-	var content string
-	if home != "" {
-		systemConfigPath := home + "/.reticulum/config"
-		if data, err := os.ReadFile(systemConfigPath); err == nil {
-			content = string(data)
-			content = strings.Replace(content, "share_instance = Yes", "share_instance = No", 1)
-			if !strings.Contains(content, "share_instance") {
-				content = "share_instance = No\n\n" + content
-			}
-		}
-	}
-
-	if content == "" {
-		content = `[reticulum]
-  share_instance = No
-
-[logging]
-  loglevel = 4
-
-[interfaces]
-  [[Default Interface]]
-    type = AutoInterface
-    enabled = Yes
-    name = Default Interface
-`
-	}
-
-	_ = os.WriteFile(configPath, []byte(content), 0o644)
-	return rnsDir
-}
-
 func defaultConfigDir() string {
 	if _, err := os.Stat("/etc/rnphone/config"); err == nil {
 		return "/etc/rnphone"
@@ -305,10 +257,10 @@ func listAudioDevices() {
 	backend := lxst.NewBackend(48000, 2, 32)
 	if backend != nil {
 		for _, mic := range backend.AllMicrophones() {
-			fmt.Printf("  Input  : %s\n", mic)
+			fmt.Printf("  Input  : %v\n", mic)
 		}
 		for _, spk := range backend.AllSpeakers() {
-			fmt.Printf("  Output : %s\n", spk)
+			fmt.Printf("  Output : %v\n", spk)
 		}
 	}
 }
@@ -363,12 +315,12 @@ After=sound.target
 ExecStartPre=/bin/sleep 30
 Type=simple
 Environment="DISPLAY=:0"
-Environment="XAUTHORITY=/home/%s/.Xauthority"
+Environment="XAUTHORITY=/home/%v/.Xauthority"
 Environment="XDG_RUNTIME_DIR=/run/user/1000"
 Restart=always
 RestartSec=5
-User=%s
-ExecStart=/home/%s/.local/bin/gornphone --service -vvv
+User=%v
+ExecStart=/home/%v/.local/bin/gornphone --service -vvv
 
 [Install]
 WantedBy=graphical.target

@@ -70,7 +70,7 @@ func TestVersionOutputFormat(t *testing.T) {
 	t.Parallel()
 
 	var buf bytes.Buffer
-	fmt.Fprintf(&buf, "gornphone %s\n", version)
+	fmt.Fprintf(&buf, "gornphone %v\n", version)
 
 	out := strings.TrimSpace(buf.String())
 	if !strings.HasPrefix(out, "gornphone ") {

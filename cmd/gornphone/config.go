@@ -259,36 +259,36 @@ func SaveConfigFile(path string, cfg *PhoneConfig) error {
 
 	sb.WriteString("[telephone]\n")
 	if cfg.Telephone.Ringtone != "" {
-		fmt.Fprintf(&sb, "    ringtone = %s\n", cfg.Telephone.Ringtone)
+		fmt.Fprintf(&sb, "    ringtone = %v\n", cfg.Telephone.Ringtone)
 	}
 	if cfg.Telephone.Speaker != "" {
-		fmt.Fprintf(&sb, "    speaker = %s\n", cfg.Telephone.Speaker)
+		fmt.Fprintf(&sb, "    speaker = %v\n", cfg.Telephone.Speaker)
 	}
 	if cfg.Telephone.Microphone != "" {
-		fmt.Fprintf(&sb, "    microphone = %s\n", cfg.Telephone.Microphone)
+		fmt.Fprintf(&sb, "    microphone = %v\n", cfg.Telephone.Microphone)
 	}
 	if cfg.Telephone.Ringer != "" {
-		fmt.Fprintf(&sb, "    ringer = %s\n", cfg.Telephone.Ringer)
+		fmt.Fprintf(&sb, "    ringer = %v\n", cfg.Telephone.Ringer)
 	}
 	if cfg.Telephone.AllowedCallers != "" {
 		switch cfg.Telephone.AllowedCallers {
 		case "all", "none", "phonebook":
-			fmt.Fprintf(&sb, "    allowed_callers = %s\n", cfg.Telephone.AllowedCallers)
+			fmt.Fprintf(&sb, "    allowed_callers = %v\n", cfg.Telephone.AllowedCallers)
 		case "list":
-			fmt.Fprintf(&sb, "    allowed_callers = %s\n", strings.Join(cfg.Telephone.AllowedList, ", "))
+			fmt.Fprintf(&sb, "    allowed_callers = %v\n", strings.Join(cfg.Telephone.AllowedList, ", "))
 		}
 	}
 	if len(cfg.Telephone.BlockedList) > 0 {
-		fmt.Fprintf(&sb, "    blocked_callers = %s\n", strings.Join(cfg.Telephone.BlockedList, ", "))
+		fmt.Fprintf(&sb, "    blocked_callers = %v\n", strings.Join(cfg.Telephone.BlockedList, ", "))
 	}
 
 	if len(cfg.Phonebook) > 0 {
 		sb.WriteString("\n[phonebook]\n")
 		for name, entry := range cfg.Phonebook {
 			if entry.Alias != "" {
-				fmt.Fprintf(&sb, "    %s = %s, %s\n", name, entry.Hash, entry.Alias)
+				fmt.Fprintf(&sb, "    %v = %v, %v\n", name, entry.Hash, entry.Alias)
 			} else {
-				fmt.Fprintf(&sb, "    %s = %s\n", name, entry.Hash)
+				fmt.Fprintf(&sb, "    %v = %v\n", name, entry.Hash)
 			}
 		}
 	}

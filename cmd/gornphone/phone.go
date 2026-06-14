@@ -150,7 +150,7 @@ func (p *Phone) Dial(hash string) {
 	}
 
 	p.state = StateConnecting
-	fmt.Printf("Calling %s...\n", prettyHex(hash))
+	fmt.Printf("Calling %v...\n", prettyHex(hash))
 
 	if p.endpoint != nil {
 		go func() {
@@ -177,11 +177,11 @@ func (p *Phone) Ringing(hash string) {
 		p.callerAlias = ""
 	}
 
-	fmt.Printf("\n\nIncoming call from %s\n", prettyHex(hash))
+	fmt.Printf("\n\nIncoming call from %v\n", prettyHex(hash))
 	if p.callerName != "" {
-		fmt.Printf("  %s", p.callerName)
+		fmt.Printf("  %v", p.callerName)
 		if p.callerAlias != "" {
-			fmt.Printf(" (%s)", p.callerAlias)
+			fmt.Printf(" (%v)", p.callerAlias)
 		}
 		fmt.Println()
 	}
@@ -193,7 +193,7 @@ func (p *Phone) Answer() bool {
 	if !p.IsRinging() {
 		return false
 	}
-	fmt.Printf("Answering call from %s\n", prettyHex(p.callerHash))
+	fmt.Printf("Answering call from %v\n", prettyHex(p.callerHash))
 	p.state = StateConnecting
 	return true
 }
@@ -206,11 +206,11 @@ func (p *Phone) Hangup() {
 
 	switch {
 	case p.IsInCall():
-		fmt.Printf("Call with %s ended\n\n", prettyHex(p.callerHash))
+		fmt.Printf("Call with %v ended\n\n", prettyHex(p.callerHash))
 	case p.IsRinging():
-		fmt.Printf("Call from %s was not answered\n\n", prettyHex(p.callerHash))
+		fmt.Printf("Call from %v was not answered\n\n", prettyHex(p.callerHash))
 	case p.CallIsConnecting():
-		fmt.Printf("Call to %s could not be connected\n\n", prettyHex(p.callerHash))
+		fmt.Printf("Call to %v could not be connected\n\n", prettyHex(p.callerHash))
 	}
 
 	if p.endpoint != nil {
@@ -226,7 +226,7 @@ func (p *Phone) Reject() {
 	if !p.IsRinging() {
 		return
 	}
-	fmt.Printf("Rejecting call from %s\n", prettyHex(p.callerHash))
+	fmt.Printf("Rejecting call from %v\n", prettyHex(p.callerHash))
 	p.Hangup()
 }
 
@@ -235,18 +235,18 @@ func (p *Phone) CallEstablished() {
 	if p.CallIsConnecting() || p.IsRinging() {
 		p.state = StateInCall
 		p.started = time.Now()
-		fmt.Printf("Call established with %s\n", prettyHex(p.callerHash))
+		fmt.Printf("Call established with %v\n", prettyHex(p.callerHash))
 	}
 }
 
 // PrintIdentity prints the identity hash of this telephone.
 func (p *Phone) PrintIdentity(hash string) {
-	fmt.Printf("Identity hash of this telephone: %s\n\n", prettyHex(hash))
+	fmt.Printf("Identity hash of this telephone: %v\n\n", prettyHex(hash))
 }
 
 // PrintDestination prints the destination hash of this telephone.
 func (p *Phone) PrintDestination(hash string) {
-	fmt.Printf("Destination hash of this telephone: %s\n\n", prettyHex(hash))
+	fmt.Printf("Destination hash of this telephone: %v\n\n", prettyHex(hash))
 }
 
 // PrintPhonebook displays the phonebook entries.
@@ -266,7 +266,7 @@ func (p *Phone) PrintPhonebook() {
 		if entry.Alias != "" {
 			alias = entry.Alias
 		}
-		fmt.Printf("  %s %s : <%s>\n", alias, name, entry.Hash)
+		fmt.Printf("  %v %v : <%v>\n", alias, name, entry.Hash)
 	}
 	fmt.Println()
 }
@@ -330,7 +330,7 @@ func (p *Phone) processAvailableInput(input string) bool {
 			} else if hash, _, ok := p.config.LookupAlias(input); ok {
 				p.Dial(hash)
 			} else {
-				fmt.Printf("Unknown command or invalid hash: %s\n", input)
+				fmt.Printf("Unknown command or invalid hash: %v\n", input)
 			}
 		}
 	}
@@ -349,7 +349,7 @@ func (p *Phone) processRingingInput(input string) bool {
 }
 
 func (p *Phone) processInCallInput(input string) bool {
-	fmt.Printf("Hanging up call with %s\n", prettyHex(p.callerHash))
+	fmt.Printf("Hanging up call with %v\n", prettyHex(p.callerHash))
 	p.Hangup()
 	return true
 }
