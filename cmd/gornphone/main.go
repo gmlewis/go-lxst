@@ -142,7 +142,7 @@ func main() {
 	// Initialize RNS transport and endpoint
 	rnsConfig := *rnsConfigDir
 	if rnsConfig == "" {
-		rnsConfig = defaultRNSConfigDir()
+		rnsConfig = ensureRNSConfig(*configDir)
 	}
 
 	rnsLogger := rns.NewLogger()
@@ -157,7 +157,8 @@ func main() {
 	}
 	_ = reticulum
 
-	fmt.Printf("RNS log: %s\n", logPath)
+	fmt.Printf("RNS config:   %s\n", rnsConfig)
+	fmt.Printf("RNS log:       %s\n", logPath)
 
 	endpoint, err := NewTelephoneEndpoint(identity, ts)
 	if err != nil {
@@ -230,16 +231,36 @@ func loadOrCreateConfig(configDir string) *PhoneConfig {
 	return cfg
 }
 
-func defaultRNSConfigDir() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ""
+// ensureRNSConfig creates a per-instance RNS config directory under the
+// gornphone config dir so that multiple gornphone instances can run
+// simultaneously on the same machine. Each instance runs its own RNS
+// stack (share_instance = No) with AutoInterface for local discovery.
+// If a system RNS config exists at ~/.reticulum/config, its interface
+// definitions are inherited so the instance can reach the broader network.
+func ensureRNSConfig(gornphoneConfigDir string) string {
+	rnsDir := gornphoneConfigDir + "/rns"
+	configPath := rnsDir + "/config"
+
+	if _, err := os.Stat(configPath); err == nil {
+		return rnsDir
 	}
-	configDir := home + "/.reticulum"
-	if _, err := os.Stat(configDir); err == nil {
-		return configDir
-	}
-	return ""
+
+	_ = os.MkdirAll(rnsDir, 0o755)
+
+	content := `[reticulum]
+  share_instance = No
+
+[logging]
+  loglevel = 4
+
+[interfaces]
+  [[Default Interface]]
+    type = AutoInterface
+    enabled = Yes
+    name = Default Interface
+`
+	_ = os.WriteFile(configPath, []byte(content), 0o644)
+	return rnsDir
 }
 
 func defaultConfigDir() string {
