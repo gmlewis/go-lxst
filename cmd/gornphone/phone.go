@@ -7,6 +7,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -150,6 +151,15 @@ func (p *Phone) Dial(hash string) {
 
 	p.state = StateConnecting
 	fmt.Printf("Calling %s...\n", prettyHex(hash))
+
+	if p.endpoint != nil {
+		go func() {
+			if err := p.endpoint.Call(hash, 30*time.Second); err != nil {
+				fmt.Printf("Call failed: %v\n", err)
+				p.Hangup()
+			}
+		}()
+	}
 }
 
 // Ringing handles an incoming call notification.
@@ -201,6 +211,10 @@ func (p *Phone) Hangup() {
 		fmt.Printf("Call from %s was not answered\n\n", prettyHex(p.callerHash))
 	case p.CallIsConnecting():
 		fmt.Printf("Call to %s could not be connected\n\n", prettyHex(p.callerHash))
+	}
+
+	if p.endpoint != nil {
+		p.endpoint.Hangup()
 	}
 
 	p.direction = ""
@@ -307,8 +321,9 @@ func (p *Phone) processAvailableInput(input string) bool {
 			fmt.Println("Announce sent")
 		}
 	default:
-		if len(input) == 32 {
-			p.Dial(input)
+		cleaned := stripColons(input)
+		if len(cleaned) == 32 {
+			p.Dial(cleaned)
 		} else if input != "" {
 			if hash, _, ok := p.config.LookupName(input); ok {
 				p.Dial(hash)
@@ -370,6 +385,19 @@ func trimSpace(s string) string {
 		end--
 	}
 	return s[start:end]
+}
+
+// stripColons removes colon characters from a string, allowing users to
+// paste pretty-printed identity hashes like "6b0af935:90501f08:a2090b80:4131ec58".
+func stripColons(s string) string {
+	var b strings.Builder
+	b.Grow(len(s))
+	for _, r := range s {
+		if r != ':' {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
 }
 
 // StatusString returns a human-readable status string for the current state.
