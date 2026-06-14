@@ -234,9 +234,11 @@ func loadOrCreateConfig(configDir string) *PhoneConfig {
 // ensureRNSConfig creates a per-instance RNS config directory under the
 // gornphone config dir so that multiple gornphone instances can run
 // simultaneously on the same machine. Each instance runs its own RNS
-// stack (share_instance = No) with AutoInterface for local discovery.
-// If a system RNS config exists at ~/.reticulum/config, its interface
-// definitions are inherited so the instance can reach the broader network.
+// stack (share_instance = No). If a system RNS config exists at
+// ~/.reticulum/config, it is copied and share_instance is overridden to No
+// so the instance can reach the broader network via the same interfaces
+// (TCP testnets, etc.) that the system RNS config defines. If no system
+// config exists, a minimal config with AutoInterface is generated.
 func ensureRNSConfig(gornphoneConfigDir string) string {
 	rnsDir := gornphoneConfigDir + "/rns"
 	configPath := rnsDir + "/config"
@@ -247,7 +249,25 @@ func ensureRNSConfig(gornphoneConfigDir string) string {
 
 	_ = os.MkdirAll(rnsDir, 0o755)
 
-	content := `[reticulum]
+	home, err := os.UserHomeDir()
+	if err != nil {
+		home = ""
+	}
+
+	var content string
+	if home != "" {
+		systemConfigPath := home + "/.reticulum/config"
+		if data, err := os.ReadFile(systemConfigPath); err == nil {
+			content = string(data)
+			content = strings.Replace(content, "share_instance = Yes", "share_instance = No", 1)
+			if !strings.Contains(content, "share_instance") {
+				content = "share_instance = No\n\n" + content
+			}
+		}
+	}
+
+	if content == "" {
+		content = `[reticulum]
   share_instance = No
 
 [logging]
@@ -259,6 +279,8 @@ func ensureRNSConfig(gornphoneConfigDir string) string {
     enabled = Yes
     name = Default Interface
 `
+	}
+
 	_ = os.WriteFile(configPath, []byte(content), 0o644)
 	return rnsDir
 }
