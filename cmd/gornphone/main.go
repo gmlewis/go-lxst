@@ -157,7 +157,7 @@ fmt.Printf("gornphone %v\n", version)
 	if err != nil {
 		log.Fatalf("Error initializing Reticulum: %v", err)
 	}
-	_ = reticulum
+	defer reticulum.Close()
 
 	rnsConfigDisplay := rnsConfig
 	if rnsConfigDisplay == "" {
@@ -165,6 +165,15 @@ fmt.Printf("gornphone %v\n", version)
 	}
 	fmt.Printf("RNS config:   %v\n", rnsConfigDisplay)
 	fmt.Printf("RNS log:       %v\n", logPath)
+
+	switch {
+	case reticulum.IsSharedInstance():
+		fmt.Println("RNS mode:     shared instance server")
+	case reticulum.IsConnectedToSharedInstance():
+		fmt.Println("RNS mode:     connected to shared instance")
+	default:
+		fmt.Println("RNS mode:     standalone")
+	}
 
 	endpoint, err := NewTelephoneEndpoint(identity, ts)
 	if err != nil {
@@ -189,7 +198,7 @@ fmt.Printf("gornphone %v\n", version)
 	phone.Start()
 
 	if err := endpoint.Announce(); err != nil {
-		log.Printf("Failed to announce on startup: %v", err)
+		fmt.Printf("Announce failed: %v\n", err)
 	}
 
 	endpoint.StartJobs()

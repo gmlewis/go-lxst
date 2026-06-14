@@ -337,6 +337,7 @@ func (tep *TelephoneEndpoint) Call(identityHash string, timeout time.Duration) e
 
 	// Request a path if we don't have one, with spinner (matching Python rnphone dial())
 	if !ts.HasPath(destHash) {
+		fmt.Printf("No path to %x, requesting...\n", destHash)
 		if err := ts.RequestPath(destHash); err != nil {
 			return fmt.Errorf("requesting path: %w", err)
 		}
@@ -351,9 +352,10 @@ func (tep *TelephoneEndpoint) Call(identityHash string, timeout time.Duration) e
 		}
 		fmt.Println()
 		if !ts.HasPath(destHash) {
-			return fmt.Errorf("path request timed out")
+			return fmt.Errorf("path request timed out (is the remote phone announced and reachable?)")
 		}
 	}
+	fmt.Printf("Path found to %x\n", destHash)
 
 	remoteID := ts.Recall(destHash)
 	if remoteID == nil {
