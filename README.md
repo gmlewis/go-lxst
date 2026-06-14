@@ -270,8 +270,8 @@ When `gornphone` is in the available state:
 | `<name>` | — | Dial a phonebook entry by name |
 | `p` | phonebook | Show phonebook entries |
 | `r` | redial | Redial the last called identity |
-| `i` | identity | Show this phone's identity hash |
-| `d` | desthash | Show this phone's destination hash |
+| `i` | identity | Show identity hash (share this with others to call you) |
+| `d` | desthash | Show destination hash (for RNS path/announce) |
 | `a` | announce | Send an announce on the network |
 | `q` | quit | Exit gornphone |
 | `h` | help | Show help |

@@ -341,16 +341,16 @@ func (p *Phone) processInCallInput(input string) bool {
 
 func (p *Phone) printHelp() {
 	fmt.Print(`
-Available commands:
-  p - phonebook
-  r - redial last called
-  i - show identity
-  d - show destination hash
-  a - announce on network
-  q - quit
-  h - help
+ Available commands:
+   p - phonebook
+   r - redial last called
+   i - show identity (share this with others)
+   d - show destination hash (for RNS path/announce)
+   a - announce on network
+   q - quit
+   h - help
 
-Enter identity hash to call, or command:`)
+ Enter identity hash to call, or command:`)
 }
 
 func prettyHex(hash string) string {
