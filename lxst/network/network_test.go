@@ -6,6 +6,7 @@
 package network
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/gmlewis/go-lxst/lxst/codecs"
@@ -352,7 +353,11 @@ func TestPacketizer_HandleFrame(t *testing.T) {
 	}
 	p.SetCodec(opus)
 
-	frame := []byte{0x01, 0x02, 0x03}
+	// Create a frame with enough samples for Opus encoding (160 samples at 8kHz)
+	frame := make([][]float32, 160)
+	for i := range frame {
+		frame[i] = []float32{0.1}
+	}
 	err = p.HandleFrame(frame, nil)
 	if err != nil {
 		t.Fatalf("HandleFrame failed: %v", err)
@@ -368,7 +373,7 @@ func TestPacketizer_TransmitFailure(t *testing.T) {
 
 	failureCalled := false
 	p := NewPacketizer(func(data []byte) error {
-		return ErrInvalidData
+		return fmt.Errorf("transmit error")
 	}, func() {
 		failureCalled = true
 	})
@@ -379,7 +384,12 @@ func TestPacketizer_TransmitFailure(t *testing.T) {
 	}
 	p.SetCodec(opus)
 
-	_ = p.HandleFrame([]byte{0x01}, nil)
+	// Create a frame with enough samples for Opus encoding
+	frame := make([][]float32, 160)
+	for i := range frame {
+		frame[i] = []float32{0.1}
+	}
+	_ = p.HandleFrame(frame, nil)
 
 	if !failureCalled {
 		t.Error("Failure callback should have been called")

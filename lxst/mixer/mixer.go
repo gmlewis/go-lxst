@@ -166,6 +166,8 @@ func (m *Mixer) applyCodecConstraints() {
 }
 
 func (m *Mixer) mixingGain() float64 {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if m.muted {
 		return 0.0
 	}
@@ -265,6 +267,7 @@ func (m *Mixer) HandleFrame(frame [][]float32, fromSource sources.Source) error 
 			maxFrames: maxFrames,
 		}
 
+		m.mu.Lock()
 		if m.channels == 0 {
 			if src, ok := fromSource.(interface{ Channels() int }); ok {
 				m.channels = src.Channels()
@@ -278,6 +281,7 @@ func (m *Mixer) HandleFrame(frame [][]float32, fromSource sources.Source) error 
 				m.frameTime = float64(m.samplesPerFrame) / float64(m.samplerate)
 			}
 		}
+		m.mu.Unlock()
 	}
 
 	q := m.incomingFrames[fromSource]
@@ -290,14 +294,15 @@ func (m *Mixer) HandleFrame(frame [][]float32, fromSource sources.Source) error 
 }
 
 func (m *Mixer) mixerJob() {
-	defer m.mixerThread.wg.Done()
+	thread := m.mixerThread
+	defer thread.wg.Done()
 
 	m.mixerLock.Lock()
 	defer m.mixerLock.Unlock()
 
 	for {
 		select {
-		case <-m.mixerThread.done:
+		case <-thread.done:
 			return
 		default:
 		}
@@ -377,10 +382,16 @@ func (m *Mixer) mixerJob() {
 
 				putFrame(mixedFrame)
 			} else {
-				time.Sleep(time.Duration(m.frameTime * float64(time.Second) * 0.1))
+				m.mu.Lock()
+				ft := m.frameTime
+				m.mu.Unlock()
+				time.Sleep(time.Duration(ft * float64(time.Second) * 0.1))
 			}
 		} else {
-			time.Sleep(time.Duration(m.frameTime * float64(time.Second) * 0.1))
+			m.mu.Lock()
+			ft := m.frameTime
+			m.mu.Unlock()
+			time.Sleep(time.Duration(ft * float64(time.Second) * 0.1))
 		}
 	}
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/gmlewis/go-lxst/lxst/codecs/codec2"
 	"github.com/gmlewis/go-lxst/lxst/codecs/opus"
 	"github.com/gmlewis/go-lxst/lxst/codecs/raw"
+	"github.com/gmlewis/go-lxst/lxst/sinks"
 	"github.com/gmlewis/go-lxst/lxst/sources"
 )
 
@@ -153,11 +154,23 @@ func NewPacketizer(sendFunc func(data []byte) error, failureCallback func()) *Pa
 	}
 }
 
-func (p *Packetizer) HandleFrame(frame []byte, source sources.Source) error {
+// Ensure Packetizer implements sinks.Sink
+var _ sinks.Sink = (*Packetizer)(nil)
+
+func (p *Packetizer) HandleFrame(frame [][]float32, fromSource sources.Source) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
 	if p.sendFunc == nil {
+		return nil
+	}
+
+	if p.codec == nil {
+		return nil
+	}
+
+	encoded := p.codec.Encode(frame)
+	if len(encoded) == 0 {
 		return nil
 	}
 
@@ -166,7 +179,7 @@ func (p *Packetizer) HandleFrame(frame []byte, source sources.Source) error {
 		header = CodeNull
 	}
 
-	frameData := append([]byte{header}, frame...)
+	frameData := append([]byte{header}, encoded...)
 	packetData := map[byte]any{FieldFrames: frameData}
 	packed, err := PackData(packetData)
 	if err != nil {

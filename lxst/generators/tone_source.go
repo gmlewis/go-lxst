@@ -154,6 +154,10 @@ func (ts *ToneSource) Stop() error {
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
 
+	if !ts.shouldRun && !ts.easingOut {
+		return nil
+	}
+
 	if !ts.ease {
 		ts.shouldRun = false
 	} else {
@@ -215,11 +219,12 @@ func (ts *ToneSource) generate() [][]float32 {
 }
 
 func (ts *ToneSource) generateJob() {
-	defer ts.generateThread.wg.Done()
+	thread := ts.generateThread
+	defer thread.wg.Done()
 
 	for {
 		select {
-		case <-ts.generateThread.done:
+		case <-thread.done:
 			return
 		default:
 		}
@@ -292,6 +297,12 @@ func (ts *ToneSource) SetGain(gain float64) {
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
 	ts.gain = gain
+}
+
+func (ts *ToneSource) EaseTimeMs() float64 {
+	ts.mu.Lock()
+	defer ts.mu.Unlock()
+	return ts.easeTimeMs
 }
 
 func (ts *ToneSource) SampleRate() int {

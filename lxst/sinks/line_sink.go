@@ -126,6 +126,10 @@ func (ls *LineSink) Start() error {
 
 func (ls *LineSink) Stop() error {
 	ls.mu.Lock()
+	if !ls.shouldRun {
+		ls.mu.Unlock()
+		return nil
+	}
 	ls.shouldRun = false
 	ls.mu.Unlock()
 	return nil
@@ -174,7 +178,8 @@ func (ls *LineSink) SamplesPerFrame() int {
 }
 
 func (ls *LineSink) digestJob() {
-	defer ls.digestThread.wg.Done()
+	thread := ls.digestThread
+	defer thread.wg.Done()
 
 	ls.digestLock.Lock()
 	defer ls.digestLock.Unlock()
@@ -192,7 +197,7 @@ func (ls *LineSink) digestJob() {
 
 	for {
 		select {
-		case <-ls.digestThread.done:
+		case <-thread.done:
 			return
 		default:
 		}

@@ -13,11 +13,37 @@ package telephony
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/gmlewis/go-lxst/lxst/codecs"
 	"github.com/gmlewis/go-lxst/lxst/codecs/codec2"
 	"github.com/gmlewis/go-lxst/lxst/codecs/opus"
+	"github.com/gmlewis/go-lxst/lxst/filters"
+	"github.com/gmlewis/go-lxst/lxst/generators"
+	"github.com/gmlewis/go-lxst/lxst/mixer"
+	"github.com/gmlewis/go-lxst/lxst/network"
+	"github.com/gmlewis/go-lxst/lxst/pipeline"
+	"github.com/gmlewis/go-lxst/lxst/sinks"
+	"github.com/gmlewis/go-lxst/lxst/sources"
 )
+
+// Time functions are package-level variables for testability.
+// In production they use real time; in tests they can be replaced
+// with simulated versions.
+var (
+	now        = time.Now
+	elapsed    = func(start time.Time, dur float64) bool { return time.Since(start).Seconds() < dur }
+	elapsedMod = func(start time.Time, window float64) float64 { return mathMod(time.Since(start).Seconds(), window) }
+	sleep      = time.Sleep
+)
+
+func mathMod(a, b float64) float64 {
+	result := a - b*float64(int(a/b))
+	if result < 0 {
+		result += b
+	}
+	return result
+}
 
 const (
 	ProfileBandwidthUltraLow byte = 0x10
@@ -204,6 +230,7 @@ const (
 	ConnectTime         = 5
 	DialToneFrequency   = 382.0
 	DialToneEaseMs      = 3.14159
+	BusyToneSeconds     = 4.25
 	JobIntervalSec      = 5
 	AnnounceIntervalMin = 60 * 5
 	AnnounceInterval    = 60 * 60 * 3
@@ -271,6 +298,8 @@ func StateFromSignalling(status byte) TelephoneState {
 // Telephone manages call state, audio pipelines, and signalling for a telephony endpoint.
 type Telephone struct {
 	mu             sync.Mutex
+	pipelineLock   sync.Mutex
+	ringerLock     sync.Mutex
 	ringTime       int
 	waitTime       int
 	connectTime    int
@@ -291,6 +320,39 @@ type Telephone struct {
 	dialToneFreq   float64
 	dialToneEaseMs float64
 	externalBusy   bool
+	busyToneSecs   float64
+	incoming       bool
+
+	// Pipeline components
+	targetFrameTimeMs float64
+	receiveCodec      codecs.Codec
+	transmitCodec     codecs.Codec
+	audioOutput       *sinks.LineSink
+	audioInput        *sources.LineSource
+	dialTone          *generators.ToneSource
+	receiveMixer      *mixer.Mixer
+	transmitMixer     *mixer.Mixer
+	receivePipeline   *pipeline.Pipeline
+	transmitPipeline  *pipeline.Pipeline
+
+	// Ringer components
+	ringerOutput   *sinks.LineSink
+	ringerSource   *sources.OpusFileSource
+	ringerPipeline *pipeline.Pipeline
+
+	// Transmit pipeline components
+	filters    []filters.Filter
+	packetizer *network.Packetizer
+
+	// Callbacks for call lifecycle events
+	ringingCallback     func()
+	establishedCallback func()
+	endedCallback       func()
+	busyCallback        func()
+	rejectedCallback    func()
+
+	// Dialling state
+	dialToneActive bool
 }
 
 func NewTelephone(ringTime, waitTime int, autoAnswer bool, allowed byte, receiveGain, transmitGain float64) *Telephone {
@@ -307,6 +369,7 @@ func NewTelephone(ringTime, waitTime int, autoAnswer bool, allowed byte, receive
 		currentProfile: DefaultProfile,
 		dialToneFreq:   DialToneFrequency,
 		dialToneEaseMs: DialToneEaseMs,
+		busyToneSecs:   BusyToneSeconds,
 	}
 }
 
@@ -566,4 +629,764 @@ func (tel *Telephone) ActiveProfile() byte {
 		return 0
 	}
 	return tel.currentProfile
+}
+
+// TargetFrameTimeMs returns the current target frame time in milliseconds.
+func (tel *Telephone) TargetFrameTimeMs() float64 {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	return tel.targetFrameTimeMs
+}
+
+// ReceiveCodec returns the current receive codec.
+func (tel *Telephone) ReceiveCodec() codecs.Codec {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	return tel.receiveCodec
+}
+
+// TransmitCodec returns the current transmit codec.
+func (tel *Telephone) TransmitCodec() codecs.Codec {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	return tel.transmitCodec
+}
+
+// AudioOutput returns the current audio output sink.
+func (tel *Telephone) AudioOutput() *sinks.LineSink {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	return tel.audioOutput
+}
+
+// AudioInput returns the current audio input source.
+func (tel *Telephone) AudioInput() *sources.LineSource {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	return tel.audioInput
+}
+
+// DialTone returns the current dial tone generator.
+func (tel *Telephone) DialTone() *generators.ToneSource {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	return tel.dialTone
+}
+
+// ReceiveMixer returns the current receive mixer.
+func (tel *Telephone) ReceiveMixer() *mixer.Mixer {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	return tel.receiveMixer
+}
+
+// TransmitMixer returns the current transmit mixer.
+func (tel *Telephone) TransmitMixer() *mixer.Mixer {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	return tel.transmitMixer
+}
+
+// ReceivePipeline returns the current receive pipeline.
+func (tel *Telephone) ReceivePipeline() *pipeline.Pipeline {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	return tel.receivePipeline
+}
+
+// TransmitPipeline returns the current transmit pipeline.
+func (tel *Telephone) TransmitPipeline() *pipeline.Pipeline {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	return tel.transmitPipeline
+}
+
+// BusyToneSeconds returns the busy tone duration in seconds.
+func (tel *Telephone) BusyToneSeconds() float64 {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	return tel.busyToneSecs
+}
+
+// SetBusyToneSeconds sets the busy tone duration in seconds.
+func (tel *Telephone) SetBusyToneSeconds(secs float64) {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	tel.busyToneSecs = secs
+}
+
+// Filters returns the current audio filter chain.
+func (tel *Telephone) Filters() []filters.Filter {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	return tel.filters
+}
+
+// SetFilters sets the audio filter chain for the transmit pipeline.
+func (tel *Telephone) SetFilters(f []filters.Filter) {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	tel.filters = f
+}
+
+// Packetizer returns the current network packetizer.
+func (tel *Telephone) Packetizer() *network.Packetizer {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	return tel.packetizer
+}
+
+// SetPacketizer sets the network packetizer for the transmit pipeline.
+func (tel *Telephone) SetPacketizer(p *network.Packetizer) {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	tel.packetizer = p
+}
+
+// selectCallCodecs sets receive codec to Null and transmit codec to the
+// codec for the given profile, matching the Python __select_call_codecs.
+func (tel *Telephone) selectCallCodecs(profile byte) {
+	tel.receiveCodec = codecs.NullCodec{}
+	teleCodec, err := GetCodec(profile)
+	if err != nil {
+		teleCodec = codecs.NullCodec{}
+	}
+	tel.transmitCodec = teleCodec
+}
+
+// selectCallFrameTime sets the target frame time based on the profile.
+func (tel *Telephone) selectCallFrameTime(profile byte) {
+	tel.targetFrameTimeMs = GetFrameTime(profile)
+}
+
+// selectCallProfile selects the call profile, codecs, and frame time.
+func (tel *Telephone) selectCallProfile(profile byte) {
+	if profile == 0 {
+		profile = DefaultProfile
+	}
+	tel.currentProfile = profile
+	tel.selectCallCodecs(profile)
+	tel.selectCallFrameTime(profile)
+}
+
+// PrepareDiallingPipelines creates the audio pipelines needed for call setup,
+// matching the Python __prepare_dialling_pipelines method. It sets up the
+// receive mixer, dial tone generator, and receive pipeline.
+func (tel *Telephone) PrepareDiallingPipelines() {
+	tel.pipelineLock.Lock()
+	defer tel.pipelineLock.Unlock()
+
+	tel.selectCallProfile(tel.currentProfile)
+
+	if tel.audioOutput == nil {
+		tel.audioOutput = sinks.NewLineSink(tel.speakerDevice, true, false)
+	}
+
+	if tel.receiveMixer == nil {
+		tel.receiveMixer = mixer.NewMixer(tel.targetFrameTimeMs, 0, nil, nil, tel.receiveGain)
+	}
+
+	if tel.dialTone == nil {
+		tel.dialTone = generators.NewToneSource(
+			tel.dialToneFreq, 0.0, true, tel.dialToneEaseMs,
+			tel.targetFrameTimeMs, codecs.NullCodec{}, tel.receiveMixer, 1,
+		)
+	}
+
+	if tel.receivePipeline == nil {
+		tel.receivePipeline, _ = pipeline.NewPipeline(
+			tel.receiveMixer, codecs.NullCodec{}, tel.audioOutput,
+		)
+	}
+}
+
+// ResetDiallingPipelines stops and recreates the dialling pipelines,
+// matching the Python __reset_dialling_pipelines method. It stops all
+// running pipeline components and reinitializes them.
+func (tel *Telephone) ResetDiallingPipelines() {
+	tel.pipelineLock.Lock()
+	defer tel.pipelineLock.Unlock()
+
+	if tel.audioOutput != nil {
+		_ = tel.audioOutput.Stop()
+	}
+	if tel.dialTone != nil {
+		_ = tel.dialTone.Stop()
+	}
+	if tel.receivePipeline != nil {
+		_ = tel.receivePipeline.Stop()
+	}
+	if tel.receiveMixer != nil {
+		_ = tel.receiveMixer.Stop()
+	}
+
+	tel.audioOutput = nil
+	tel.dialTone = nil
+	tel.receivePipeline = nil
+	tel.receiveMixer = nil
+
+	tel.selectCallProfile(tel.currentProfile)
+
+	tel.audioOutput = sinks.NewLineSink(tel.speakerDevice, true, false)
+	tel.receiveMixer = mixer.NewMixer(tel.targetFrameTimeMs, 0, nil, nil, tel.receiveGain)
+	tel.dialTone = generators.NewToneSource(
+		tel.dialToneFreq, 0.0, true, tel.dialToneEaseMs,
+		tel.targetFrameTimeMs, codecs.NullCodec{}, tel.receiveMixer, 1,
+	)
+	tel.receivePipeline, _ = pipeline.NewPipeline(
+		tel.receiveMixer, codecs.NullCodec{}, tel.audioOutput,
+	)
+}
+
+// Incoming reports whether the current call is an incoming call.
+func (tel *Telephone) Incoming() bool {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	return tel.incoming
+}
+
+// SetIncoming sets whether the call is incoming.
+func (tel *Telephone) SetIncoming(incoming bool) {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	tel.incoming = incoming
+}
+
+// RingerOutput returns the ringer audio output sink.
+func (tel *Telephone) RingerOutput() *sinks.LineSink {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	return tel.ringerOutput
+}
+
+// RingerSource returns the ringer audio file source.
+func (tel *Telephone) RingerSource() *sources.OpusFileSource {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	return tel.ringerSource
+}
+
+// RingerPipeline returns the ringer audio pipeline.
+func (tel *Telephone) RingerPipeline() *pipeline.Pipeline {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	return tel.ringerPipeline
+}
+
+// ActivateRingTone activates the ringtone playback when an incoming call
+// is received, matching the Python __activate_ring_tone method. If a
+// ringtone path is set and the file exists, it creates a ringer pipeline
+// and starts playback in a goroutine. The ringtone plays on loop while
+// the call remains in the Ringing state and is incoming.
+func (tel *Telephone) ActivateRingTone() {
+	tel.mu.Lock()
+	ringtonePath := tel.ringtonePath
+	ringerDevice := tel.ringerDevice
+	tel.mu.Unlock()
+
+	if ringtonePath == "" {
+		return
+	}
+
+	tel.ringerLock.Lock()
+	defer tel.ringerLock.Unlock()
+
+	if tel.ringerPipeline == nil {
+		if tel.ringerOutput == nil {
+			tel.ringerOutput = sinks.NewLineSink(ringerDevice, true, false)
+		}
+
+		src, err := sources.NewOpusFileSource(ringtonePath, 60.0, true, nil, nil, false)
+		if err != nil {
+			return
+		}
+		tel.ringerSource = src
+
+		tel.ringerPipeline, _ = pipeline.NewPipeline(
+			tel.ringerSource, codecs.NullCodec{}, tel.ringerOutput,
+		)
+	}
+
+	go func() {
+		tel.ringerLock.Lock()
+		defer tel.ringerLock.Unlock()
+
+		for {
+			tel.mu.Lock()
+			isRinging := tel.state == StateRinging && tel.incoming
+			tel.mu.Unlock()
+
+			if !isRinging {
+				break
+			}
+
+			if tel.ringerPipeline != nil && !tel.ringerPipeline.Running() {
+				_ = tel.ringerPipeline.Start()
+			}
+		}
+
+		if tel.ringerSource != nil {
+			_ = tel.ringerSource.Stop()
+		}
+	}()
+}
+
+// StopRingTone stops the ringer pipeline and source.
+func (tel *Telephone) StopRingTone() {
+	tel.ringerLock.Lock()
+	defer tel.ringerLock.Unlock()
+
+	if tel.ringerSource != nil {
+		_ = tel.ringerSource.Stop()
+	}
+	if tel.ringerPipeline != nil {
+		_ = tel.ringerPipeline.Stop()
+	}
+}
+
+// EnableDialTone starts the receive mixer if needed and enables the dial
+// tone at a low gain level, matching the Python __enable_dial_tone method.
+func (tel *Telephone) EnableDialTone() {
+	tel.mu.Lock()
+	receiveMixer := tel.receiveMixer
+	dialTone := tel.dialTone
+	tel.mu.Unlock()
+
+	if receiveMixer != nil && !receiveMixer.Running() {
+		_ = receiveMixer.Start()
+	}
+
+	if dialTone != nil {
+		dialTone.SetGain(0.04)
+		if !dialTone.Running() {
+			_ = dialTone.Start()
+		}
+	}
+}
+
+// MuteDialTone mutes the dial tone by setting gain to 0 while keeping it
+// running, matching the Python __mute_dial_tone method.
+func (tel *Telephone) MuteDialTone() {
+	tel.mu.Lock()
+	receiveMixer := tel.receiveMixer
+	dialTone := tel.dialTone
+	tel.mu.Unlock()
+
+	if receiveMixer != nil && !receiveMixer.Running() {
+		_ = receiveMixer.Start()
+	}
+
+	if dialTone != nil && dialTone.Running() && dialTone.Gain() != 0 {
+		dialTone.SetGain(0.0)
+	}
+
+	if dialTone != nil && !dialTone.Running() {
+		_ = dialTone.Start()
+	}
+}
+
+// DisableDialTone stops the dial tone entirely, matching the Python
+// __disable_dial_tone method.
+func (tel *Telephone) DisableDialTone() {
+	tel.mu.Lock()
+	dialTone := tel.dialTone
+	tel.mu.Unlock()
+
+	if dialTone != nil && dialTone.Running() {
+		_ = dialTone.Stop()
+	}
+}
+
+// ActivateDialTone starts the dial tone pattern for an outgoing call,
+// matching the Python __activate_dial_tone method. It plays the dial tone
+// in a 7-second window: enabled from 0.05s to 2.05s, muted for the rest.
+// The pattern continues while the call is outgoing and in the Ringing state.
+func (tel *Telephone) ActivateDialTone() {
+	go func() {
+		window := 7.0
+		started := now()
+		for {
+			tel.mu.Lock()
+			isOutgoingRinging := !tel.incoming && tel.state == StateRinging
+			tel.mu.Unlock()
+
+			if !isOutgoingRinging {
+				break
+			}
+
+			e := elapsedMod(started, window)
+			if e > 0.05 && e < 2.05 {
+				tel.EnableDialTone()
+			} else {
+				tel.MuteDialTone()
+			}
+
+			sleep(200 * time.Millisecond)
+		}
+	}()
+}
+
+// PlayBusyTone plays an intermittent busy tone for the configured duration,
+// matching the Python __play_busy_tone method. The busy tone alternates
+// between muted and enabled at 0.5s intervals. This method blocks for
+// busyToneSeconds + 0.5s.
+func (tel *Telephone) PlayBusyTone() {
+	tel.mu.Lock()
+	busyToneSecs := tel.busyToneSecs
+	tel.mu.Unlock()
+
+	if busyToneSecs <= 0 {
+		return
+	}
+
+	tel.mu.Lock()
+	hasAudioOutput := tel.audioOutput != nil
+	hasReceiveMixer := tel.receiveMixer != nil
+	hasDialTone := tel.dialTone != nil
+	tel.mu.Unlock()
+
+	if !hasAudioOutput || !hasReceiveMixer || !hasDialTone {
+		tel.ResetDiallingPipelines()
+	}
+
+	playBusyTone(busyToneSecs, tel)
+}
+
+// playBusyTone is the internal busy tone playback loop, separated for
+// testability. The window is 0.5s with mute for 0.25s then enable for 0.25s.
+func playBusyTone(duration float64, tel *Telephone) {
+	window := 0.5
+	started := now()
+	for elapsed(started, duration) {
+		e := elapsedMod(started, window)
+		if e > 0.25 {
+			tel.EnableDialTone()
+		} else {
+			tel.MuteDialTone()
+		}
+		sleep(5 * time.Millisecond)
+	}
+	sleep(500 * time.Millisecond)
+}
+
+// ReconfigureTransmitPipeline recreates the transmit pipeline mid-call when
+// switching audio profiles, matching the Python __reconfigure_transmit_pipeline
+// method. It stops the existing transmit components, creates new ones with the
+// current profile's codec and frame time, and restarts them.
+func (tel *Telephone) ReconfigureTransmitPipeline() {
+	tel.mu.Lock()
+	hasTransmitPipeline := tel.transmitPipeline != nil
+	isEstablished := tel.state == StateEstablished
+	micDevice := tel.micDevice
+	targetFrameMs := tel.targetFrameTimeMs
+	transmitGain := tel.transmitGain
+	transmitMuted := tel.transmitMuted
+	transmitCodec := tel.transmitCodec
+	pktz := tel.packetizer
+	filterChain := tel.filters
+	tel.mu.Unlock()
+
+	if !hasTransmitPipeline || !isEstablished {
+		return
+	}
+
+	if tel.audioInput != nil {
+		_ = tel.audioInput.Stop()
+	}
+	if tel.transmitMixer != nil {
+		_ = tel.transmitMixer.Stop()
+	}
+	if tel.transmitPipeline != nil {
+		_ = tel.transmitPipeline.Stop()
+	}
+
+	tel.transmitMixer = mixer.NewMixer(targetFrameMs, 0, nil, nil, transmitGain)
+
+	tel.audioInput = sources.NewLineSource(
+		micDevice, targetFrameMs,
+		codecs.NullCodec{},
+		tel.transmitMixer,
+		filterChain,
+		transmitGain, 0.0, 0.075,
+	)
+
+	if pktz != nil {
+		tel.transmitPipeline, _ = pipeline.NewPipeline(
+			tel.transmitMixer, transmitCodec, pktz,
+		)
+	}
+
+	if transmitMuted {
+		tel.transmitMixer.Mute()
+	}
+	_ = tel.transmitMixer.Start()
+	_ = tel.audioInput.Start()
+	if tel.transmitPipeline != nil {
+		_ = tel.transmitPipeline.Start()
+	}
+}
+
+// OpenPipelines sets up the audio pipelines for an established call,
+// matching the Python __open_pipelines method. It creates the transmit
+// mixer, audio input, transmit pipeline, receive link source, and
+// signals ESTABLISHED.
+func (tel *Telephone) OpenPipelines() {
+	tel.pipelineLock.Lock()
+	defer tel.pipelineLock.Unlock()
+
+	tel.mu.Lock()
+	isEstablished := tel.state == StateEstablished
+	micDevice := tel.micDevice
+	transmitGain := tel.transmitGain
+	transmitCodec := tel.transmitCodec
+	targetFrameMs := tel.targetFrameTimeMs
+	useAGC := tel.useAGC
+	pktz := tel.packetizer
+	tel.mu.Unlock()
+
+	if !isEstablished {
+		return
+	}
+
+	tel.PrepareDiallingPipelines()
+
+	if useAGC {
+		tel.filters = []filters.Filter{
+			filters.NewBandPass(250, 8500),
+			filters.NewAGC(-15.0, 12.0, 0.0001, 0.002, 0.001),
+		}
+	} else {
+		tel.filters = []filters.Filter{
+			filters.NewBandPass(250, 8500),
+		}
+	}
+
+	tel.transmitMixer = mixer.NewMixer(targetFrameMs, 0, nil, nil, transmitGain)
+
+	tel.audioInput = sources.NewLineSource(
+		micDevice, targetFrameMs,
+		codecs.NullCodec{},
+		tel.transmitMixer,
+		tel.filters,
+		transmitGain, 0.225, 0.075,
+	)
+
+	if pktz != nil {
+		tel.transmitPipeline, _ = pipeline.NewPipeline(
+			tel.transmitMixer, transmitCodec, pktz,
+		)
+	}
+}
+
+// StartPipelines starts all audio pipelines for an active call,
+// matching the Python __start_pipelines method.
+func (tel *Telephone) StartPipelines() {
+	tel.pipelineLock.Lock()
+	defer tel.pipelineLock.Unlock()
+
+	if tel.receiveMixer != nil {
+		_ = tel.receiveMixer.Start()
+	}
+	if tel.transmitMixer != nil {
+		_ = tel.transmitMixer.Start()
+	}
+	if tel.audioInput != nil {
+		_ = tel.audioInput.Start()
+	}
+	if tel.transmitPipeline != nil {
+		_ = tel.transmitPipeline.Start()
+	}
+}
+
+// StopPipelines stops all audio pipelines,
+// matching the Python __stop_pipelines method.
+func (tel *Telephone) StopPipelines() {
+	tel.pipelineLock.Lock()
+	defer tel.pipelineLock.Unlock()
+
+	if tel.receiveMixer != nil {
+		_ = tel.receiveMixer.Stop()
+	}
+	if tel.transmitMixer != nil {
+		_ = tel.transmitMixer.Stop()
+	}
+	if tel.audioInput != nil {
+		_ = tel.audioInput.Stop()
+	}
+	if tel.receivePipeline != nil {
+		_ = tel.receivePipeline.Stop()
+	}
+	if tel.transmitPipeline != nil {
+		_ = tel.transmitPipeline.Stop()
+	}
+}
+
+// SetRingingCallback sets the callback invoked when an incoming call is ringing.
+func (tel *Telephone) SetRingingCallback(fn func()) {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	tel.ringingCallback = fn
+}
+
+// SetEstablishedCallback sets the callback invoked when a call is established.
+func (tel *Telephone) SetEstablishedCallback(fn func()) {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	tel.establishedCallback = fn
+}
+
+// SetEndedCallback sets the callback invoked when a call ends.
+func (tel *Telephone) SetEndedCallback(fn func()) {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	tel.endedCallback = fn
+}
+
+// SetBusyCallback sets the callback invoked when the remote is busy.
+func (tel *Telephone) SetBusyCallback(fn func()) {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	tel.busyCallback = fn
+}
+
+// SetRejectedCallback sets the callback invoked when the remote rejects the call.
+func (tel *Telephone) SetRejectedCallback(fn func()) {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	tel.rejectedCallback = fn
+}
+
+// SignallingReceived processes incoming signalling codes from a remote peer,
+// matching the Python signalling_received method. It handles state transitions
+// for BUSY, REJECTED, AVAILABLE, RINGING, CONNECTING, ESTABLISHED, and
+// PREFERRED_PROFILE signals, triggering pipeline operations and callbacks.
+func (tel *Telephone) SignallingReceived(signals []byte) {
+	for _, signal := range signals {
+		switch {
+		case signal == SignallingBusy:
+			tel.mu.Lock()
+			tel.state = StateBusy
+			cb := tel.busyCallback
+			tel.mu.Unlock()
+
+			go tel.PlayBusyTone()
+			tel.DisableDialTone()
+			tel.Hangup()
+			if cb != nil {
+				cb()
+			}
+
+		case signal == SignallingRejected:
+			tel.mu.Lock()
+			tel.state = StateRejected
+			cb := tel.rejectedCallback
+			tel.mu.Unlock()
+
+			go tel.PlayBusyTone()
+			tel.DisableDialTone()
+			tel.Hangup()
+			if cb != nil {
+				cb()
+			}
+
+		case signal == SignallingAvailable:
+			tel.mu.Lock()
+			tel.state = StateIdle
+			tel.mu.Unlock()
+			// In the full implementation, this would call
+			// source.identify(tel.identity) on the RNS link
+
+		case signal == SignallingRinging:
+			tel.mu.Lock()
+			tel.state = StateRinging
+			isOutgoing := !tel.incoming
+			cb := tel.ringingCallback
+			tel.mu.Unlock()
+
+			tel.PrepareDiallingPipelines()
+			if isOutgoing {
+				tel.ActivateDialTone()
+			}
+			if cb != nil {
+				cb()
+			}
+
+		case signal == SignallingConnecting:
+			tel.mu.Lock()
+			tel.state = StateConnecting
+			tel.mu.Unlock()
+
+			tel.ResetDiallingPipelines()
+			tel.OpenPipelines()
+
+		case signal == SignallingEstablished:
+			tel.mu.Lock()
+			tel.state = StateEstablished
+			isOutgoing := !tel.incoming
+			ll := tel.lowLatency
+			cb := tel.establishedCallback
+			tel.mu.Unlock()
+
+			if isOutgoing {
+				tel.StartPipelines()
+				tel.DisableDialTone()
+			}
+			if ll && tel.audioOutput != nil {
+				tel.audioOutput.EnableLowLatency()
+			}
+			if cb != nil {
+				cb()
+			}
+
+		case signal >= SignallingPreferredProfile:
+			profile := signal - SignallingPreferredProfile
+			tel.mu.Lock()
+			isEstablished := tel.state == StateEstablished
+			tel.mu.Unlock()
+
+			if isEstablished {
+				tel.SwitchProfile(profile)
+			} else {
+				tel.mu.Lock()
+				tel.selectCallProfile(profile)
+				tel.mu.Unlock()
+			}
+		}
+	}
+}
+
+// SwitchProfile switches the audio profile during an active call,
+// matching the Python switch_profile method. It reconfigures the
+// transmit pipeline with the new codec and frame time.
+func (tel *Telephone) SwitchProfile(profile byte) {
+	tel.mu.Lock()
+	if tel.state != StateEstablished {
+		tel.mu.Unlock()
+		return
+	}
+	if tel.currentProfile == profile {
+		tel.mu.Unlock()
+		return
+	}
+	tel.currentProfile = profile
+	tel.mu.Unlock()
+
+	tel.selectCallCodecs(profile)
+	tel.selectCallFrameTime(profile)
+
+	tel.ReconfigureTransmitPipeline()
+}
+
+// DialToneActive reports whether the dial tone is currently active.
+func (tel *Telephone) DialToneActive() bool {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	return tel.dialToneActive
+}
+
+// SetDialToneActive sets the dial tone active state.
+func (tel *Telephone) SetDialToneActive(active bool) {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	tel.dialToneActive = active
 }

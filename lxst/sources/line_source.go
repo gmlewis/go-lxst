@@ -219,14 +219,15 @@ func (ls *LineSource) applyCodecConstraints() {
 }
 
 func (ls *LineSource) ingestJob() {
-	defer ls.ingestThread.wg.Done()
+	thread := ls.ingestThread
+	defer thread.wg.Done()
 
 	ls.recordingLock.Lock()
 	defer ls.recordingLock.Unlock()
 
 	for {
 		select {
-		case <-ls.ingestThread.done:
+		case <-thread.done:
 			return
 		default:
 			ls.mu.Lock()

@@ -229,7 +229,8 @@ func (src *OpusFileSource) Running() bool {
 }
 
 func (src *OpusFileSource) ingestJob() {
-	defer src.ingestThread.wg.Done()
+	thread := src.ingestThread
+	defer thread.wg.Done()
 
 	src.readLock.Lock()
 	defer src.readLock.Unlock()
@@ -241,7 +242,7 @@ func (src *OpusFileSource) ingestJob() {
 
 	for {
 		select {
-		case <-src.ingestThread.done:
+		case <-thread.done:
 			return
 		default:
 		}
