@@ -325,7 +325,37 @@ func (tep *TelephoneEndpoint) Call(identityHash string, timeout time.Duration) e
 		return fmt.Errorf("invalid identity hash: %w", err)
 	}
 
-	remoteID := ts.Recall(identityBytes)
+	// Compute the destination hash from the identity hash and app name,
+	// matching Python's RNS.Destination.hash_from_name_and_identity.
+	tempID, err := rns.NewIdentity(false, ts.GetLogger())
+	if err != nil {
+		return fmt.Errorf("creating temp identity: %w", err)
+	}
+	tempID.Hash = identityBytes
+	tempID.HexHash = identityHash
+	destHash := rns.CalculateHash(tempID, appName, primitiveName)
+
+	// Request a path if we don't have one, with spinner (matching Python rnphone dial())
+	if !ts.HasPath(destHash) {
+		if err := ts.RequestPath(destHash); err != nil {
+			return fmt.Errorf("requesting path: %w", err)
+		}
+		spinner := []string{"⢄", "⢂", "⢁", "⡁", "⡈", "⡐", "⡠"}
+		index := 0
+		fmt.Print("Discovering path ")
+		deadline := time.Now().Add(timeout)
+		for !ts.HasPath(destHash) && time.Now().Before(deadline) {
+			time.Sleep(100 * time.Millisecond)
+			fmt.Printf("\b\b%v ", spinner[index])
+			index = (index + 1) % len(spinner)
+		}
+		fmt.Println()
+		if !ts.HasPath(destHash) {
+			return fmt.Errorf("path request timed out")
+		}
+	}
+
+	remoteID := ts.Recall(destHash)
 	if remoteID == nil {
 		return fmt.Errorf("identity not found on network")
 	}
@@ -333,25 +363,6 @@ func (tep *TelephoneEndpoint) Call(identityHash string, timeout time.Duration) e
 	callDest, err := rns.NewDestination(ts, remoteID, rns.DestinationOut, rns.DestinationSingle, appName, primitiveName)
 	if err != nil {
 		return fmt.Errorf("creating call destination: %w", err)
-	}
-
-	if !ts.HasPath(callDest.Hash) {
-		if err := ts.RequestPath(callDest.Hash); err != nil {
-			return fmt.Errorf("requesting path: %w", err)
-		}
-		deadline := time.Now().Add(timeout)
-		spinner := []string{"⢄", "⢂", "⢁", "⡁", "⡈", "⡐", "⡠"}
-		index := 0
-		fmt.Print("Discovering path ")
-		for !ts.HasPath(callDest.Hash) && time.Now().Before(deadline) {
-			time.Sleep(100 * time.Millisecond)
-			fmt.Printf("\b\b%v ", spinner[index])
-			index = (index + 1) % len(spinner)
-		}
-		fmt.Println()
-		if !ts.HasPath(callDest.Hash) {
-			return fmt.Errorf("path request timed out")
-		}
 	}
 
 	link, err := rns.NewLink(ts, callDest)

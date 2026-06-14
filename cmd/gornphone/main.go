@@ -13,6 +13,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/gmlewis/go-lxst/lxst"
 	"github.com/gmlewis/go-lxst/lxst/primitives/telephony"
@@ -66,13 +67,14 @@ func main() {
 
 	profile := byte(*profileFlag)
 	if !isValidProfile(profile) {
-		fmt.Fprintf(os.Stderr, "Invalid profile: 0x%02x. Use one of:\n", profile)
+		var buf strings.Builder
+		fmt.Fprintf(&buf, "Invalid profile: 0x%02x. Use one of:\n", profile)
 		for _, p := range telephony.AvailableProfiles {
-			fmt.Fprintf(os.Stderr, "  0x%02x (%s, %s, %.0fms)\n",
+			fmt.Fprintf(&buf, "  0x%02x (%s, %s, %.0fms)\n",
 				p, telephony.ProfileName(p), telephony.ProfileAbbreviation(p),
 				telephony.GetFrameTime(p))
 		}
-		os.Exit(1)
+		log.Fatal(buf.String())
 	}
 
 	if *configDir == "" {
@@ -109,8 +111,7 @@ func main() {
 
 	codec, err := telephony.GetCodec(profile)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating codec: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("Error creating codec: %v", err)
 	}
 	fmt.Printf("Codec: %T\n", codec)
 
@@ -121,8 +122,7 @@ func main() {
 
 	identity, err := loadOrCreateIdentity(*configDir + "/identity")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading identity: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("Error loading identity: %v", err)
 	}
 	fmt.Printf("Identity hash: %s\n", prettyHex(identity.HexHash))
 	fmt.Println()
@@ -134,13 +134,28 @@ func main() {
 	phone := NewPhone(cfg)
 
 	// Initialize RNS transport and endpoint
-	_ = *rnsConfigDir // Store for future use
+	rnsConfig := *rnsConfigDir
+	if rnsConfig == "" {
+		rnsConfig = defaultRNSConfigDir()
+	}
 	ts := rns.NewTransportSystem(nil)
+
+	logPath := fmt.Sprintf("/tmp/gornphone-%v.log", time.Now().UnixMilli())
+	rnsLogger := rns.NewLogger()
+	rnsLogger.SetLogFilePath(logPath)
+	rnsLogger.SetLogDest(rns.LogDestFile)
+
+	reticulum, err := rns.NewReticulumWithLogger(ts, rnsConfig, rnsLogger)
+	if err != nil {
+		log.Fatalf("Error initializing Reticulum: %v", err)
+	}
+	_ = reticulum
+
+	fmt.Printf("RNS log: %s\n", logPath)
 
 	endpoint, err := NewTelephoneEndpoint(identity, ts)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error creating telephone endpoint: %v\n", err)
-		os.Exit(1)
+		log.Fatalf("Error creating telephone endpoint: %v", err)
 	}
 	phone.SetEndpoint(endpoint)
 
