@@ -267,10 +267,13 @@ func TestTelephone_Answer(t *testing.T) {
 
 	tel := NewTelephone(60, 70, true, AllowAll, 0.0, 0.0)
 	tel.SetState(StateRinging)
-	tel.Answer()
+	ok := tel.Answer()
 
-	if tel.State() != StateConnecting {
-		t.Error("Telephone should be in Connecting state after Answer()")
+	if !ok {
+		t.Error("Answer() should return true when in Ringing state")
+	}
+	if tel.State() != StateEstablished {
+		t.Errorf("Telephone should be in Established state after Answer(), got %v", tel.State())
 	}
 }
 
@@ -278,10 +281,13 @@ func TestTelephone_AnswerFromNonRinging(t *testing.T) {
 	t.Parallel()
 
 	tel := NewTelephone(60, 70, true, AllowAll, 0.0, 0.0)
-	tel.Answer()
+	ok := tel.Answer()
 
+	if ok {
+		t.Error("Answer() should return false when not in Ringing state")
+	}
 	if tel.State() != StateIdle {
-		t.Error("Telephone should stay in Idle state if Answer() from non-ringing")
+		t.Errorf("Telephone should stay in Idle state if Answer() from non-ringing, got %v", tel.State())
 	}
 }
 

@@ -351,25 +351,35 @@ type Telephone struct {
 	busyCallback        func()
 	rejectedCallback    func()
 
+	// Caller access control
+	blockedList []string
+	allowList   []string
+
+	// Timeouts
+	establishmentTimeout int
+	announceInterval     int
+
 	// Dialling state
 	dialToneActive bool
 }
 
 func NewTelephone(ringTime, waitTime int, autoAnswer bool, allowed byte, receiveGain, transmitGain float64) *Telephone {
 	return &Telephone{
-		ringTime:       ringTime,
-		waitTime:       waitTime,
-		connectTime:    ConnectTime,
-		autoAnswer:     autoAnswer,
-		allowed:        allowed,
-		receiveGain:    receiveGain,
-		transmitGain:   transmitGain,
-		useAGC:         true,
-		state:          StateIdle,
-		currentProfile: DefaultProfile,
-		dialToneFreq:   DialToneFrequency,
-		dialToneEaseMs: DialToneEaseMs,
-		busyToneSecs:   BusyToneSeconds,
+		ringTime:             ringTime,
+		waitTime:             waitTime,
+		connectTime:          ConnectTime,
+		autoAnswer:           autoAnswer,
+		allowed:              allowed,
+		receiveGain:          receiveGain,
+		transmitGain:         transmitGain,
+		useAGC:               true,
+		state:                StateIdle,
+		currentProfile:       DefaultProfile,
+		dialToneFreq:         DialToneFrequency,
+		dialToneEaseMs:       DialToneEaseMs,
+		busyToneSecs:         BusyToneSeconds,
+		establishmentTimeout: ConnectTime,
+		announceInterval:     AnnounceInterval,
 	}
 }
 
@@ -505,20 +515,181 @@ func (tel *Telephone) IsIdle() bool {
 	return tel.state == StateIdle
 }
 
-// Hangup terminates the current call and resets state.
+// Hangup terminates the current call, stops pipelines, resets state,
+// and fires the ended callback.
 func (tel *Telephone) Hangup() {
 	tel.mu.Lock()
-	defer tel.mu.Unlock()
+	if tel.state == StateIdle {
+		tel.mu.Unlock()
+		return
+	}
+	tel.mu.Unlock()
+
+	tel.StopPipelines()
+
+	tel.mu.Lock()
+	tel.receiveMixer = nil
+	tel.transmitMixer = nil
+	tel.receivePipeline = nil
+	tel.transmitPipeline = nil
+	tel.audioOutput = nil
+	tel.dialTone = nil
 	tel.state = StateIdle
+	tel.receiveMuted = false
+	tel.transmitMuted = false
+	cb := tel.endedCallback
+	tel.mu.Unlock()
+
+	if cb != nil {
+		cb()
+	}
 }
 
-// Answer accepts an incoming call.
-func (tel *Telephone) Answer() {
+// HangupWithReason terminates the call with a specific reason code.
+// It fires the busy callback for BUSY, rejected callback for REJECTED,
+// or the ended callback for no specific reason.
+func (tel *Telephone) HangupWithReason(reason byte) {
 	tel.mu.Lock()
-	defer tel.mu.Unlock()
-	if tel.state == StateRinging {
-		tel.state = StateConnecting
+	if tel.state == StateIdle {
+		tel.mu.Unlock()
+		return
 	}
+	tel.mu.Unlock()
+
+	tel.StopPipelines()
+
+	tel.mu.Lock()
+	tel.receiveMixer = nil
+	tel.transmitMixer = nil
+	tel.receivePipeline = nil
+	tel.transmitPipeline = nil
+	tel.audioOutput = nil
+	tel.dialTone = nil
+	tel.state = StateIdle
+	tel.receiveMuted = false
+	tel.transmitMuted = false
+
+	var cb func()
+	switch reason {
+	case SignallingBusy:
+		cb = tel.busyCallback
+		if cb == nil {
+			cb = tel.endedCallback
+		}
+	case SignallingRejected:
+		cb = tel.rejectedCallback
+		if cb == nil {
+			cb = tel.endedCallback
+		}
+	default:
+		cb = tel.endedCallback
+	}
+	tel.mu.Unlock()
+
+	if cb != nil {
+		cb()
+	}
+}
+
+// StartRingTimeout starts a goroutine that hangs up the call after the
+// ring timeout if the call is still in Ringing state (incoming call not
+// answered). This matches the Python __timeout_incoming_call_at method.
+func (tel *Telephone) StartRingTimeout() {
+	go func() {
+		deadline := time.Now().Add(time.Duration(tel.RingTime()) * time.Second)
+		for time.Now().Before(deadline) {
+			tel.mu.Lock()
+			state := tel.state
+			incoming := tel.incoming
+			tel.mu.Unlock()
+			if state != StateRinging || !incoming {
+				return
+			}
+			sleep(250 * time.Millisecond)
+		}
+		tel.mu.Lock()
+		state := tel.state
+		incoming := tel.incoming
+		tel.mu.Unlock()
+		if state == StateRinging && incoming {
+			tel.Hangup()
+		}
+	}()
+}
+
+// StartCallTimeout starts a goroutine that hangs up the outgoing call
+// after the wait timeout if the call is not yet established. This matches
+// the Python __timeout_outgoing_call_at method.
+func (tel *Telephone) StartCallTimeout() {
+	go func() {
+		deadline := time.Now().Add(time.Duration(tel.WaitTime()) * time.Second)
+		for time.Now().Before(deadline) {
+			tel.mu.Lock()
+			state := tel.state
+			tel.mu.Unlock()
+			if state == StateIdle || state == StateEstablished {
+				return
+			}
+			sleep(250 * time.Millisecond)
+		}
+		tel.mu.Lock()
+		state := tel.state
+		tel.mu.Unlock()
+		if state != StateIdle && state != StateEstablished {
+			tel.Hangup()
+		}
+	}()
+}
+
+// StartEstablishmentTimeout starts a goroutine that hangs up the outgoing
+// call after the establishment timeout if the link has not been established.
+// This matches the Python __timeout_outgoing_establishment_at method.
+func (tel *Telephone) StartEstablishmentTimeout() {
+	go func() {
+		deadline := time.Now().Add(time.Duration(tel.ConnectTimeout()) * time.Second)
+		for time.Now().Before(deadline) {
+			tel.mu.Lock()
+			state := tel.state
+			tel.mu.Unlock()
+			if state == StateIdle || state == StateRinging {
+				return
+			}
+			sleep(250 * time.Millisecond)
+		}
+		tel.mu.Lock()
+		state := tel.state
+		tel.mu.Unlock()
+		if state != StateIdle && state != StateRinging {
+			tel.Hangup()
+		}
+	}()
+}
+
+// Answer accepts an incoming call. It transitions from Ringing to Established
+// state and fires the established callback. The caller is responsible for
+// calling OpenPipelines() and StartPipelines() after Answer() returns true.
+// Returns true if the call was answered, false if not in Ringing state.
+func (tel *Telephone) Answer() bool {
+	tel.mu.Lock()
+	if tel.state != StateRinging {
+		tel.mu.Unlock()
+		return false
+	}
+
+	tel.state = StateEstablished
+	cb := tel.establishedCallback
+	ll := tel.lowLatency
+	ao := tel.audioOutput
+	tel.mu.Unlock()
+
+	if ll && ao != nil {
+		ao.EnableLowLatency()
+	}
+	if cb != nil {
+		cb()
+	}
+
+	return true
 }
 
 // Call initiates an outgoing call.
@@ -529,6 +700,89 @@ func (tel *Telephone) Call(profile byte) {
 		tel.state = StateCalling
 		tel.currentProfile = profile
 	}
+}
+
+// Signal sends a signalling code and updates the call state for
+// auto status codes (CALLING, AVAILABLE, RINGING, CONNECTING, ESTABLISHED).
+func (tel *Telephone) Signal(signal byte, sendFunc func(data []byte) error, immediate bool) {
+	if isAutoStatusCode(signal) {
+		tel.mu.Lock()
+		tel.state = StateFromSignalling(signal)
+		tel.mu.Unlock()
+	}
+
+	if sendFunc != nil {
+		signallingData := map[byte]any{network.FieldSignalling: []any{signal}}
+		packed, err := network.PackData(signallingData)
+		if err != nil {
+			return
+		}
+		_ = sendFunc(packed)
+	}
+}
+
+func isAutoStatusCode(code byte) bool {
+	for _, c := range AutoStatusCodes {
+		if c == code {
+			return true
+		}
+	}
+	return false
+}
+
+// OutgoingLinkEstablished handles the callback when an outgoing RNS
+// link is established. It sets up signalling handling and transitions
+// the call to the Ringing state.
+func (tel *Telephone) OutgoingLinkEstablished(signalFunc func(byte) error) {
+	tel.mu.Lock()
+	if tel.state == StateIdle {
+		tel.state = StateRinging
+	}
+	tel.mu.Unlock()
+}
+
+// LinkClosed handles the callback when the RNS link is closed by the
+// remote peer. It terminates the call and fires the ended callback.
+func (tel *Telephone) LinkClosed() {
+	tel.Hangup()
+}
+
+// PacketizerFailure handles a frame packetization failure by terminating
+// the call. It is called when the Packetizer cannot send audio data.
+func (tel *Telephone) PacketizerFailure() {
+	tel.Hangup()
+}
+
+// ConnectTimeout returns the establishment timeout in seconds.
+func (tel *Telephone) ConnectTimeout() int {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	return tel.establishmentTimeout
+}
+
+// SetConnectTimeout sets the establishment timeout in seconds.
+func (tel *Telephone) SetConnectTimeout(timeout int) {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	tel.establishmentTimeout = timeout
+}
+
+// AnnounceInterval returns the announce interval in seconds.
+func (tel *Telephone) AnnounceInterval() int {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	return tel.announceInterval
+}
+
+// SetAnnounceInterval sets the announce interval in seconds.
+// Values below AnnounceIntervalMin are clamped to the minimum.
+func (tel *Telephone) SetAnnounceInterval(interval int) {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	if interval < AnnounceIntervalMin {
+		interval = AnnounceIntervalMin
+	}
+	tel.announceInterval = interval
 }
 
 func (tel *Telephone) RingtonePath() string {
@@ -608,6 +862,15 @@ func (tel *Telephone) SetBusy(busy bool) {
 	tel.mu.Lock()
 	defer tel.mu.Unlock()
 	tel.externalBusy = busy
+}
+
+// SetAllowed sets the allowed callers policy. Valid values are AllowAll
+// and AllowNone. To use an explicit allow list, set allowed to AllowNone
+// and use SetAllowList.
+func (tel *Telephone) SetAllowed(allowed byte) {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	tel.allowed = allowed
 }
 
 // Busy reports whether the telephone is busy.
@@ -775,7 +1038,10 @@ func (tel *Telephone) selectCallProfile(profile byte) {
 func (tel *Telephone) PrepareDiallingPipelines() {
 	tel.pipelineLock.Lock()
 	defer tel.pipelineLock.Unlock()
+	tel.prepareDiallingPipelinesLocked()
+}
 
+func (tel *Telephone) prepareDiallingPipelinesLocked() {
 	tel.selectCallProfile(tel.currentProfile)
 
 	if tel.audioOutput == nil {
@@ -1303,7 +1569,7 @@ func (tel *Telephone) SignallingReceived(signals []byte) {
 			cb := tel.ringingCallback
 			tel.mu.Unlock()
 
-			tel.PrepareDiallingPipelines()
+			tel.prepareDiallingPipelinesLocked()
 			if isOutgoing {
 				tel.ActivateDialTone()
 			}
@@ -1389,4 +1655,169 @@ func (tel *Telephone) SetDialToneActive(active bool) {
 	tel.mu.Lock()
 	defer tel.mu.Unlock()
 	tel.dialToneActive = active
+}
+
+// BlockedList returns the list of blocked caller identity hashes.
+func (tel *Telephone) BlockedList() []string {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	result := make([]string, len(tel.blockedList))
+	copy(result, tel.blockedList)
+	return result
+}
+
+// SetBlockedList sets the list of blocked caller identity hashes.
+// Blocked callers are rejected even if they would otherwise be allowed.
+func (tel *Telephone) SetBlockedList(list []string) {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	tel.blockedList = list
+}
+
+// AllowList returns the list of explicitly allowed caller identity hashes.
+func (tel *Telephone) AllowList() []string {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	result := make([]string, len(tel.allowList))
+	copy(result, tel.allowList)
+	return result
+}
+
+// SetAllowList sets the list of explicitly allowed caller identity hashes.
+// This is only effective when the allowed policy is not AllowAll or AllowNone.
+func (tel *Telephone) SetAllowList(list []string) {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	tel.allowList = list
+}
+
+// IsCallerAllowed reports whether a caller with the given identity hash is
+// permitted to establish a call. It checks the blocked list first, then
+// applies the allowed policy (AllowAll, AllowNone, or explicit allow list).
+func (tel *Telephone) IsCallerAllowed(identityHash string) bool {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+
+	for _, blocked := range tel.blockedList {
+		if blocked == identityHash {
+			return false
+		}
+	}
+
+	switch tel.allowed {
+	case AllowAll:
+		return true
+	case AllowNone:
+		if len(tel.allowList) == 0 {
+			return false
+		}
+		for _, allowed := range tel.allowList {
+			if allowed == identityHash {
+				return true
+			}
+		}
+		return false
+	default:
+		for _, allowed := range tel.allowList {
+			if allowed == identityHash {
+				return true
+			}
+		}
+		return false
+	}
+}
+
+// IncomingLinkEstablished handles an incoming RNS link establishment.
+// If the line is busy (active call or externally busy), it signals BUSY
+// and calls teardownFunc. Otherwise it marks the call as incoming and
+// signals AVAILABLE to the remote peer.
+func (tel *Telephone) IncomingLinkEstablished(signalFunc func(byte) error, teardownFunc func()) {
+	tel.mu.Lock()
+	if tel.state != StateIdle || tel.externalBusy {
+		tel.mu.Unlock()
+		_ = signalFunc(SignallingBusy)
+		if teardownFunc != nil {
+			teardownFunc()
+		}
+		return
+	}
+
+	tel.incoming = true
+	tel.mu.Unlock()
+
+	_ = signalFunc(SignallingAvailable)
+}
+
+// CallerIdentified handles a caller whose identity has been verified.
+// If the line is busy, it signals BUSY and calls teardownFunc.
+// If the caller is not allowed, it signals BUSY and calls teardownFunc.
+// Otherwise it transitions to Ringing state, resets dialling pipelines,
+// signals RINGING, and activates the ringtone. It returns true if the
+// caller is accepted (ringing), or false if rejected (busy/not allowed).
+func (tel *Telephone) CallerIdentified(identityHash string, signalFunc func(byte) error, teardownFunc func()) bool {
+	tel.mu.Lock()
+	if tel.state != StateIdle || tel.externalBusy {
+		tel.mu.Unlock()
+		_ = signalFunc(SignallingBusy)
+		if teardownFunc != nil {
+			teardownFunc()
+		}
+		return false
+	}
+
+	if !tel.isCallerAllowedLocked(identityHash) {
+		tel.mu.Unlock()
+		_ = signalFunc(SignallingBusy)
+		if teardownFunc != nil {
+			teardownFunc()
+		}
+		return false
+	}
+
+	tel.state = StateRinging
+	tel.incoming = true
+	cb := tel.ringingCallback
+	tel.mu.Unlock()
+
+	tel.ResetDiallingPipelines()
+	_ = signalFunc(SignallingRinging)
+	tel.ActivateRingTone()
+
+	if cb != nil {
+		cb()
+	}
+
+	return true
+}
+
+// isCallerAllowedLocked checks whether a caller is allowed, assuming
+// the mutex is already held.
+func (tel *Telephone) isCallerAllowedLocked(identityHash string) bool {
+	for _, blocked := range tel.blockedList {
+		if blocked == identityHash {
+			return false
+		}
+	}
+
+	switch tel.allowed {
+	case AllowAll:
+		return true
+	case AllowNone:
+		if len(tel.allowList) == 0 {
+			return false
+		}
+		for _, allowed := range tel.allowList {
+			if allowed == identityHash {
+				return true
+			}
+		}
+		return false
+	default:
+		for _, allowed := range tel.allowList {
+			if allowed == identityHash {
+				return true
+			}
+		}
+		return false
+	}
 }

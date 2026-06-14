@@ -11,7 +11,7 @@
 set -euo pipefail
 set -x
 
-RUN_ALL_TESTS_TIMEOUT_SECONDS="${RUN_ALL_TESTS_TIMEOUT_SECONDS:-500}"
+RUN_ALL_TESTS_TIMEOUT_SECONDS="${RUN_ALL_TESTS_TIMEOUT_SECONDS:-30}"
 
 run_with_timeout() {
 	if command -v timeout >/dev/null 2>&1; then
