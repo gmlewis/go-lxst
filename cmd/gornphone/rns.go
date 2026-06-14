@@ -359,18 +359,21 @@ func (tep *TelephoneEndpoint) Call(identityHash string, timeout time.Duration) e
 
 	remoteID := ts.Recall(destHash)
 	if remoteID == nil {
-		return fmt.Errorf("identity not found on network")
+		return fmt.Errorf("identity not found on network (Recall returned nil)")
 	}
+	fmt.Println("Identity recalled from network")
 
 	callDest, err := rns.NewDestination(ts, remoteID, rns.DestinationOut, rns.DestinationSingle, appName, primitiveName)
 	if err != nil {
 		return fmt.Errorf("creating call destination: %w", err)
 	}
+	fmt.Println("Call destination created")
 
 	link, err := rns.NewLink(ts, callDest)
 	if err != nil {
 		return fmt.Errorf("creating link: %w", err)
 	}
+	fmt.Println("Link object created")
 
 	tep.mu.Lock()
 	tep.activeLink = link
@@ -431,6 +434,7 @@ func (tep *TelephoneEndpoint) Call(identityHash string, timeout time.Duration) e
 		tep.mu.Unlock()
 		return fmt.Errorf("establishing link: %w", err)
 	}
+	fmt.Println("Link established")
 
 	return nil
 }
