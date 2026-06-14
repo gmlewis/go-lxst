@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/gmlewis/go-lxst/lxst/network"
+	"github.com/gmlewis/go-lxst/lxst/primitives/telephony"
 	"github.com/gmlewis/go-reticulum/rns"
 )
 
@@ -268,16 +269,50 @@ func (tep *TelephoneEndpoint) incomingLinkEstablished(link *rns.Link) {
 	ap := tep.audioPipeline
 	tep.mu.Unlock()
 
-	var hashHex string
-	if remoteIdentity != nil {
-		hashHex = hex.EncodeToString(remoteIdentity.Hash)
-		fmt.Printf("Incoming link from %v\n", prettyHex(hashHex))
+	// If remote identity is not yet known (common for responder side),
+	// set up the RemoteIdentified callback to ring when the caller
+	// identifies itself, and send SignallingAvailable to request identification.
+	if remoteIdentity == nil {
+		link.SetRemoteIdentifiedCallback(func(l *rns.Link, id *rns.Identity) {
+			log.Printf("Remote identity identified: %v", id.HexHash)
+			hashHex := id.HexHash
+			fmt.Printf("Incoming call from %v\n", prettyHex(hashHex))
+
+			tep.mu.Lock()
+			onRinging := tep.onRinging
+			onBusy := tep.onBusy
+			tep.mu.Unlock()
+
+			if !tep.IsCallerAllowed(hashHex) {
+				if onBusy != nil {
+					onBusy(id)
+				}
+				l.Teardown()
+				return
+			}
+
+			if onRinging != nil {
+				onRinging(id)
+			}
+		})
+
+		// Send SignallingAvailable through the link to request caller identification
+		tep.sendSignalling(link, telephony.SignallingAvailable)
+
+		// Don't call onRinging yet — wait for the caller to identify
+	} else {
+		hashHex := hex.EncodeToString(remoteIdentity.Hash)
+		fmt.Printf("Incoming call from %v\n", prettyHex(hashHex))
 		if !tep.IsCallerAllowed(hashHex) {
 			if onBusy != nil {
 				onBusy(remoteIdentity)
 			}
 			link.Teardown()
 			return
+		}
+
+		if onRinging != nil {
+			onRinging(remoteIdentity)
 		}
 	}
 
@@ -296,13 +331,22 @@ func (tep *TelephoneEndpoint) incomingLinkEstablished(link *rns.Link) {
 			ap.ReceivePacket(data)
 		})
 	}
+}
 
-	if onRinging != nil {
-		if remoteIdentity != nil {
-			onRinging(remoteIdentity)
-		} else if hashHex != "" {
-			onRinging(&rns.Identity{Hash: []byte(hashHex), HexHash: hashHex})
-		}
+// sendSignalling sends a signalling byte through the link as a raw
+// data packet, matching Python's signal() method. The receiver's
+// PacketCallback will receive the packet data.
+func (tep *TelephoneEndpoint) sendSignalling(link *rns.Link, signal byte) {
+	signallingData := map[byte]any{network.FieldSignalling: []any{signal}}
+	packed, err := network.PackData(signallingData)
+	if err != nil {
+		log.Printf("sendSignalling: pack failed: %v", err)
+		return
+	}
+	p := rns.NewPacket(link, packed)
+	p.CreateReceipt = false
+	if err := p.Send(); err != nil {
+		log.Printf("sendSignalling: send failed: %v", err)
 	}
 }
 
@@ -393,7 +437,43 @@ func (tep *TelephoneEndpoint) Call(identityHash string, timeout time.Duration) e
 		tep.mu.Lock()
 		onEstablished := tep.onEstablished
 		ap := tep.audioPipeline
+		identity := tep.identity
 		tep.mu.Unlock()
+
+		// Set up packet callback to handle incoming signalling
+		l.SetPacketCallback(func(data []byte, packet *rns.Packet) {
+			if ap != nil {
+				ap.ReceivePacket(data)
+			}
+
+			// Try to handle signalling
+			unpacked, err := network.UnpackData(data)
+			if err != nil {
+				return
+			}
+			m, ok := unpacked.(map[byte]any)
+			if !ok {
+				return
+			}
+			if signalling, exists := m[network.FieldSignalling]; exists {
+				switch v := signalling.(type) {
+				case []any:
+					for _, s := range v {
+						if b, ok := s.(byte); ok && b == telephony.SignallingAvailable {
+							log.Printf("Received SignallingAvailable, identifying to remote")
+							if identity != nil {
+								if err := l.Identify(identity); err != nil {
+									log.Printf("identify failed: %v", err)
+								}
+							}
+						}
+					}
+				}
+			}
+		})
+
+		// Send SignallingCalling to indicate we're calling
+		tep.sendSignalling(l, telephony.SignallingCalling)
 
 		if ap != nil {
 			if err := ap.SetupTransmit(func(data []byte) error {
@@ -449,12 +529,16 @@ func (tep *TelephoneEndpoint) Call(identityHash string, timeout time.Duration) e
 		fmt.Printf("%s", spinner[index%len(spinner)])
 		index++
 	}
-	// Clear spinner line and print result
-	fmt.Print("\r" + strings.Repeat(" ", 40) + "\r")
 
 	if link.GetStatus() != rns.LinkActive {
+		// Clear spinner line and print error
+		fmt.Print("\r" + strings.Repeat(" ", 40) + "\r")
 		return fmt.Errorf("link handshake timed out")
 	}
+
+	// Link is active — print newline to finish the line so that
+	// the callback's "Call established" output starts on a fresh line.
+	fmt.Println()
 
 	return nil
 }
