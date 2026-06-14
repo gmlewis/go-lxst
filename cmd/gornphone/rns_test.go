@@ -326,6 +326,38 @@ func TestTelephoneEndpoint_AnnounceInterval(t *testing.T) {
 	}
 }
 
+func TestTelephoneEndpoint_JobLoop(t *testing.T) {
+	t.Parallel()
+
+	id, err := rns.NewIdentity(true, nil)
+	if err != nil {
+		t.Fatalf("NewIdentity failed: %v", err)
+	}
+
+	ts := rns.NewTransportSystem(nil)
+	tep, err := NewTelephoneEndpoint(id, ts)
+	if err != nil {
+		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
+	}
+
+	// Set a short announce interval for testing
+	tep.mu.Lock()
+	tep.announceIntvl = 200 * time.Millisecond
+	tep.mu.Unlock()
+
+	// Start the jobs loop
+	tep.StartJobs()
+	defer tep.StopJobs()
+
+	// Wait long enough for at least one job poll cycle
+	time.Sleep(300 * time.Millisecond)
+
+	// The job loop should have re-announced, so NeedsAnnounce should be false
+	if tep.NeedsAnnounce() {
+		t.Error("NeedsAnnounce should be false after job loop re-announced")
+	}
+}
+
 func TestTelephoneEndpoint_Hangup(t *testing.T) {
 	t.Parallel()
 

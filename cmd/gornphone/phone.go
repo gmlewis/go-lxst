@@ -340,17 +340,17 @@ func (p *Phone) processInCallInput(input string) bool {
 }
 
 func (p *Phone) printHelp() {
-	fmt.Println()
-	fmt.Println("Available commands:")
-	fmt.Println("  p - phonebook")
-	fmt.Println("  r - redial last called")
-	fmt.Println("  i - show identity")
-	fmt.Println("  d - show destination hash")
-	fmt.Println("  a - announce on network")
-	fmt.Println("  q - quit")
-	fmt.Println("  h - help")
-	fmt.Println()
-	fmt.Println("Enter identity hash to call, or command:")
+	fmt.Print(`
+Available commands:
+  p - phonebook
+  r - redial last called
+  i - show identity
+  d - show destination hash
+  a - announce on network
+  q - quit
+  h - help
+
+Enter identity hash to call, or command:`)
 }
 
 func prettyHex(hash string) string {

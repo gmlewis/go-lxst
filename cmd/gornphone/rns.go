@@ -38,6 +38,7 @@ type TelephoneEndpoint struct {
 	onRejected    func(remoteIdentity *rns.Identity)
 	activeLink    *rns.Link
 	audioPipeline *AudioPipeline
+	shouldRun     bool
 }
 
 // NewTelephoneEndpoint creates a new TelephoneEndpoint bound to the given identity and transport.
@@ -107,6 +108,53 @@ func (tep *TelephoneEndpoint) NeedsAnnounce() bool {
 	tep.mu.Lock()
 	defer tep.mu.Unlock()
 	return time.Since(tep.lastAnnounce) >= tep.announceIntvl
+}
+
+// StartJobs launches the background job loop that periodically re-announces.
+func (tep *TelephoneEndpoint) StartJobs() {
+	tep.mu.Lock()
+	tep.shouldRun = true
+	tep.mu.Unlock()
+
+	go tep.jobsLoop()
+}
+
+// StopJobs stops the background job loop.
+func (tep *TelephoneEndpoint) StopJobs() {
+	tep.mu.Lock()
+	tep.shouldRun = false
+	tep.mu.Unlock()
+}
+
+func (tep *TelephoneEndpoint) jobsLoop() {
+	for {
+		tep.mu.Lock()
+		running := tep.shouldRun
+		tep.mu.Unlock()
+		if !running {
+			return
+		}
+
+		if tep.NeedsAnnounce() {
+			_ = tep.Announce()
+		}
+
+		time.Sleep(tep.JobInterval())
+	}
+}
+
+// JobInterval returns the polling interval for the background job loop.
+func (tep *TelephoneEndpoint) JobInterval() time.Duration {
+	tep.mu.Lock()
+	defer tep.mu.Unlock()
+	intvl := tep.announceIntvl / 10
+	if intvl < 100*time.Millisecond {
+		intvl = 100 * time.Millisecond
+	}
+	if intvl > 30*time.Second {
+		intvl = 30 * time.Second
+	}
+	return intvl
 }
 
 // SetAllowed sets the allowed callers policy.

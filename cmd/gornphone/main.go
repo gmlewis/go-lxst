@@ -23,6 +23,15 @@ var (
 	version = "0.1.0"
 )
 
+type verbosity int
+
+func (v *verbosity) String() string { return fmt.Sprintf("%d", *v) }
+
+func (v *verbosity) Set(_ string) error {
+	*v++
+	return nil
+}
+
 func main() {
 	log.SetFlags(0)
 
@@ -30,6 +39,10 @@ func main() {
 	showVersion := flag.Bool("version", false, "show version")
 	configDir := flag.String("config", "", "path to config directory")
 	rnsConfigDir := flag.String("rnsconfig", "", "path to Reticulum config directory")
+	serviceFlag := flag.Bool("service", false, "run as service (no interactive prompt)")
+	systemdFlag := flag.Bool("systemd", false, "display systemd unit file and exit")
+	var verbose verbosity
+	flag.Var(&verbose, "v", "increase verbosity (-v, -vv, -vvv)")
 	profileFlag := flag.Int("profile", int(telephony.DefaultProfile), "audio profile (hex)")
 	gainFlag := flag.Float64("gain", 0.0, "receive gain in dB")
 	micFlag := flag.String("mic", "", "microphone device name")
@@ -43,6 +56,11 @@ func main() {
 
 	if *listDevices {
 		listAudioDevices()
+		os.Exit(0)
+	}
+
+	if *systemdFlag {
+		printSystemdUnit()
 		os.Exit(0)
 	}
 
@@ -145,17 +163,42 @@ func main() {
 	})
 
 	phone.Start()
-	phone.printHelp()
-	fmt.Println()
-	fmt.Print("> ")
 
-	scanner := bufio.NewScanner(os.Stdin)
-	for scanner.Scan() {
-		input := strings.TrimSpace(scanner.Text())
-		if !phone.ProcessInput(input) {
-			break
-		}
+	if err := endpoint.Announce(); err != nil {
+		log.Printf("Failed to announce on startup: %v", err)
+	}
+
+	endpoint.StartJobs()
+	defer endpoint.StopJobs()
+
+	if *serviceFlag {
+		// Service mode: run announce loop, handle calls automatically
+		phone.printHelp()
+		fmt.Println()
 		fmt.Print("> ")
+
+		scanner := bufio.NewScanner(os.Stdin)
+		for scanner.Scan() {
+			input := strings.TrimSpace(scanner.Text())
+			if !phone.ProcessInput(input) {
+				break
+			}
+			fmt.Print("> ")
+		}
+	} else {
+		// Interactive mode
+		phone.printHelp()
+		fmt.Println()
+		fmt.Print("> ")
+
+		scanner := bufio.NewScanner(os.Stdin)
+		for scanner.Scan() {
+			input := strings.TrimSpace(scanner.Text())
+			if !phone.ProcessInput(input) {
+				break
+			}
+			fmt.Print("> ")
+		}
 	}
 }
 
@@ -242,3 +285,48 @@ func defaultStr(s, def string) string {
 	}
 	return s
 }
+
+func printSystemdUnit() {
+	username := os.Getenv("USER")
+	if username == "" {
+		username = "root"
+	}
+
+	fmt.Print(`To install gornphone as a system service, paste the
+systemd unit configuration below into a new file at:
+
+/etc/systemd/system/gornphone.service
+
+Then enable the service at boot by running:
+
+sudo systemctl enable gornphone
+
+--- begin systemd unit snipped ---
+
+`)
+	fmt.Printf(systemdUnitTemplate, username, username, username)
+	fmt.Println("---  end systemd unit snipped  ---")
+}
+
+const systemdUnitTemplate = `# This systemd unit allows installing gornphone
+# as a system service on Linux-based devices
+[Unit]
+Description=Reticulum Telephone Service
+After=sound.target
+
+[Service]
+# Wait 30 seconds for WiFi and audio
+# hardware to initialise.
+ExecStartPre=/bin/sleep 30
+Type=simple
+Environment="DISPLAY=:0"
+Environment="XAUTHORITY=/home/%s/.Xauthority"
+Environment="XDG_RUNTIME_DIR=/run/user/1000"
+Restart=always
+RestartSec=5
+User=%s
+ExecStart=/home/%s/.local/bin/gornphone --service -vvv
+
+[Install]
+WantedBy=graphical.target
+`
