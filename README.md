@@ -18,9 +18,22 @@ A complete Go port of the [LXST](https://github.com/markqvist/LXST) real-time au
 
 ## Installation
 
+### Library
+
 ```bash
 go get github.com/gmlewis/go-lxst
 ```
+
+### gornphone CLI
+
+Install directly from GitHub — no clone needed:
+
+```bash
+go install github.com/gmlewis/go-lxst/cmd/gornphone@latest
+```
+
+This puts the `gornphone` binary on your `$GOPATH/bin` (or `$GOBIN`). Make
+sure that directory is on your `PATH`.
 
 ## Quick Start
 
@@ -159,10 +172,10 @@ sources, codecs encode/decode for transport, and sinks consume the final output.
 
 ### Prerequisites
 
-**On the Go side** — build `gornphone`:
+**On the Go side** — install `gornphone`:
 
 ```bash
-go install ./cmd/gornphone
+go install github.com/gmlewis/go-lxst/cmd/gornphone@latest
 ```
 
 **On the Python side** — install LXST (includes `rnphone`):
