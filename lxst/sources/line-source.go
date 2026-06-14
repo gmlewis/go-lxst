@@ -137,39 +137,49 @@ func (ls *LineSource) Start() error {
 	ls.skipCompleted = (ls.skip <= 0)
 	ls.skipStartTime = time.Now()
 
-	ls.ingestThread = &threadInfo{
+	thread := &threadInfo{
 		done: make(chan struct{}),
 	}
-	ls.ingestThread.wg.Add(1)
-	go ls.ingestJob()
+	ls.ingestThread = thread
+	thread.wg.Add(1)
+	go ls.ingestJobWithThread(thread)
 
 	return nil
 }
 
 func (ls *LineSource) Stop() error {
 	ls.mu.Lock()
-	defer ls.mu.Unlock()
-
 	running := ls.shouldRun
 	if !running {
+		ls.mu.Unlock()
 		return nil
 	}
 
 	ls.shouldRun = false
 
+	var thread *threadInfo
 	if ls.ingestThread != nil {
-		close(ls.ingestThread.done)
-		ls.ingestThread.wg.Wait()
+		thread = ls.ingestThread
 		ls.ingestThread = nil
+		close(thread.done)
 	}
 
-	if ls.recorder != nil {
-		_ = ls.recorder.Close()
-		ls.recorder = nil
+	recorder := ls.recorder
+	ls.recorder = nil
+	backend := ls.backend
+	ls.mu.Unlock()
+
+	// Close recorder to unblock any pending Record() calls in ingestJob,
+	// so the goroutine can check the done channel and exit.
+	if recorder != nil {
+		_ = recorder.Close()
+	}
+	if backend != nil {
+		_ = backend.ReleaseRecorder()
 	}
 
-	if ls.backend != nil {
-		_ = ls.backend.ReleaseRecorder()
+	if thread != nil {
+		thread.wg.Wait()
 	}
 
 	return nil
@@ -218,73 +228,102 @@ func (ls *LineSource) applyCodecConstraints() {
 	}
 }
 
-func (ls *LineSource) ingestJob() {
-	thread := ls.ingestThread
+func (ls *LineSource) ingestJobWithThread(thread *threadInfo) {
 	defer thread.wg.Done()
 
 	ls.recordingLock.Lock()
 	defer ls.recordingLock.Unlock()
+
+	ls.mu.Lock()
+	recorder := ls.recorder
+	samplesPerFrame := ls.samplesPerFrame
+	ls.mu.Unlock()
 
 	for {
 		select {
 		case <-thread.done:
 			return
 		default:
-			ls.mu.Lock()
-			shouldRun := ls.shouldRun
-			ls.mu.Unlock()
+		}
 
-			if !shouldRun {
-				return
-			}
+		ls.mu.Lock()
+		shouldRun := ls.shouldRun
+		ls.mu.Unlock()
 
-			frame, err := ls.recorder.Record(ls.samplesPerFrame)
-			if err != nil {
+		if !shouldRun {
+			return
+		}
+
+		if recorder == nil {
+			return
+		}
+
+		frame, err := recorder.Record(samplesPerFrame)
+		if err != nil {
+			continue
+		}
+
+		ls.mu.Lock()
+		skipCompleted := ls.skipCompleted
+		skipStartTime := ls.skipStartTime
+		skipDuration := ls.skip
+		filterChain := ls.filterChain
+		currentGain := ls.currentGain
+		easeInCompleted := ls.easeInCompleted
+		easeInDuration := ls.easeIn
+		targetGain := ls.targetGain
+		codec := ls.codec
+		sink := ls.sink
+		ls.mu.Unlock()
+
+		if !skipCompleted {
+			if time.Since(skipStartTime).Seconds() > skipDuration {
+				ls.mu.Lock()
+				ls.skipCompleted = true
+				ls.skipStartTime = time.Now()
+				ls.mu.Unlock()
+			} else {
 				continue
 			}
+		}
 
-			if !ls.skipCompleted {
-				if time.Since(ls.skipStartTime).Seconds() > ls.skip {
-					ls.skipCompleted = true
-					ls.skipStartTime = time.Now()
-				} else {
-					continue
+		// Apply filters
+		for _, f := range filterChain {
+			frame = f.HandleFrame(frame, ls.samplerate)
+		}
+
+		// Apply gain
+		if currentGain != 1.0 {
+			for i := range frame {
+				for ch := range frame[i] {
+					frame[i][ch] *= float32(currentGain)
 				}
 			}
+		}
 
-			// Apply filters
-			for _, f := range ls.filterChain {
-				frame = f.HandleFrame(frame, ls.samplerate)
+		// Apply ease-in
+		if !easeInCompleted && easeInDuration > 0 {
+			elapsed := time.Since(skipStartTime).Seconds()
+			newGain := (elapsed / easeInDuration) * targetGain
+			if newGain >= targetGain {
+				newGain = targetGain
+				ls.mu.Lock()
+				ls.easeInCompleted = true
+				ls.mu.Unlock()
 			}
+			ls.mu.Lock()
+			ls.currentGain = newGain
+			ls.mu.Unlock()
+		}
 
-			// Apply gain
-			if ls.currentGain != 1.0 {
-				for i := range frame {
-					for ch := range frame[i] {
-						frame[i][ch] *= float32(ls.currentGain)
-					}
-				}
+		// Encode and send to sink
+		if codec != nil && sink != nil {
+			encoded := codec.Encode(frame)
+			if len(encoded) > 0 && sink.CanReceive(ls) {
+				_ = sink.HandleFrame(frame, ls)
 			}
-
-			// Apply ease-in
-			if !ls.easeInCompleted && ls.easeIn > 0 {
-				elapsed := time.Since(ls.skipStartTime).Seconds()
-				ls.currentGain = (elapsed / ls.easeIn) * ls.targetGain
-				if ls.currentGain >= ls.targetGain {
-					ls.currentGain = ls.targetGain
-					ls.easeInCompleted = true
-				}
-			}
-
-			// Encode and send to sink
-			if ls.codec != nil && ls.sink != nil {
-				encoded := ls.codec.Encode(frame)
-				if len(encoded) > 0 && ls.sink.CanReceive(ls) {
-					_ = ls.sink.HandleFrame(frame, ls)
-				}
-			} else if ls.sink != nil {
-				_ = ls.sink.HandleFrame(frame, ls)
-			}
+		} else if sink != nil {
+			_ = sink.HandleFrame(frame, ls)
 		}
 	}
 }

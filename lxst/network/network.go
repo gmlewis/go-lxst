@@ -316,11 +316,18 @@ func (ls *LinkSource) ReceivePacket(data []byte) {
 			return
 		}
 
+		ls.mu.Lock()
 		ls.codec = newCodec
+		ls.mu.Unlock()
 
-		if newCodec != nil && ls.sink != nil && ls.sink.CanReceive(ls) {
-			decoded := ls.codec.Decode(payload, ls.channels)
-			_ = ls.sink.HandleFrame(decoded, ls)
+		ls.mu.Lock()
+		sink := ls.sink
+		channels := ls.channels
+		ls.mu.Unlock()
+
+		if newCodec != nil && sink != nil && sink.CanReceive(ls) {
+			decoded := newCodec.Decode(payload, channels)
+			_ = sink.HandleFrame(decoded, ls)
 		}
 	}
 

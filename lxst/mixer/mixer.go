@@ -187,19 +187,35 @@ func (m *Mixer) Start() error {
 
 	m.shouldRun = true
 
-	m.mixerThread = &mixerThreadInfo{
+	thread := &mixerThreadInfo{
 		done: make(chan struct{}),
 	}
-	m.mixerThread.wg.Add(1)
-	go m.mixerJob()
+	m.mixerThread = thread
+	thread.wg.Add(1)
+	go m.mixerJobWithThread(thread)
 
 	return nil
 }
 
 func (m *Mixer) Stop() error {
 	m.mu.Lock()
+	if !m.shouldRun {
+		m.mu.Unlock()
+		return nil
+	}
 	m.shouldRun = false
+
+	var thread *mixerThreadInfo
+	if m.mixerThread != nil {
+		thread = m.mixerThread
+		m.mixerThread = nil
+		close(thread.done)
+	}
 	m.mu.Unlock()
+
+	if thread != nil {
+		thread.wg.Wait()
+	}
 	return nil
 }
 
@@ -293,8 +309,7 @@ func (m *Mixer) HandleFrame(frame [][]float32, fromSource sources.Source) error 
 	return nil
 }
 
-func (m *Mixer) mixerJob() {
-	thread := m.mixerThread
+func (m *Mixer) mixerJobWithThread(thread *mixerThreadInfo) {
 	defer thread.wg.Done()
 
 	m.mixerLock.Lock()

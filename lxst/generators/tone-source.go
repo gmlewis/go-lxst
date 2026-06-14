@@ -141,20 +141,20 @@ func (ts *ToneSource) Start() error {
 	ts.shouldRun = true
 	ts.easingOut = false
 
-	ts.generateThread = &generateThreadInfo{
+	thread := &generateThreadInfo{
 		done: make(chan struct{}),
 	}
-	ts.generateThread.wg.Add(1)
-	go ts.generateJob()
+	ts.generateThread = thread
+	thread.wg.Add(1)
+	go ts.generateJobWithThread(thread)
 
 	return nil
 }
 
 func (ts *ToneSource) Stop() error {
 	ts.mu.Lock()
-	defer ts.mu.Unlock()
-
 	if !ts.shouldRun && !ts.easingOut {
+		ts.mu.Unlock()
 		return nil
 	}
 
@@ -162,6 +162,18 @@ func (ts *ToneSource) Stop() error {
 		ts.shouldRun = false
 	} else {
 		ts.easingOut = true
+	}
+
+	var thread *generateThreadInfo
+	if ts.generateThread != nil && !ts.ease {
+		thread = ts.generateThread
+		ts.generateThread = nil
+		close(thread.done)
+	}
+	ts.mu.Unlock()
+
+	if thread != nil {
+		thread.wg.Wait()
 	}
 
 	return nil
@@ -174,52 +186,75 @@ func (ts *ToneSource) Running() bool {
 }
 
 func (ts *ToneSource) generate() [][]float32 {
-	frame := make([][]float32, ts.samplesPerFrame)
-	step := (ts.frequency * 2.0 * math.Pi) / float64(ts.samplerate)
+	ts.mu.Lock()
+	samplesPerFrame := ts.samplesPerFrame
+	channels := ts.channels
+	samplerate := ts.samplerate
+	frequency := ts.frequency
+	currentGain := ts.currentGain
+	gain := ts.gain
+	gainStep := ts.gainStep
+	ease := ts.ease
+	easeGain := ts.easeGain
+	easeStep := ts.easeStep
+	easingOut := ts.easingOut
+	theta := ts.theta
+	ts.mu.Unlock()
 
-	for n := 0; n < ts.samplesPerFrame; n++ {
-		ts.theta += step
-		amplitude := float32(math.Sin(ts.theta) * ts.currentGain * ts.easeGain)
+	frame := make([][]float32, samplesPerFrame)
+	step := (frequency * 2.0 * math.Pi) / float64(samplerate)
 
-		frame[n] = make([]float32, ts.channels)
-		for c := 0; c < ts.channels; c++ {
+	for n := 0; n < samplesPerFrame; n++ {
+		theta += step
+		amplitude := float32(math.Sin(theta) * currentGain * easeGain)
+
+		frame[n] = make([]float32, channels)
+		for c := 0; c < channels; c++ {
 			frame[n][c] = amplitude
 		}
 
-		if ts.gain > ts.currentGain {
-			ts.currentGain += ts.gainStep
-			if ts.currentGain > ts.gain {
-				ts.currentGain = ts.gain
+		if gain > currentGain {
+			currentGain += gainStep
+			if currentGain > gain {
+				currentGain = gain
 			}
-		} else if ts.gain < ts.currentGain {
-			ts.currentGain -= ts.gainStep
-			if ts.currentGain < ts.gain {
-				ts.currentGain = ts.gain
+		} else if gain < currentGain {
+			currentGain -= gainStep
+			if currentGain < gain {
+				currentGain = gain
 			}
 		}
 
-		if ts.ease {
-			if ts.easeGain < 1.0 && !ts.easingOut {
-				ts.easeGain += ts.easeStep
-				if ts.easeGain > 1.0 {
-					ts.easeGain = 1.0
+		if ease {
+			if easeGain < 1.0 && !easingOut {
+				easeGain += easeStep
+				if easeGain > 1.0 {
+					easeGain = 1.0
 				}
-			} else if ts.easingOut && ts.easeGain > 0.0 {
-				ts.easeGain -= ts.easeStep
-				if ts.easeGain <= 0.0 {
-					ts.easeGain = 0.0
-					ts.easingOut = false
+			} else if easingOut && easeGain > 0.0 {
+				easeGain -= easeStep
+				if easeGain <= 0.0 {
+					easeGain = 0.0
+					easingOut = false
+					ts.mu.Lock()
 					ts.shouldRun = false
+					ts.mu.Unlock()
 				}
 			}
 		}
 	}
 
+	ts.mu.Lock()
+	ts.theta = theta
+	ts.currentGain = currentGain
+	ts.easeGain = easeGain
+	ts.easingOut = easingOut
+	ts.mu.Unlock()
+
 	return frame
 }
 
-func (ts *ToneSource) generateJob() {
-	thread := ts.generateThread
+func (ts *ToneSource) generateJobWithThread(thread *generateThreadInfo) {
 	defer thread.wg.Done()
 
 	for {
@@ -231,16 +266,14 @@ func (ts *ToneSource) generateJob() {
 
 		ts.mu.Lock()
 		shouldRun := ts.shouldRun
+		codec := ts.codec
+		sink := ts.sink
+		frameTime := ts.frameTime
 		ts.mu.Unlock()
 
 		if !shouldRun {
 			return
 		}
-
-		ts.mu.Lock()
-		codec := ts.codec
-		sink := ts.sink
-		ts.mu.Unlock()
 
 		if codec != nil && sink != nil && sink.CanReceive(ts) {
 			frame := ts.generate()
@@ -253,7 +286,7 @@ func (ts *ToneSource) generateJob() {
 			_ = sink.HandleFrame(frame, ts)
 		}
 
-		time.Sleep(time.Duration(ts.frameTime * float64(time.Second) * 0.1))
+		time.Sleep(time.Duration(frameTime * float64(time.Second) * 0.1))
 	}
 }
 
@@ -312,14 +345,20 @@ func (ts *ToneSource) SampleRate() int {
 }
 
 func (ts *ToneSource) Channels() int {
+	ts.mu.Lock()
+	defer ts.mu.Unlock()
 	return ts.channels
 }
 
 func (ts *ToneSource) SamplesPerFrame() int {
+	ts.mu.Lock()
+	defer ts.mu.Unlock()
 	return ts.samplesPerFrame
 }
 
 func (ts *ToneSource) TargetFrameMs() float64 {
+	ts.mu.Lock()
+	defer ts.mu.Unlock()
 	return ts.targetFrameMs
 }
 

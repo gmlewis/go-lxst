@@ -115,11 +115,12 @@ func (ls *LineSink) Start() error {
 
 	ls.shouldRun = true
 
-	ls.digestThread = &digestThreadInfo{
+	thread := &digestThreadInfo{
 		done: make(chan struct{}),
 	}
-	ls.digestThread.wg.Add(1)
-	go ls.digestJob()
+	ls.digestThread = thread
+	thread.wg.Add(1)
+	go ls.digestJobWithThread(thread)
 
 	return nil
 }
@@ -131,7 +132,27 @@ func (ls *LineSink) Stop() error {
 		return nil
 	}
 	ls.shouldRun = false
+
+	var thread *digestThreadInfo
+	player := ls.player
+	ls.player = nil
+	if ls.digestThread != nil {
+		thread = ls.digestThread
+		ls.digestThread = nil
+		close(thread.done)
+	}
 	ls.mu.Unlock()
+
+	// Close the player to unblock any pending Play() calls in digestJob,
+	// so the goroutine can check the done channel and exit.
+	if player != nil {
+		_ = player.Close()
+		_ = ls.backend.ReleasePlayer()
+	}
+
+	if thread != nil {
+		thread.wg.Wait()
+	}
 	return nil
 }
 
@@ -177,23 +198,24 @@ func (ls *LineSink) SamplesPerFrame() int {
 	return ls.samplesPerFrame
 }
 
-func (ls *LineSink) digestJob() {
-	thread := ls.digestThread
+func (ls *LineSink) digestJobWithThread(thread *digestThreadInfo) {
 	defer thread.wg.Done()
 
 	ls.digestLock.Lock()
 	defer ls.digestLock.Unlock()
 
+	ls.mu.Lock()
 	backendSPF := ls.samplesPerFrame
-	player, err := ls.backend.GetPlayer(backendSPF, ls.lowLatency)
+	lowLatency := ls.lowLatency
+	ls.mu.Unlock()
+
+	player, err := ls.backend.GetPlayer(backendSPF, lowLatency)
 	if err != nil {
 		return
 	}
+	ls.mu.Lock()
 	ls.player = player
-	defer func() {
-		_ = player.Close()
-		_ = ls.backend.ReleasePlayer()
-	}()
+	ls.mu.Unlock()
 
 	for {
 		select {
@@ -216,9 +238,12 @@ func (ls *LineSink) digestJob() {
 
 		if framesReady > 0 {
 			ls.insertLock.Lock()
+			ls.mu.Lock()
 			ls.outputLatency = float64(len(ls.frameDeque)) * ls.frameTime
 			ls.maxLatency = float64(ls.bufferMaxHeight) * ls.frameTime
 			ls.underrunAt = nil
+			channels := ls.channels
+			ls.mu.Unlock()
 
 			var frame [][]float32
 			if len(ls.frameDeque) > 0 {
@@ -228,9 +253,9 @@ func (ls *LineSink) digestJob() {
 			ls.insertLock.Unlock()
 
 			if len(frame) > 0 {
-				if len(frame[0]) > ls.channels {
+				if len(frame[0]) > channels {
 					for i := range frame {
-						frame[i] = frame[i][:ls.channels]
+						frame[i] = frame[i][:channels]
 					}
 				}
 				_ = player.Play(frame)
@@ -242,20 +267,34 @@ func (ls *LineSink) digestJob() {
 			}
 			ls.insertLock.Unlock()
 		} else {
-			if ls.underrunAt == nil {
+			ls.mu.Lock()
+			underrunAt := ls.underrunAt
+			frameTimeout := ls.frameTimeout
+			frameTime := ls.frameTime
+			ls.mu.Unlock()
+
+			if underrunAt == nil {
 				now := time.Now()
+				ls.mu.Lock()
 				ls.underrunAt = &now
+				ls.mu.Unlock()
 			} else {
-				if time.Since(*ls.underrunAt).Seconds() > ls.frameTime*float64(ls.frameTimeout) {
+				if time.Since(*underrunAt).Seconds() > frameTime*float64(frameTimeout) {
+					ls.mu.Lock()
 					ls.shouldRun = false
+					ls.mu.Unlock()
 					return
 				}
-				time.Sleep(time.Duration(ls.frameTime * float64(time.Second) * 0.1))
+				time.Sleep(time.Duration(frameTime * float64(time.Second) * 0.1))
 			}
 		}
 
-		if ls.wantsLowLatency {
-			ls.wantsLowLatency = false
+		ls.mu.Lock()
+		wantsLowLatency := ls.wantsLowLatency
+		ls.wantsLowLatency = false
+		ls.mu.Unlock()
+
+		if wantsLowLatency {
 			_ = player.EnableLowLatency()
 		}
 	}
