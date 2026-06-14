@@ -179,6 +179,7 @@ fmt.Printf("gornphone %v\n", version)
 	if err != nil {
 		log.Fatalf("Error creating telephone endpoint: %v", err)
 	}
+	fmt.Printf("Destination hash: %v\n", endpoint.DestinationHash())
 	phone.SetEndpoint(endpoint)
 
 	// Wire callbacks

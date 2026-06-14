@@ -356,7 +356,7 @@ func (tep *TelephoneEndpoint) Call(identityHash string, timeout time.Duration) e
 			return fmt.Errorf("path request timed out (is the remote phone announced and reachable?)")
 		}
 	}
-	fmt.Printf("Path found to %x\n", destHash)
+	fmt.Printf("Path found to %x (hops=%v)\n", destHash, ts.HopsTo(destHash))
 
 	remoteID := ts.Recall(destHash)
 	if remoteID == nil {
