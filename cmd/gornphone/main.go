@@ -75,6 +75,9 @@ func main() {
 		os.Exit(1)
 	}
 
+	if *configDir == "" {
+		*configDir = defaultConfigDir()
+	}
 	cfg := loadOrCreateConfig(*configDir)
 
 	tel := telephony.NewTelephone(
@@ -116,8 +119,12 @@ func main() {
 	fmt.Printf("Auto-answer: %v\n", tel.AutoAnswer())
 	fmt.Println()
 
-	identityHash := loadOrCreateIdentityForConfig(*configDir)
-	fmt.Printf("Identity hash: %s\n", prettyHex(identityHash))
+	identity, err := loadOrCreateIdentity(*configDir + "/identity")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error loading identity: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Printf("Identity hash: %s\n", prettyHex(identity.HexHash))
 	fmt.Println()
 
 	if *configDir != "" || cfg != nil {
@@ -127,19 +134,8 @@ func main() {
 	phone := NewPhone(cfg)
 
 	// Initialize RNS transport and endpoint
-	// Note: rnsConfigDir can be used with Reticulum's config loading when available
 	_ = *rnsConfigDir // Store for future use
 	ts := rns.NewTransportSystem(nil)
-	identity, err := rns.FromFile(*configDir+"/identity", ts.GetLogger())
-	if err != nil {
-		identity, err = rns.NewIdentity(true, ts.GetLogger())
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error creating identity: %v\n", err)
-			os.Exit(1)
-		}
-		_ = os.MkdirAll(*configDir, 0o755)
-		_ = identity.ToFile(*configDir + "/identity")
-	}
 
 	endpoint, err := NewTelephoneEndpoint(identity, ts)
 	if err != nil {
@@ -203,10 +199,6 @@ func main() {
 }
 
 func loadOrCreateConfig(configDir string) *PhoneConfig {
-	if configDir == "" {
-		configDir = defaultConfigDir()
-	}
-
 	configPath := configDir + "/config"
 	cfg, err := LoadConfigFile(configPath)
 	if err != nil {
@@ -215,19 +207,6 @@ func loadOrCreateConfig(configDir string) *PhoneConfig {
 		_ = SaveConfigFile(configPath, cfg)
 	}
 	return cfg
-}
-
-func loadOrCreateIdentityForConfig(configDir string) string {
-	if configDir == "" {
-		configDir = defaultConfigDir()
-	}
-	identityPath := configDir + "/identity"
-	id, err := loadOrCreateIdentity(identityPath)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading identity: %v\n", err)
-		os.Exit(1)
-	}
-	return id.HexHash
 }
 
 func defaultRNSConfigDir() string {
