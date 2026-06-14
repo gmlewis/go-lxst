@@ -394,26 +394,22 @@ func (tep *TelephoneEndpoint) Call(identityHash string, timeout time.Duration) e
 		ap := tep.audioPipeline
 		tep.mu.Unlock()
 
-		// Start audio pipeline for outgoing call
 		if ap != nil {
 			if err := ap.SetupTransmit(func(data []byte) error {
-				// Create a raw message for channel transport
 				msg := &rawMessage{data: data}
 				_, err := l.GetChannel().Send(msg)
 				return err
 			}, nil); err != nil {
-				_ = fmt.Errorf("setting up transmit pipeline: %w", err)
+				log.Printf("setting up transmit pipeline: %v", err)
 			}
 			if err := ap.Start(); err != nil {
-				_ = fmt.Errorf("starting transmit pipeline: %w", err)
+				log.Printf("starting transmit pipeline: %v", err)
 			}
 		}
 
 		if onEstablished != nil {
 			remote := l.GetRemoteIdentity()
-			if remote != nil {
-				onEstablished(remote)
-			}
+			onEstablished(remote)
 		}
 	})
 
@@ -425,26 +421,38 @@ func (tep *TelephoneEndpoint) Call(identityHash string, timeout time.Duration) e
 		ap := tep.audioPipeline
 		tep.mu.Unlock()
 
-		// Stop audio pipeline when link closes
 		if ap != nil {
 			ap.Stop()
 		}
 
 		if onEnded != nil {
 			remote := l.GetRemoteIdentity()
-			if remote != nil {
-				onEnded(remote)
-			}
+			onEnded(remote)
 		}
 	})
 
+	fmt.Print("Establishing link ")
 	if err := link.Establish(); err != nil {
 		tep.mu.Lock()
 		tep.activeLink = nil
 		tep.mu.Unlock()
 		return fmt.Errorf("establishing link: %w", err)
 	}
-	log.Printf("Link established")
+
+	// Wait for link handshake to complete
+	spinner := []string{"⢄", "⢂", "⢁", "⡁", "⡈", "⡐", "⡠"}
+	index := 0
+	deadline := time.Now().Add(timeout)
+	for link.GetStatus() != rns.LinkActive && time.Now().Before(deadline) {
+		time.Sleep(100 * time.Millisecond)
+		fmt.Printf("\b\b%v ", spinner[index])
+		index = (index + 1) % len(spinner)
+	}
+	fmt.Println()
+
+	if link.GetStatus() != rns.LinkActive {
+		return fmt.Errorf("link handshake timed out")
+	}
 
 	return nil
 }

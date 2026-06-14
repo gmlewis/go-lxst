@@ -34,7 +34,8 @@ func (v *verbosity) Set(_ string) error {
 }
 
 func main() {
-	logPath := fmt.Sprintf("/tmp/gornphone-%v.log", time.Now().UnixMilli())
+	startupMilli := time.Now().UnixMilli()
+	logPath := fmt.Sprintf("/tmp/gornphone-%v.log", startupMilli)
 	logFile, err := os.Create(logPath)
 	if err != nil {
 		log.Fatalf("Error creating log file: %v", err)
@@ -149,7 +150,7 @@ fmt.Printf("gornphone %v\n", version)
 	// requests can't be routed to the correct destination.
 	rnsConfig := *rnsConfigDir
 	if rnsConfig == "" {
-		rnsConfig = ensureStandaloneRNSConfig()
+		rnsConfig = ensureStandaloneRNSConfig(startupMilli)
 	}
 
 	rnsLogger := rns.NewLogger()
@@ -189,7 +190,11 @@ fmt.Printf("gornphone %v\n", version)
 
 	// Wire callbacks
 	endpoint.SetOnRinging(func(remoteIdentity *rns.Identity) {
-		phone.Ringing(remoteIdentity.HexHash)
+		hash := "<unknown>"
+		if remoteIdentity != nil {
+			hash = remoteIdentity.HexHash
+		}
+		phone.Ringing(hash)
 	})
 	endpoint.SetOnEstablished(func(remoteIdentity *rns.Identity) {
 		phone.CallEstablished()
@@ -275,8 +280,8 @@ func defaultConfigDir() string {
 // doesn't work because each instance's destinations live on different
 // TransportSystems and the server can't route link requests to a client's
 // destinations.
-func ensureStandaloneRNSConfig() string {
-	rnsDir := "/tmp/gornphone-rns-" + fmt.Sprintf("%v", time.Now().UnixMilli())
+func ensureStandaloneRNSConfig(startupMilli int64) string {
+	rnsDir := fmt.Sprintf("/tmp/gornphone-rns-%v", startupMilli)
 	configPath := rnsDir + "/config"
 
 	_ = os.MkdirAll(rnsDir, 0o755)
