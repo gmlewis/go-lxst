@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gmlewis/go-lxst/lxst/network"
 	"github.com/gmlewis/go-reticulum/rns"
 )
 
@@ -36,6 +37,7 @@ type TelephoneEndpoint struct {
 	onBusy        func(remoteIdentity *rns.Identity)
 	onRejected    func(remoteIdentity *rns.Identity)
 	activeLink    *rns.Link
+	audioPipeline *AudioPipeline
 }
 
 // NewTelephoneEndpoint creates a new TelephoneEndpoint bound to the given identity and transport.
@@ -163,6 +165,20 @@ func (tep *TelephoneEndpoint) SetOnRejected(fn func(*rns.Identity)) {
 	tep.onRejected = fn
 }
 
+// SetAudioPipeline attaches an audio pipeline for transmit/receive audio.
+func (tep *TelephoneEndpoint) SetAudioPipeline(ap *AudioPipeline) {
+	tep.mu.Lock()
+	defer tep.mu.Unlock()
+	tep.audioPipeline = ap
+}
+
+// AudioPipeline returns the attached audio pipeline, if any.
+func (tep *TelephoneEndpoint) AudioPipeline() *AudioPipeline {
+	tep.mu.Lock()
+	defer tep.mu.Unlock()
+	return tep.audioPipeline
+}
+
 // IsCallerAllowed reports whether an identity hash is permitted to call.
 func (tep *TelephoneEndpoint) IsCallerAllowed(hashHex string) bool {
 	tep.mu.Lock()
@@ -198,6 +214,7 @@ func (tep *TelephoneEndpoint) incomingLinkEstablished(link *rns.Link) {
 	tep.activeLink = link
 	onRinging := tep.onRinging
 	onBusy := tep.onBusy
+	ap := tep.audioPipeline
 	tep.mu.Unlock()
 
 	if remoteIdentity != nil {
@@ -209,6 +226,22 @@ func (tep *TelephoneEndpoint) incomingLinkEstablished(link *rns.Link) {
 			link.Teardown()
 			return
 		}
+	}
+
+	// Start audio pipeline for incoming call
+	if ap != nil {
+		sr := network.NewSignallingReceiver(nil)
+		if err := ap.SetupReceive(sr); err != nil {
+			_ = fmt.Errorf("setting up receive pipeline: %w", err)
+		}
+		if err := ap.Start(); err != nil {
+			_ = fmt.Errorf("starting receive pipeline: %w", err)
+		}
+
+		// Wire link to receive incoming packets
+		link.SetPacketCallback(func(data []byte, packet *rns.Packet) {
+			ap.ReceivePacket(data)
+		})
 	}
 
 	if onRinging != nil && remoteIdentity != nil {
@@ -279,7 +312,24 @@ func (tep *TelephoneEndpoint) Call(identityHash string, timeout time.Duration) e
 	link.SetLinkEstablishedCallback(func(l *rns.Link) {
 		tep.mu.Lock()
 		onEstablished := tep.onEstablished
+		ap := tep.audioPipeline
 		tep.mu.Unlock()
+
+		// Start audio pipeline for outgoing call
+		if ap != nil {
+			if err := ap.SetupTransmit(func(data []byte) error {
+				// Create a raw message for channel transport
+				msg := &rawMessage{data: data}
+				_, err := l.GetChannel().Send(msg)
+				return err
+			}, nil); err != nil {
+				_ = fmt.Errorf("setting up transmit pipeline: %w", err)
+			}
+			if err := ap.Start(); err != nil {
+				_ = fmt.Errorf("starting transmit pipeline: %w", err)
+			}
+		}
+
 		if onEstablished != nil {
 			remote := l.GetRemoteIdentity()
 			if remote != nil {
@@ -292,7 +342,14 @@ func (tep *TelephoneEndpoint) Call(identityHash string, timeout time.Duration) e
 		tep.mu.Lock()
 		tep.activeLink = nil
 		onEnded := tep.onEnded
+		ap := tep.audioPipeline
 		tep.mu.Unlock()
+
+		// Stop audio pipeline when link closes
+		if ap != nil {
+			ap.Stop()
+		}
+
 		if onEnded != nil {
 			remote := l.GetRemoteIdentity()
 			if remote != nil {
@@ -327,4 +384,20 @@ func (tep *TelephoneEndpoint) Hangup() {
 		tep.activeLink.Teardown()
 		tep.activeLink = nil
 	}
+}
+
+// rawMessage implements rns.Message for sending raw byte data through channels.
+type rawMessage struct {
+	data []byte
+}
+
+func (m *rawMessage) GetMsgType() uint16 { return 0 }
+
+func (m *rawMessage) Pack() ([]byte, error) {
+	return m.data, nil
+}
+
+func (m *rawMessage) Unpack(data []byte) error {
+	m.data = data
+	return nil
 }

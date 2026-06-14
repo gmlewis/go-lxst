@@ -290,6 +290,7 @@ type Telephone struct {
 	lowLatency     bool
 	dialToneFreq   float64
 	dialToneEaseMs float64
+	externalBusy   bool
 }
 
 func NewTelephone(ringTime, waitTime int, autoAnswer bool, allowed byte, receiveGain, transmitGain float64) *Telephone {
@@ -537,4 +538,32 @@ func (tel *Telephone) SetUseAGC(use bool) {
 	tel.mu.Lock()
 	defer tel.mu.Unlock()
 	tel.useAGC = use
+}
+
+// SetBusy sets the external busy state of the telephone.
+func (tel *Telephone) SetBusy(busy bool) {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	tel.externalBusy = busy
+}
+
+// Busy reports whether the telephone is busy.
+// Returns true if the call status is not Idle or if external busy is set.
+func (tel *Telephone) Busy() bool {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	if tel.state != StateIdle {
+		return true
+	}
+	return tel.externalBusy
+}
+
+// ActiveProfile returns the profile of the active call, or nil if no call is active.
+func (tel *Telephone) ActiveProfile() byte {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	if tel.state == StateIdle {
+		return 0
+	}
+	return tel.currentProfile
 }

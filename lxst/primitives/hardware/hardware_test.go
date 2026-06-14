@@ -7,6 +7,7 @@
 package hardware
 
 import (
+	"sync"
 	"testing"
 	"time"
 )
@@ -174,12 +175,15 @@ func equalKeyMaps(a, b [][]string) bool {
 }
 
 type mockGPIODriver struct {
+	mu       sync.Mutex
 	pinModes map[int]GPIOMode
 	outputs  map[int]bool
 	inputs   map[int]bool
 }
 
 func (m *mockGPIODriver) Setup(pin int, mode GPIOMode) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if m.pinModes == nil {
 		m.pinModes = make(map[int]GPIOMode)
 	}
@@ -188,6 +192,8 @@ func (m *mockGPIODriver) Setup(pin int, mode GPIOMode) error {
 }
 
 func (m *mockGPIODriver) SetOutput(pin int, high bool) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if m.outputs == nil {
 		m.outputs = make(map[int]bool)
 	}
@@ -196,6 +202,8 @@ func (m *mockGPIODriver) SetOutput(pin int, high bool) error {
 }
 
 func (m *mockGPIODriver) ReadInput(pin int) (bool, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	if m.inputs == nil {
 		return false, nil
 	}
@@ -208,22 +216,41 @@ func (m *mockGPIODriver) SetPullUpDown(pin int, pull PullUpDown) error {
 
 func (m *mockGPIODriver) Close() error { return nil }
 
+// SetInputs safely sets the input state for testing.
+func (m *mockGPIODriver) SetInputs(inputs map[int]bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.inputs = inputs
+}
+
 type mockKeypad struct {
 	Keypad
 }
 
 type mockI2CDriver struct {
+	mu      sync.Mutex
 	written []byte
 	addr    int
 }
 
 func (m *mockI2CDriver) WriteToDevice(addr int, data byte) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.addr = addr
 	m.written = append(m.written, data)
 	return nil
 }
 
 func (m *mockI2CDriver) Close() error { return nil }
+
+// GetWritten returns a copy of the written bytes for testing.
+func (m *mockI2CDriver) GetWritten() []byte {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	cp := make([]byte, len(m.written))
+	copy(cp, m.written)
+	return cp
+}
 
 func TestKeypad_UsesGPIODriver(t *testing.T) {
 	t.Parallel()
@@ -238,7 +265,7 @@ func TestKeypad_UsesGPIODriver(t *testing.T) {
 	})
 
 	// Simulate a key press by setting the mock input state
-	mock.inputs = map[int]bool{DefaultColPins4x4[0]: true}
+	mock.SetInputs(map[int]bool{DefaultColPins4x4[0]: true})
 	k.TestSimulatePress("1")
 	time.Sleep(10 * time.Millisecond)
 
@@ -261,7 +288,8 @@ func TestLCD_UsesI2CDriver(t *testing.T) {
 	lcd.Close()
 
 	// The mock should have received I2C writes (init + print)
-	if len(mock.written) == 0 {
+	written := mock.GetWritten()
+	if len(written) == 0 {
 		t.Error("LCD should write to I2CDriver when available")
 	}
 }

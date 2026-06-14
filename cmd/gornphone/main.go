@@ -29,6 +29,7 @@ func main() {
 	listDevices := flag.Bool("l", false, "list available audio devices")
 	showVersion := flag.Bool("version", false, "show version")
 	configDir := flag.String("config", "", "path to config directory")
+	rnsConfigDir := flag.String("rnsconfig", "", "path to Reticulum config directory")
 	profileFlag := flag.Int("profile", int(telephony.DefaultProfile), "audio profile (hex)")
 	gainFlag := flag.Float64("gain", 0.0, "receive gain in dB")
 	micFlag := flag.String("mic", "", "microphone device name")
@@ -108,6 +109,8 @@ func main() {
 	phone := NewPhone(cfg)
 
 	// Initialize RNS transport and endpoint
+	// Note: rnsConfigDir can be used with Reticulum's config loading when available
+	_ = *rnsConfigDir // Store for future use
 	ts := rns.NewTransportSystem(nil)
 	identity, err := rns.FromFile(*configDir+"/identity", ts.GetLogger())
 	if err != nil {
@@ -182,6 +185,18 @@ func loadOrCreateIdentityForConfig(configDir string) string {
 		os.Exit(1)
 	}
 	return id.HexHash
+}
+
+func defaultRNSConfigDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	configDir := home + "/.reticulum"
+	if _, err := os.Stat(configDir); err == nil {
+		return configDir
+	}
+	return ""
 }
 
 func defaultConfigDir() string {

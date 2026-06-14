@@ -34,6 +34,7 @@ type AudioPipeline struct {
 	samplerate     int
 	transmitGain   float64
 	receiveGain    float64
+	started        bool
 }
 
 // NewAudioPipeline creates a new AudioPipeline with the given configuration.
@@ -111,6 +112,10 @@ func (ap *AudioPipeline) Start() error {
 	ap.mu.Lock()
 	defer ap.mu.Unlock()
 
+	if ap.started {
+		return nil
+	}
+
 	if ap.receiveMixer != nil {
 		if err := ap.receiveMixer.Start(); err != nil {
 			return fmt.Errorf("starting receive mixer: %w", err)
@@ -131,6 +136,7 @@ func (ap *AudioPipeline) Start() error {
 			return fmt.Errorf("starting link source: %w", err)
 		}
 	}
+	ap.started = true
 	return nil
 }
 
@@ -138,6 +144,10 @@ func (ap *AudioPipeline) Start() error {
 func (ap *AudioPipeline) Stop() {
 	ap.mu.Lock()
 	defer ap.mu.Unlock()
+
+	if !ap.started {
+		return
+	}
 
 	if ap.receiveMixer != nil {
 		_ = ap.receiveMixer.Stop()
@@ -151,6 +161,14 @@ func (ap *AudioPipeline) Stop() {
 	if ap.linkSource != nil {
 		_ = ap.linkSource.Stop()
 	}
+	ap.started = false
+}
+
+// Started reports whether the pipeline has been started.
+func (ap *AudioPipeline) Started() bool {
+	ap.mu.Lock()
+	defer ap.mu.Unlock()
+	return ap.started
 }
 
 // Packetizer returns the network packetizer for sending audio frames.
@@ -176,4 +194,46 @@ func (ap *AudioPipeline) ReceivePacket(data []byte) {
 	if ls != nil {
 		ls.ReceivePacket(data)
 	}
+}
+
+// TransmitCodec returns the codec used for transmitting audio.
+func (ap *AudioPipeline) TransmitCodec() codecs.Codec {
+	ap.mu.Lock()
+	defer ap.mu.Unlock()
+	return ap.transmitCodec
+}
+
+// ReceiveCodec returns the codec used for receiving audio.
+func (ap *AudioPipeline) ReceiveCodec() codecs.Codec {
+	ap.mu.Lock()
+	defer ap.mu.Unlock()
+	return ap.receiveCodec
+}
+
+// TargetFrameMs returns the target frame time in milliseconds.
+func (ap *AudioPipeline) TargetFrameMs() float64 {
+	ap.mu.Lock()
+	defer ap.mu.Unlock()
+	return ap.targetFrameMs
+}
+
+// Samplerate returns the audio samplerate.
+func (ap *AudioPipeline) Samplerate() int {
+	ap.mu.Lock()
+	defer ap.mu.Unlock()
+	return ap.samplerate
+}
+
+// TransmitGain returns the transmit gain in dB.
+func (ap *AudioPipeline) TransmitGain() float64 {
+	ap.mu.Lock()
+	defer ap.mu.Unlock()
+	return ap.transmitGain
+}
+
+// ReceiveGain returns the receive gain in dB.
+func (ap *AudioPipeline) ReceiveGain() float64 {
+	ap.mu.Lock()
+	defer ap.mu.Unlock()
+	return ap.receiveGain
 }
