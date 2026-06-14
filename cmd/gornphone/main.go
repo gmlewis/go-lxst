@@ -34,7 +34,13 @@ func (v *verbosity) Set(_ string) error {
 }
 
 func main() {
+	logPath := fmt.Sprintf("/tmp/gornphone-%v.log", time.Now().UnixMilli())
+	logFile, err := os.Create(logPath)
+	if err != nil {
+		log.Fatalf("Error creating log file: %v", err)
+	}
 	log.SetFlags(0)
+	log.SetOutput(logFile)
 
 	listDevices := flag.Bool("l", false, "list available audio devices")
 	showVersion := flag.Bool("version", false, "show version")
@@ -139,16 +145,9 @@ func main() {
 		rnsConfig = defaultRNSConfigDir()
 	}
 
-	logPath := fmt.Sprintf("/tmp/gornphone-%v.log", time.Now().UnixMilli())
 	rnsLogger := rns.NewLogger()
 	rnsLogger.SetLogFilePath(logPath)
 	rnsLogger.SetLogDest(rns.LogDestFile)
-
-	logFile, err := os.Create(logPath)
-	if err != nil {
-		log.Fatalf("Error creating log file: %v", err)
-	}
-	log.SetOutput(logFile)
 
 	ts := rns.NewTransportSystem(rnsLogger)
 
