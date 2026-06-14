@@ -2,8 +2,6 @@ module github.com/gmlewis/go-lxst
 
 go 1.26.4
 
-replace github.com/gmlewis/go-reticulum => ../go-reticulum
-
 require (
 	github.com/ebitengine/oto/v3 v3.4.0
 	github.com/gen2brain/malgo v0.11.25
