@@ -140,12 +140,17 @@ fmt.Printf("gornphone %v\n", version)
 	phone := NewPhone(cfg)
 
 	// Initialize RNS transport and endpoint.
-	// When --rnsconfig is not specified, pass "" so go-reticulum
-	// resolves the default config dir (~/.reticulum, /etc/reticulum,
-	// etc.), matching Python rnphone behavior. This lets share_instance
-	// work so multiple gornphone instances communicate via the local
-	// shared instance socket.
+	// We pass "" so go-reticulum resolves the default config dir
+	// (~/.reticulum), but override share_instance = No so each
+	// gornphone runs its own standalone RNS stack with its own
+	// destinations registered locally. Shared instance mode doesn't
+	// work for gornphone because each instance's destinations are
+	// registered on different TransportSystems, so incoming link
+	// requests can't be routed to the correct destination.
 	rnsConfig := *rnsConfigDir
+	if rnsConfig == "" {
+		rnsConfig = ensureStandaloneRNSConfig()
+	}
 
 	rnsLogger := rns.NewLogger()
 	rnsLogger.SetLogFilePath(logPath)
@@ -257,9 +262,97 @@ func defaultConfigDir() string {
 		if _, err := os.Stat(configDir + "/config"); err == nil {
 			return configDir
 		}
-		return home + "/.rnphone"
+		return home + ".rnphone"
 	}
 	return ".rnphone"
+}
+
+// ensureStandaloneRNSConfig creates a per-gornphone RNS config directory
+// with share_instance = No and inherits interface definitions from the
+// system ~/.reticulum/config. Each gornphone runs its own standalone RNS
+// stack so that its destinations are registered on its own TransportSystem
+// and incoming link requests can be routed correctly. Shared instance mode
+// doesn't work because each instance's destinations live on different
+// TransportSystems and the server can't route link requests to a client's
+// destinations.
+func ensureStandaloneRNSConfig() string {
+	rnsDir := os.TempDir() + "/gornphone-rns-" + fmt.Sprintf("%v", time.Now().UnixMilli())
+	configPath := rnsDir + "/config"
+
+	_ = os.MkdirAll(rnsDir, 0o755)
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		home = ""
+	}
+
+	var content string
+	if home != "" {
+		systemConfigPath := home + "/.reticulum/config"
+		if data, err := os.ReadFile(systemConfigPath); err == nil {
+			content = string(data)
+		}
+	}
+
+	if content == "" {
+		content = `[reticulum]
+  share_instance = No
+
+[logging]
+  loglevel = 4
+
+[interfaces]
+  [[Default Interface]]
+    type = AutoInterface
+    enabled = Yes
+    name = Default Interface
+`
+	}
+
+	content = setRNSConfigDirective(content, "share_instance", "No")
+
+	_ = os.WriteFile(configPath, []byte(content), 0o644)
+	return rnsDir
+}
+
+// setRNSConfigDirective replaces or adds a key=value directive in the
+// [reticulum] section of an RNS config string.
+func setRNSConfigDirective(content, key, value string) string {
+	lines := strings.Split(content, "\n")
+	inReticulum := false
+	replaced := false
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "[[[") {
+			continue
+		}
+		if strings.HasPrefix(trimmed, "[[") {
+			continue
+		}
+		if strings.HasPrefix(trimmed, "[") && strings.HasSuffix(trimmed, "]") {
+			section := strings.Trim(trimmed, "[] ")
+			inReticulum = section == "reticulum"
+			continue
+		}
+		if inReticulum {
+			if strings.HasPrefix(trimmed, "#") || strings.HasPrefix(trimmed, ";") {
+				continue
+			}
+			k := trimmed
+			if eq := strings.Index(trimmed, "="); eq >= 0 {
+				k = strings.TrimSpace(trimmed[:eq])
+			}
+			if k == key {
+				indent := line[:strings.Index(line, trimmed)]
+				lines[i] = indent + key + " = " + value
+				replaced = true
+			}
+		}
+	}
+	if !replaced {
+		lines = append([]string{"[reticulum]", "  " + key + " = " + value, ""}, lines...)
+	}
+	return strings.Join(lines, "\n")
 }
 
 func listAudioDevices() {
