@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -349,16 +350,16 @@ func (tep *TelephoneEndpoint) Call(identityHash string, timeout time.Duration) e
 		if err := ts.RequestPath(destHash); err != nil {
 			return fmt.Errorf("requesting path: %w", err)
 		}
-		spinner := []string{"⢄", "⢂", "⢁", "⡁", "⡈", "⡐", "⡠"}
+		spinner := []string{".", "..", "...", "....", ".....", "......", "......."}
 		index := 0
-		fmt.Print("Discovering path ")
+		fmt.Print("Discovering path")
 		deadline := time.Now().Add(timeout)
 		for !ts.HasPath(destHash) && time.Now().Before(deadline) {
-			time.Sleep(100 * time.Millisecond)
-			fmt.Printf("\b\b%v ", spinner[index])
-			index = (index + 1) % len(spinner)
+			time.Sleep(300 * time.Millisecond)
+			fmt.Printf("%s", spinner[index%len(spinner)])
+			index++
 		}
-		fmt.Println()
+		fmt.Print("\r" + strings.Repeat(" ", 40) + "\r")
 		if !ts.HasPath(destHash) {
 			return fmt.Errorf("path request timed out (is the remote phone announced and reachable?)")
 		}
@@ -431,7 +432,7 @@ func (tep *TelephoneEndpoint) Call(identityHash string, timeout time.Duration) e
 		}
 	})
 
-	fmt.Print("Establishing link ")
+	fmt.Print("Establishing link")
 	if err := link.Establish(); err != nil {
 		tep.mu.Lock()
 		tep.activeLink = nil
@@ -440,15 +441,16 @@ func (tep *TelephoneEndpoint) Call(identityHash string, timeout time.Duration) e
 	}
 
 	// Wait for link handshake to complete
-	spinner := []string{"⢄", "⢂", "⢁", "⡁", "⡈", "⡐", "⡠"}
+	spinner := []string{".", "..", "...", "....", ".....", "......", "......."}
 	index := 0
 	deadline := time.Now().Add(timeout)
 	for link.GetStatus() != rns.LinkActive && time.Now().Before(deadline) {
-		time.Sleep(100 * time.Millisecond)
-		fmt.Printf("\b\b%v ", spinner[index])
-		index = (index + 1) % len(spinner)
+		time.Sleep(300 * time.Millisecond)
+		fmt.Printf("%s", spinner[index%len(spinner)])
+		index++
 	}
-	fmt.Println()
+	// Clear spinner line and print result
+	fmt.Print("\r" + strings.Repeat(" ", 40) + "\r")
 
 	if link.GetStatus() != rns.LinkActive {
 		return fmt.Errorf("link handshake timed out")
