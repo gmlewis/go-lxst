@@ -152,110 +152,114 @@ sources, codecs encode/decode for transport, and sinks consume the final output.
 
 ## Making Phone Calls Over Reticulum
 
-### Current Status
-
-The `gornphone` CLI (`cmd/gornphone/`) provides the foundation for Reticulum
-network telephony. The RNS signaling layer (link establishment, call state
-machine, identity management) is functional. The audio I/O layer (oto backend,
-codecs, filters, mixers) is functional. However, **the audio pipeline is not
-yet wired to the RNS link layer** — meaning you cannot hear audio over a
-remote call yet. The signaling works (calls can be established and torn down),
-but no audio flows through the link.
-
-### What Works Today
-
-- **RNS identity management** — creates/loads persistent identities
-- **RNS Destination/Link** — can establish encrypted links to remote peers
-- **Call signaling** — ringing, connect, established, hangup state machine
-- **Local audio I/O** — microphone capture and speaker playback via oto
-- **Audio codecs** — Opus, Codec2, Raw PCM encoding/decoding
-- **Audio filtering** — HighPass, LowPass, BandPass, AGC (parity-verified)
-- **Cross-platform** — pure Go, works on macOS (M1/M2), Linux, Windows
-
-### What's Not Yet Connected
-
-The audio pipeline components exist (`lxst/network` Package: `Packetizer`,
-`LinkSource`, `SignallingReceiver`) but are not wired into `gornphone`'s call
-flow. Specifically:
-
-1. When a call is established, `main.go` does not start the audio pipeline
-2. Microphone audio is not encoded and sent over the RNS Link
-3. Received audio from the Link is not decoded and played through the speaker
-
-### Setting Up the Python Side (for when audio is wired)
-
-The Go `gornphone` is wire-compatible with the Python `rnphone.py` from the
+`gornphone` is a wire-compatible Go port of the Python `rnphone.py` from the
 [LXST repository](https://github.com/markqvist/LXST). Both use the same
-`lxst.telephony` primitive with matching RNS destination names and signalling
-protocol.
+`lxst.telephony` RNS destination name and signalling protocol, so a Go
+`gornphone` can call a Python `rnphone` and vice versa.
 
-**Step 1: Install Python LXST and RNS on the other machine**
+### Prerequisites
+
+**On the Go side** — build `gornphone`:
 
 ```bash
-# On the other person's machine (Linux or macOS):
-pip install LXST
-# RNS should be installed automatically as a dependency
+go install ./cmd/gornphone
 ```
 
-**Step 2: Set up a shared Reticulum network**
+**On the Python side** — install LXST (includes `rnphone`):
+
+```bash
+pip install LXST
+```
+
+Both sides need a [go-reticulum](https://github.com/gmlewis/go-reticulum) or
+[Reticulum](https://github.com/markqvist/Reticulum) transport configured so
+the two machines can reach each other.
+
+### Step 1: Configure RNS Transport
 
 Both machines need to be on the same Reticulum network. The simplest setup
-is a direct TCP connection:
+for two machines on the same LAN is a TCP connection.
 
-```bash
-# On Machine A (the Go phone):
-# Start gornphone — it will create a config directory at ~/.rnphone/
-gornphone
-
-# The first run creates ~/.rnphone/config and ~/.rnphone/identity
-# Note the identity hash printed on startup — you'll share this
-```
-
-```bash
-# On Machine B (the Python phone):
-rnphone --config /path/to/rnphone-config
-
-# The first run creates a default config
-# Note the identity hash printed on startup
-```
-
-**Step 3: Configure RNS transport (TCP example)**
-
-Create an RNS config file on each machine that tells RNS how to reach
-the other. For a direct LAN connection, create
-`~/.reticulum/config` (or `~/.config/reticulum/config`):
+On **Machine A** (the machine running `gornphone`), create
+`~/.reticulum/config`:
 
 ```ini
-# Machine A config (~/.reticulum/config)
 [[TCPServer]]
     tcp_address = 0.0.0.0
     tcp_port = 2222
 ```
 
+On **Machine B** (the machine running Python `rnphone`), create
+`~/.reticulum/config`:
+
 ```ini
-# Machine B config (~/.reticulum/config)
 [[TCPClient]]
-    target_host = <Machine A's IP address>
+    target_host = <Machine A's LAN IP address>
     target_port = 2222
 ```
 
-Both machines must also have a shared `trusted` entry for the other's
-identity so they can form links. Alternatively, use announce + path
-discovery.
+For other transport options (RNode LoRa, AutoInterface, etc.), see the
+[Reticulum docs](https://reticulum.network/manual/interfaces.html).
 
-**Step 4: Make a call**
-
-Once both machines are running and have discovered each other's paths:
+### Step 2: Start `gornphone` (Go side)
 
 ```bash
-# On Machine A (Go phone), enter Machine B's identity hash:
-> <Machine B's 32-char hex identity hash>
-
-# On Machine B (Python phone), you'll see an incoming call
-# Press Enter to answer
+gornphone
 ```
 
-### Architecture When Audio Is Wired
+On first run, `gornphone` creates `~/.rnphone/config` and `~/.rnphone/identity`.
+Note the **identity hash** printed on startup — this is your phone number that
+you share with the other person.
+
+### Step 3: Start `rnphone` (Python side)
+
+```bash
+rnphone
+```
+
+On first run, `rnphone` creates `~/.rnphone/config` and `~/.rnphone/identity`.
+Note the identity hash printed on startup.
+
+### Step 4: Make a Call
+
+Once both machines are running and have discovered each other's paths
+(either through announces or by entering the identity hash directly):
+
+```bash
+# On the Go phone, dial the Python phone's 32-char hex identity hash:
+> <32-char identity hash>
+
+# Or use the phonebook — add to ~/.rnphone/config:
+# [phonebook]
+#     Alice = <32-char identity hash>
+
+# Then dial by name:
+> alice
+```
+
+On the Python side, the incoming call will appear with a prompt to answer
+(press Enter) or reject (press `r`).
+
+### Interactive Commands
+
+When `gornphone` is in the available state:
+
+| Key | Command | Description |
+|-----|---------|-------------|
+| `<hash>` | — | Dial a 32-char hex identity hash |
+| `<name>` | — | Dial a phonebook entry by name |
+| `p` | phonebook | Show phonebook entries |
+| `r` | redial | Redial the last called identity |
+| `i` | identity | Show this phone's identity hash |
+| `d` | desthash | Show this phone's destination hash |
+| `a` | announce | Send an announce on the network |
+| `q` | quit | Exit gornphone |
+| `h` | help | Show help |
+
+When ringing (incoming call): press **Enter** to answer, any other key to
+reject. When in a call: press **Enter** to hang up.
+
+### Audio Architecture
 
 ```
 ┌──────────────┐                        ┌──────────────┐
@@ -269,6 +273,10 @@ Once both machines are running and have discovered each other's paths:
 Transmit: LineSource → Mixer → Codec → Packetizer → RNS Link
 Receive:  RNS Link → LinkSource → Mixer → Codec → LineSink
 ```
+
+The `TelephoneEndpoint` in `cmd/gornphone/rns.go` wires the audio pipeline
+automatically when a link is established — both for incoming calls (via
+`incomingLinkEstablished`) and outgoing calls (via `Call`).
 
 ### Audio Profile Selection
 
@@ -285,12 +293,51 @@ Receive:  RNS Link → LinkSource → Mixer → Codec → LineSink
 | Low Latency | 0x70 | Opus | 20ms | Real-time |
 | Ultra Low Latency | 0x80 | Opus | 10ms | Ultra real-time |
 
+Select a profile at startup:
+
+```bash
+gornphone -profile 0x50
+```
+
+### Phonebook Configuration
+
+Add entries to `~/.rnphone/config` to dial by name or numerical alias:
+
+```ini
+[phonebook]
+    Alice = <32-char hex identity hash>
+    Bob = <32-char hex identity hash>, 42
+```
+
+Then dial with `alice`, `bob`, or the alias `42`.
+
+### Caller Access Control
+
+Configure who can call you in `~/.rnphone/config`:
+
+```ini
+[telephone]
+    # Allow everyone (default)
+    allowed_callers = all
+
+    # Block everyone
+    allowed_callers = none
+
+    # Only allow phonebook entries
+    allowed_callers = phonebook
+
+    # Only allow specific identity hashes
+    allowed_callers = b8d80b1b7a9d3147880b366995422a45, fcfb80d4cd3aab7c8710541fb2317974
+
+    # Block specific callers (overrides allow list)
+    blocked_callers = f3e8c3359b39d36f3baff0a616a73d3e
+```
+
 ### Bluetooth Audio on macOS
 
 On macOS with Bluetooth earbuds, the oto backend uses CoreAudio which
-automatically routes to the system's default output device. If your
-Bluetooth earbuds are set as the default audio output in System Settings,
-`gornphone` will use them. To select specific devices:
+automatically routes to the system's default audio device. To select
+specific devices:
 
 ```bash
 # List available devices
@@ -298,6 +345,20 @@ gornphone -l
 
 # Use a specific speaker/mic
 gornphone --speaker "AirPods Pro" --mic "AirPods Pro"
+```
+
+### Running as a Service
+
+`gornphone` can run as a headless service that auto-answers incoming calls:
+
+```bash
+gornphone --service
+```
+
+To install as a systemd service on Linux:
+
+```bash
+gornphone --systemd    # prints a systemd unit file
 ```
 
 ## License
