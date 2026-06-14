@@ -138,12 +138,19 @@ func main() {
 	if rnsConfig == "" {
 		rnsConfig = defaultRNSConfigDir()
 	}
-	ts := rns.NewTransportSystem(nil)
 
 	logPath := fmt.Sprintf("/tmp/gornphone-%v.log", time.Now().UnixMilli())
 	rnsLogger := rns.NewLogger()
 	rnsLogger.SetLogFilePath(logPath)
 	rnsLogger.SetLogDest(rns.LogDestFile)
+
+	logFile, err := os.Create(logPath)
+	if err != nil {
+		log.Fatalf("Error creating log file: %v", err)
+	}
+	log.SetOutput(logFile)
+
+	ts := rns.NewTransportSystem(rnsLogger)
 
 	reticulum, err := rns.NewReticulumWithLogger(ts, rnsConfig, rnsLogger)
 	if err != nil {
