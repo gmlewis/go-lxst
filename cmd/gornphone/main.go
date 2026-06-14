@@ -58,7 +58,7 @@ func main() {
 	flag.Parse()
 
 	if *showVersion {
-fmt.Printf("gornphone %v\n", version)
+		fmt.Printf("gornphone %v\n", version)
 		os.Exit(0)
 	}
 
@@ -163,7 +163,11 @@ fmt.Printf("gornphone %v\n", version)
 	if err != nil {
 		log.Fatalf("Error initializing Reticulum: %v", err)
 	}
-	defer reticulum.Close()
+	defer func() {
+		if err := reticulum.Close(); err != nil {
+			log.Printf("reticulum.Close: %v", err)
+		}
+	}()
 
 	rnsConfigDisplay := rnsConfig
 	if rnsConfigDisplay == "" {
