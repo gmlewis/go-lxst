@@ -8,6 +8,7 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -257,7 +258,7 @@ func (tep *TelephoneEndpoint) isCallerAllowedLocked(hashHex string) bool {
 }
 
 func (tep *TelephoneEndpoint) incomingLinkEstablished(link *rns.Link) {
-	fmt.Println("Incoming link established callback fired")
+	log.Printf("Incoming link established callback fired")
 	tep.mu.Lock()
 	remoteIdentity := link.GetRemoteIdentity()
 	tep.activeLink = link
@@ -266,8 +267,10 @@ func (tep *TelephoneEndpoint) incomingLinkEstablished(link *rns.Link) {
 	ap := tep.audioPipeline
 	tep.mu.Unlock()
 
+	var hashHex string
 	if remoteIdentity != nil {
-		hashHex := hex.EncodeToString(remoteIdentity.Hash)
+		hashHex = hex.EncodeToString(remoteIdentity.Hash)
+		fmt.Printf("Incoming link from %v\n", prettyHex(hashHex))
 		if !tep.IsCallerAllowed(hashHex) {
 			if onBusy != nil {
 				onBusy(remoteIdentity)
@@ -293,8 +296,12 @@ func (tep *TelephoneEndpoint) incomingLinkEstablished(link *rns.Link) {
 		})
 	}
 
-	if onRinging != nil && remoteIdentity != nil {
-		onRinging(remoteIdentity)
+	if onRinging != nil {
+		if remoteIdentity != nil {
+			onRinging(remoteIdentity)
+		} else if hashHex != "" {
+			onRinging(&rns.Identity{Hash: []byte(hashHex), HexHash: hashHex})
+		}
 	}
 }
 
@@ -362,26 +369,26 @@ func (tep *TelephoneEndpoint) Call(identityHash string, timeout time.Duration) e
 	if remoteID == nil {
 		return fmt.Errorf("identity not found on network (Recall returned nil)")
 	}
-	fmt.Println("Identity recalled from network")
+	log.Printf("Identity recalled from network")
 
 	callDest, err := rns.NewDestination(ts, remoteID, rns.DestinationOut, rns.DestinationSingle, appName, primitiveName)
 	if err != nil {
 		return fmt.Errorf("creating call destination: %w", err)
 	}
-	fmt.Println("Call destination created")
+	log.Printf("Call destination created")
 
 	link, err := rns.NewLink(ts, callDest)
 	if err != nil {
 		return fmt.Errorf("creating link: %w", err)
 	}
-	fmt.Println("Link object created")
+	log.Printf("Link object created")
 
 	tep.mu.Lock()
 	tep.activeLink = link
 	tep.mu.Unlock()
 
 	link.SetLinkEstablishedCallback(func(l *rns.Link) {
-		fmt.Println("Outgoing link established callback fired")
+		log.Printf("Outgoing link established callback fired")
 		tep.mu.Lock()
 		onEstablished := tep.onEstablished
 		ap := tep.audioPipeline
@@ -411,7 +418,7 @@ func (tep *TelephoneEndpoint) Call(identityHash string, timeout time.Duration) e
 	})
 
 	link.SetLinkClosedCallback(func(l *rns.Link) {
-		fmt.Println("Link closed callback fired")
+		log.Printf("Link closed callback fired")
 		tep.mu.Lock()
 		tep.activeLink = nil
 		onEnded := tep.onEnded
@@ -437,7 +444,7 @@ func (tep *TelephoneEndpoint) Call(identityHash string, timeout time.Duration) e
 		tep.mu.Unlock()
 		return fmt.Errorf("establishing link: %w", err)
 	}
-	fmt.Println("Link established")
+	log.Printf("Link established")
 
 	return nil
 }
