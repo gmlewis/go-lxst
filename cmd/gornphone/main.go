@@ -276,7 +276,7 @@ func defaultConfigDir() string {
 // TransportSystems and the server can't route link requests to a client's
 // destinations.
 func ensureStandaloneRNSConfig() string {
-	rnsDir := os.TempDir() + "/gornphone-rns-" + fmt.Sprintf("%v", time.Now().UnixMilli())
+	rnsDir := "/tmp/gornphone-rns-" + fmt.Sprintf("%v", time.Now().UnixMilli())
 	configPath := rnsDir + "/config"
 
 	_ = os.MkdirAll(rnsDir, 0o755)
