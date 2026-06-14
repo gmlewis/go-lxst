@@ -257,6 +257,7 @@ func (tep *TelephoneEndpoint) isCallerAllowedLocked(hashHex string) bool {
 }
 
 func (tep *TelephoneEndpoint) incomingLinkEstablished(link *rns.Link) {
+	fmt.Println("Incoming link established callback fired")
 	tep.mu.Lock()
 	remoteIdentity := link.GetRemoteIdentity()
 	tep.activeLink = link
@@ -380,6 +381,7 @@ func (tep *TelephoneEndpoint) Call(identityHash string, timeout time.Duration) e
 	tep.mu.Unlock()
 
 	link.SetLinkEstablishedCallback(func(l *rns.Link) {
+		fmt.Println("Outgoing link established callback fired")
 		tep.mu.Lock()
 		onEstablished := tep.onEstablished
 		ap := tep.audioPipeline
@@ -409,6 +411,7 @@ func (tep *TelephoneEndpoint) Call(identityHash string, timeout time.Duration) e
 	})
 
 	link.SetLinkClosedCallback(func(l *rns.Link) {
+		fmt.Println("Link closed callback fired")
 		tep.mu.Lock()
 		tep.activeLink = nil
 		onEnded := tep.onEnded
