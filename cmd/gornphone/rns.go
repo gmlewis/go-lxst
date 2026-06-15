@@ -731,9 +731,10 @@ func (tep *TelephoneEndpoint) Call(identityHash string, timeout time.Duration) e
 		tep.logger.Info("Link closed callback fired")
 		tep.mu.Lock()
 		tep.activeLink = nil
+		ap := tep.audioPipeline
+		tep.audioPipeline = nil
 		onEnded := tep.onEnded
 		tel := tep.telephone
-		ap := tep.audioPipeline
 		tep.mu.Unlock()
 
 		if tel != nil {
@@ -794,19 +795,22 @@ func (tep *TelephoneEndpoint) Hangup() {
 	tel := tep.telephone
 	ap := tep.audioPipeline
 	tep.activeLink = nil
+	tep.audioPipeline = nil
 	tep.remoteIdentified = false
 	tep.mu.Unlock()
 
 	tep.logger.Info("TelephoneEndpoint.Hangup: link=%v, tel=%v", link != nil, tel != nil)
 
+	// Stop audio pipelines first to prevent further send attempts on a
+	// link that is about to be torn down.
+	if ap != nil {
+		ap.Stop()
+	}
+
 	if tel != nil {
 		tep.logger.Info("TelephoneEndpoint.Hangup: tel state=%v before hangup", tel.State())
 		tel.Hangup()
 		tep.logger.Info("TelephoneEndpoint.Hangup: tel state=%v after hangup", tel.State())
-	}
-
-	if ap != nil {
-		ap.Stop()
 	}
 
 	if link != nil {

@@ -40,12 +40,12 @@ func main() {
 	startupMilli := time.Now().UnixMilli()
 	logPath := fmt.Sprintf("/tmp/gornphone-%v.log", startupMilli)
 
-	// Redirect Go's log package to stderr so that go-reticulum's
-	// internal log.Printf calls don't pollute stdout (which is used
-	// for the interactive prompt). Gornphone application messages go
-	// through the RNS logger to the log file instead.
+	// Redirect Go's log package to the log file so that go-reticulum's
+	// internal log.Printf calls don't pollute the terminal. We use a
+	// reopening writer that opens the file on each Write call, matching
+	// the RNS logger's approach so both survive log rotation.
 	log.SetFlags(0)
-	log.SetOutput(os.Stderr)
+	log.SetOutput(&reopeningWriter{path: logPath})
 
 	listDevices := flag.Bool("l", false, "list available audio devices")
 	showVersion := flag.Bool("version", false, "show version")
@@ -502,3 +502,19 @@ ExecStart=/home/%v/.local/bin/gornphone --service -vvv
 [Install]
 WantedBy=graphical.target
 `
+
+// reopeningWriter is an io.Writer that opens the file on each Write call.
+// This matches the RNS logger's approach and survives log file rotation:
+// after the RNS logger renames the file, the next Write opens the new one.
+type reopeningWriter struct {
+	path string
+}
+
+func (w *reopeningWriter) Write(p []byte) (n int, err error) {
+	f, err := os.OpenFile(w.path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		return 0, err
+	}
+	defer f.Close()
+	return f.Write(p)
+}
