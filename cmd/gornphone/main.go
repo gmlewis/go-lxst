@@ -11,13 +11,16 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/gmlewis/go-lxst/lxst"
 	"github.com/gmlewis/go-lxst/lxst/primitives/telephony"
 	"github.com/gmlewis/go-reticulum/rns"
+	"github.com/gmlewis/go-reticulum/rns/interfaces"
 )
 
 var (
@@ -185,6 +188,30 @@ func main() {
 		fmt.Println("RNS mode:     connected to shared instance")
 	default:
 		fmt.Println("RNS mode:     standalone")
+	}
+
+	if *listenFlag != "" || *connectFlag != "" {
+		handler := func(data []byte, iface interfaces.Interface) {
+			ts.Inbound(data, iface)
+		}
+		if *listenFlag != "" {
+			host, port := parseHostPort(*listenFlag, "localhost", 4242)
+			srv, err := interfaces.NewTCPServerInterface("Local TCP Server", host, port, handler, nil)
+			if err != nil {
+				log.Fatalf("Error creating local TCP server: %v", err)
+			}
+			ts.RegisterInterface(srv)
+			fmt.Printf("Local TCP:    listening on %v:%v\n", host, port)
+		}
+		if *connectFlag != "" {
+			host, port := parseHostPort(*connectFlag, "localhost", 4242)
+			cli, err := interfaces.NewTCPClientInterface("Local TCP Client", host, port, false, handler)
+			if err != nil {
+				log.Fatalf("Error creating local TCP client: %v", err)
+			}
+			ts.RegisterInterface(cli)
+			fmt.Printf("Local TCP:    connecting to %v:%v\n", host, port)
+		}
 	}
 
 	endpoint, err := NewTelephoneEndpoint(identity, ts)
@@ -393,6 +420,21 @@ func defaultStr(s, def string) string {
 		return def
 	}
 	return s
+}
+
+func parseHostPort(addr, defaultHost string, defaultPort int) (string, int) {
+	host, portStr, err := net.SplitHostPort(addr)
+	if err != nil {
+		return defaultHost, defaultPort
+	}
+	port, err := strconv.Atoi(portStr)
+	if err != nil {
+		return host, defaultPort
+	}
+	if host == "" {
+		host = defaultHost
+	}
+	return host, port
 }
 
 func printSystemdUnit() {
