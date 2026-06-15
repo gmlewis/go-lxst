@@ -25,7 +25,7 @@ func TestNewTelephoneEndpoint(t *testing.T) {
 	}
 
 	ts := rns.NewTransportSystem(nil)
-	tep, err := NewTelephoneEndpoint(id, ts)
+	tep, err := NewTelephoneEndpoint(id, ts, nil)
 	if err != nil {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
@@ -38,7 +38,7 @@ func TestNewTelephoneEndpoint_NilIdentity(t *testing.T) {
 	t.Parallel()
 
 	ts := rns.NewTransportSystem(nil)
-	_, err := NewTelephoneEndpoint(nil, ts)
+	_, err := NewTelephoneEndpoint(nil, ts, nil)
 	if err == nil {
 		t.Fatal("expected error for nil identity")
 	}
@@ -52,7 +52,7 @@ func TestNewTelephoneEndpoint_NilTransport(t *testing.T) {
 		t.Fatalf("NewIdentity failed: %v", err)
 	}
 
-	_, err = NewTelephoneEndpoint(id, nil)
+	_, err = NewTelephoneEndpoint(id, nil, nil)
 	if err == nil {
 		t.Fatal("expected error for nil transport")
 	}
@@ -67,7 +67,7 @@ func TestTelephoneEndpoint_Destination(t *testing.T) {
 	}
 
 	ts := rns.NewTransportSystem(nil)
-	tep, err := NewTelephoneEndpoint(id, ts)
+	tep, err := NewTelephoneEndpoint(id, ts, nil)
 	if err != nil {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
@@ -90,7 +90,7 @@ func TestTelephoneEndpoint_Hashes(t *testing.T) {
 	}
 
 	ts := rns.NewTransportSystem(nil)
-	tep, err := NewTelephoneEndpoint(id, ts)
+	tep, err := NewTelephoneEndpoint(id, ts, nil)
 	if err != nil {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
@@ -112,7 +112,7 @@ func TestTelephoneEndpoint_Announce(t *testing.T) {
 	}
 
 	ts := rns.NewTransportSystem(nil)
-	tep, err := NewTelephoneEndpoint(id, ts)
+	tep, err := NewTelephoneEndpoint(id, ts, nil)
 	if err != nil {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
@@ -132,7 +132,7 @@ func TestTelephoneEndpoint_NeedsAnnounce(t *testing.T) {
 	}
 
 	ts := rns.NewTransportSystem(nil)
-	tep, err := NewTelephoneEndpoint(id, ts)
+	tep, err := NewTelephoneEndpoint(id, ts, nil)
 	if err != nil {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
@@ -162,7 +162,7 @@ func TestTelephoneEndpoint_SetAllowed(t *testing.T) {
 	}
 
 	ts := rns.NewTransportSystem(nil)
-	tep, err := NewTelephoneEndpoint(id, ts)
+	tep, err := NewTelephoneEndpoint(id, ts, nil)
 	if err != nil {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
@@ -183,7 +183,7 @@ func TestTelephoneEndpoint_SetBlocked(t *testing.T) {
 	}
 
 	ts := rns.NewTransportSystem(nil)
-	tep, err := NewTelephoneEndpoint(id, ts)
+	tep, err := NewTelephoneEndpoint(id, ts, nil)
 	if err != nil {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
@@ -206,7 +206,7 @@ func TestTelephoneEndpoint_SetAllowList(t *testing.T) {
 	}
 
 	ts := rns.NewTransportSystem(nil)
-	tep, err := NewTelephoneEndpoint(id, ts)
+	tep, err := NewTelephoneEndpoint(id, ts, nil)
 	if err != nil {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
@@ -235,7 +235,7 @@ func TestTelephoneEndpoint_Callbacks(t *testing.T) {
 	}
 
 	ts := rns.NewTransportSystem(nil)
-	tep, err := NewTelephoneEndpoint(id, ts)
+	tep, err := NewTelephoneEndpoint(id, ts, nil)
 	if err != nil {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
@@ -281,7 +281,7 @@ func TestTelephoneEndpoint_Teardown(t *testing.T) {
 	}
 
 	ts := rns.NewTransportSystem(nil)
-	tep, err := NewTelephoneEndpoint(id, ts)
+	tep, err := NewTelephoneEndpoint(id, ts, nil)
 	if err != nil {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
@@ -302,7 +302,7 @@ func TestTelephoneEndpoint_AnnounceInterval(t *testing.T) {
 	}
 
 	ts := rns.NewTransportSystem(nil)
-	tep, err := NewTelephoneEndpoint(id, ts)
+	tep, err := NewTelephoneEndpoint(id, ts, nil)
 	if err != nil {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
@@ -338,7 +338,7 @@ func TestTelephoneEndpoint_JobLoop(t *testing.T) {
 	}
 
 	ts := rns.NewTransportSystem(nil)
-	tep, err := NewTelephoneEndpoint(id, ts)
+	tep, err := NewTelephoneEndpoint(id, ts, nil)
 	if err != nil {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
@@ -370,7 +370,7 @@ func TestTelephoneEndpoint_Hangup(t *testing.T) {
 	}
 
 	ts := rns.NewTransportSystem(nil)
-	tep, err := NewTelephoneEndpoint(id, ts)
+	tep, err := NewTelephoneEndpoint(id, ts, nil)
 	if err != nil {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
@@ -392,7 +392,7 @@ func TestTelephoneEndpoint_CallSelf(t *testing.T) {
 	}
 
 	ts := rns.NewTransportSystem(nil)
-	tep, err := NewTelephoneEndpoint(id, ts)
+	tep, err := NewTelephoneEndpoint(id, ts, nil)
 	if err != nil {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
@@ -417,11 +417,11 @@ func TestTelephoneEndpoint_CallSpinner(t *testing.T) {
 	}
 
 	ts := rns.NewTransportSystem(nil)
-	tep1, err := NewTelephoneEndpoint(id1, ts)
+	tep1, err := NewTelephoneEndpoint(id1, ts, nil)
 	if err != nil {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
-	tep2, err := NewTelephoneEndpoint(id2, ts)
+	tep2, err := NewTelephoneEndpoint(id2, ts, nil)
 	if err != nil {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
@@ -443,7 +443,7 @@ func TestHandleSignallingData_Available(t *testing.T) {
 	}
 
 	ts := rns.NewTransportSystem(nil)
-	tep, err := NewTelephoneEndpoint(id, ts)
+	tep, err := NewTelephoneEndpoint(id, ts, nil)
 	if err != nil {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
@@ -474,7 +474,7 @@ func TestHandleSignallingData_Ringing(t *testing.T) {
 	}
 
 	ts := rns.NewTransportSystem(nil)
-	tep, err := NewTelephoneEndpoint(id, ts)
+	tep, err := NewTelephoneEndpoint(id, ts, nil)
 	if err != nil {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
@@ -500,7 +500,7 @@ func TestHandleSignallingData_Connecting(t *testing.T) {
 	}
 
 	ts := rns.NewTransportSystem(nil)
-	tep, err := NewTelephoneEndpoint(id, ts)
+	tep, err := NewTelephoneEndpoint(id, ts, nil)
 	if err != nil {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
@@ -527,7 +527,7 @@ func TestHandleSignallingData_Established(t *testing.T) {
 	}
 
 	ts := rns.NewTransportSystem(nil)
-	tep, err := NewTelephoneEndpoint(id, ts)
+	tep, err := NewTelephoneEndpoint(id, ts, nil)
 	if err != nil {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
@@ -554,7 +554,7 @@ func TestHandleSignallingData_Busy(t *testing.T) {
 	}
 
 	ts := rns.NewTransportSystem(nil)
-	tep, err := NewTelephoneEndpoint(id, ts)
+	tep, err := NewTelephoneEndpoint(id, ts, nil)
 	if err != nil {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
@@ -581,7 +581,7 @@ func TestHandleSignallingData_Rejected(t *testing.T) {
 	}
 
 	ts := rns.NewTransportSystem(nil)
-	tep, err := NewTelephoneEndpoint(id, ts)
+	tep, err := NewTelephoneEndpoint(id, ts, nil)
 	if err != nil {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
@@ -608,7 +608,7 @@ func TestHandleSignallingData_PreferredProfile(t *testing.T) {
 	}
 
 	ts := rns.NewTransportSystem(nil)
-	tep, err := NewTelephoneEndpoint(id, ts)
+	tep, err := NewTelephoneEndpoint(id, ts, nil)
 	if err != nil {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
@@ -636,7 +636,7 @@ func TestCallerDoesNotSendCallingOnLinkEstablished(t *testing.T) {
 	}
 
 	ts := rns.NewTransportSystem(nil)
-	tep, err := NewTelephoneEndpoint(id, ts)
+	tep, err := NewTelephoneEndpoint(id, ts, nil)
 	if err != nil {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
@@ -667,7 +667,7 @@ func TestResponderSendsRingingAfterCallerIdentified(t *testing.T) {
 	}
 
 	ts := rns.NewTransportSystem(nil)
-	tep, err := NewTelephoneEndpoint(id, ts)
+	tep, err := NewTelephoneEndpoint(id, ts, nil)
 	if err != nil {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
@@ -726,11 +726,11 @@ func TestTelephoneEndpoint_AlreadyInCall(t *testing.T) {
 	}
 
 	ts := rns.NewTransportSystem(nil)
-	tep1, err := NewTelephoneEndpoint(id1, ts)
+	tep1, err := NewTelephoneEndpoint(id1, ts, nil)
 	if err != nil {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
-	tep2, err := NewTelephoneEndpoint(id2, ts)
+	tep2, err := NewTelephoneEndpoint(id2, ts, nil)
 	if err != nil {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
@@ -1010,7 +1010,7 @@ func TestCallLifecycle_BusyRejectFlow(t *testing.T) {
 	ts := rns.NewTransportSystem(nil)
 	ts.Remember(callerID.Hash, nil, nil, nil)
 
-	callerEP, err := NewTelephoneEndpoint(callerID, ts)
+	callerEP, err := NewTelephoneEndpoint(callerID, ts, nil)
 	if err != nil {
 		t.Fatalf("NewTelephoneEndpoint for caller: %v", err)
 	}
@@ -1099,7 +1099,7 @@ func TestCallLifecycle_ProfileNegotiation(t *testing.T) {
 	}
 
 	ts := rns.NewTransportSystem(nil)
-	tep, err := NewTelephoneEndpoint(id, ts)
+	tep, err := NewTelephoneEndpoint(id, ts, nil)
 	if err != nil {
 		t.Fatalf("NewTelephoneEndpoint: %v", err)
 	}
@@ -1188,7 +1188,7 @@ func TestCallLifecycle_ResponderRejectedCall(t *testing.T) {
 	ts := rns.NewTransportSystem(nil)
 	ts.Remember(callerID.Hash, nil, nil, nil)
 
-	callerEP, err := NewTelephoneEndpoint(callerID, ts)
+	callerEP, err := NewTelephoneEndpoint(callerID, ts, nil)
 	if err != nil {
 		t.Fatalf("NewTelephoneEndpoint: %v", err)
 	}

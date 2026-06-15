@@ -32,7 +32,7 @@ func TestIntegration_AudioPipelineOnIncomingLink(t *testing.T) {
 	ts.Remember(receiverID.Hash, nil, nil, nil)
 
 	// Create receiver endpoint with audio pipeline
-	receiverEP, err := NewTelephoneEndpoint(receiverID, ts)
+	receiverEP, err := NewTelephoneEndpoint(receiverID, ts, nil)
 	if err != nil {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
@@ -72,7 +72,7 @@ func TestIntegration_AudioPipelineOnIncomingLink(t *testing.T) {
 	}
 
 	// Create caller endpoint
-	callerEP, err := NewTelephoneEndpoint(callerID, ts)
+	callerEP, err := NewTelephoneEndpoint(callerID, ts, nil)
 	if err != nil {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}

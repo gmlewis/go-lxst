@@ -14,7 +14,7 @@ import (
 func TestNewPhone(t *testing.T) {
 	t.Parallel()
 	cfg := DefaultConfig()
-	phone := NewPhone(cfg)
+	phone := NewPhone(cfg, nil)
 	if phone == nil {
 		t.Fatal("NewPhone() returned nil")
 	}
@@ -29,7 +29,7 @@ func TestNewPhone(t *testing.T) {
 func TestPhoneStateTransitions(t *testing.T) {
 	t.Parallel()
 	cfg := DefaultConfig()
-	phone := NewPhone(cfg)
+	phone := NewPhone(cfg, nil)
 
 	if !phone.IsAvailable() {
 		t.Fatal("phone should start available")
@@ -57,7 +57,7 @@ func TestPhoneStateTransitions(t *testing.T) {
 func TestPhoneIncomingCall(t *testing.T) {
 	t.Parallel()
 	cfg := DefaultConfig()
-	phone := NewPhone(cfg)
+	phone := NewPhone(cfg, nil)
 
 	phone.Ringing("11223344aabbccdd11223344aabbccdd")
 	if !phone.IsRinging() {
@@ -84,7 +84,7 @@ func TestPhoneIncomingCall(t *testing.T) {
 func TestPhoneReject(t *testing.T) {
 	t.Parallel()
 	cfg := DefaultConfig()
-	phone := NewPhone(cfg)
+	phone := NewPhone(cfg, nil)
 
 	phone.Ringing("11223344aabbccdd11223344aabbccdd")
 	if !phone.IsRinging() {
@@ -100,7 +100,7 @@ func TestPhoneReject(t *testing.T) {
 func TestPhoneRedial(t *testing.T) {
 	t.Parallel()
 	cfg := DefaultConfig()
-	phone := NewPhone(cfg)
+	phone := NewPhone(cfg, nil)
 
 	phone.Dial("aabbccdd11223344aabbccdd11223344")
 	phone.Hangup()
@@ -124,7 +124,7 @@ func TestPhoneCallerLookup(t *testing.T) {
 			"Alice": {Hash: "aabbccdd11223344aabbccdd11223344", Alias: "100"},
 		},
 	}
-	phone := NewPhone(cfg)
+	phone := NewPhone(cfg, nil)
 
 	phone.Ringing("aabbccdd11223344aabbccdd11223344")
 	if phone.CallerName() != "Alice" {
@@ -138,7 +138,7 @@ func TestPhoneCallerLookup(t *testing.T) {
 func TestPhoneProcessInput(t *testing.T) {
 	t.Parallel()
 	cfg := DefaultConfig()
-	phone := NewPhone(cfg)
+	phone := NewPhone(cfg, nil)
 
 	keepGoing := phone.ProcessInput("q")
 	if keepGoing {
@@ -149,7 +149,7 @@ func TestPhoneProcessInput(t *testing.T) {
 func TestPhoneProcessInputHelp(t *testing.T) {
 	t.Parallel()
 	cfg := DefaultConfig()
-	phone := NewPhone(cfg)
+	phone := NewPhone(cfg, nil)
 
 	keepGoing := phone.ProcessInput("h")
 	if !keepGoing {
@@ -160,7 +160,7 @@ func TestPhoneProcessInputHelp(t *testing.T) {
 func TestPhoneProcessInputDial(t *testing.T) {
 	t.Parallel()
 	cfg := DefaultConfig()
-	phone := NewPhone(cfg)
+	phone := NewPhone(cfg, nil)
 
 	keepGoing := phone.ProcessInput("aabbccdd11223344aabbccdd11223344")
 	if !keepGoing {
@@ -181,7 +181,7 @@ func TestPhoneProcessInputAliasDial(t *testing.T) {
 			"Alice": {Hash: "aabbccdd11223344aabbccdd11223344", Alias: "100"},
 		},
 	}
-	phone := NewPhone(cfg)
+	phone := NewPhone(cfg, nil)
 
 	keepGoing := phone.ProcessInput("100")
 	if !keepGoing {
@@ -202,7 +202,7 @@ func TestPhoneProcessInputNameDial(t *testing.T) {
 			"Alice": {Hash: "aabbccdd11223344aabbccdd11223344", Alias: "100"},
 		},
 	}
-	phone := NewPhone(cfg)
+	phone := NewPhone(cfg, nil)
 
 	keepGoing := phone.ProcessInput("Alice")
 	if !keepGoing {
@@ -219,7 +219,7 @@ func TestPhoneProcessInputNameDial(t *testing.T) {
 func TestPhoneAnswerFromRinging(t *testing.T) {
 	t.Parallel()
 	cfg := DefaultConfig()
-	phone := NewPhone(cfg)
+	phone := NewPhone(cfg, nil)
 
 	phone.Ringing("aabbccdd11223344aabbccdd11223344")
 	phone.ProcessInput("")
@@ -231,7 +231,7 @@ func TestPhoneAnswerFromRinging(t *testing.T) {
 func TestPhoneRejectFromRinging(t *testing.T) {
 	t.Parallel()
 	cfg := DefaultConfig()
-	phone := NewPhone(cfg)
+	phone := NewPhone(cfg, nil)
 
 	phone.Ringing("aabbccdd11223344aabbccdd11223344")
 	phone.ProcessInput("r")
@@ -243,7 +243,7 @@ func TestPhoneRejectFromRinging(t *testing.T) {
 func TestPhoneHangupFromCall(t *testing.T) {
 	t.Parallel()
 	cfg := DefaultConfig()
-	phone := NewPhone(cfg)
+	phone := NewPhone(cfg, nil)
 
 	phone.Dial("aabbccdd11223344aabbccdd11223344")
 	phone.CallEstablished()
@@ -256,7 +256,7 @@ func TestPhoneHangupFromCall(t *testing.T) {
 func TestPhonePrintPhonebookEmpty(t *testing.T) {
 	t.Parallel()
 	cfg := DefaultConfig()
-	phone := NewPhone(cfg)
+	phone := NewPhone(cfg, nil)
 	phone.PrintPhonebook()
 }
 
@@ -271,28 +271,28 @@ func TestPhonePrintPhonebookWithEntries(t *testing.T) {
 			"Bob":   {Hash: "11223344aabbccdd11223344aabbccdd"},
 		},
 	}
-	phone := NewPhone(cfg)
+	phone := NewPhone(cfg, nil)
 	phone.PrintPhonebook()
 }
 
 func TestPhonePrintIdentity(t *testing.T) {
 	t.Parallel()
 	cfg := DefaultConfig()
-	phone := NewPhone(cfg)
+	phone := NewPhone(cfg, nil)
 	phone.PrintIdentity("aabbccdd11223344aabbccdd11223344")
 }
 
 func TestPhonePrintDestination(t *testing.T) {
 	t.Parallel()
 	cfg := DefaultConfig()
-	phone := NewPhone(cfg)
+	phone := NewPhone(cfg, nil)
 	phone.PrintDestination("aabbccdd11223344aabbccdd11223344")
 }
 
 func TestPhoneStatusString(t *testing.T) {
 	t.Parallel()
 	cfg := DefaultConfig()
-	phone := NewPhone(cfg)
+	phone := NewPhone(cfg, nil)
 
 	tests := []struct {
 		state byte
@@ -315,7 +315,7 @@ func TestPhoneStatusString(t *testing.T) {
 func TestPhoneStatusStringInCall(t *testing.T) {
 	t.Parallel()
 	cfg := DefaultConfig()
-	phone := NewPhone(cfg)
+	phone := NewPhone(cfg, nil)
 
 	phone.SetState(StateInCall)
 	phone.started = time.Now().Add(-2 * time.Second)

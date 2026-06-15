@@ -10,7 +10,6 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"strconv"
@@ -39,12 +38,6 @@ func (v *verbosity) Set(_ string) error {
 func main() {
 	startupMilli := time.Now().UnixMilli()
 	logPath := fmt.Sprintf("/tmp/gornphone-%v.log", startupMilli)
-	logFile, err := os.Create(logPath)
-	if err != nil {
-		log.Fatalf("Error creating log file: %v", err)
-	}
-	log.SetFlags(0)
-	log.SetOutput(logFile)
 
 	listDevices := flag.Bool("l", false, "list available audio devices")
 	showVersion := flag.Bool("version", false, "show version")
@@ -86,7 +79,8 @@ func main() {
 				p, telephony.ProfileName(p), telephony.ProfileAbbreviation(p),
 				telephony.GetFrameTime(p))
 		}
-		log.Fatal(buf.String())
+		fmt.Fprintf(os.Stderr, "%v", buf.String())
+		os.Exit(1)
 	}
 
 	if *configDir == "" {
@@ -123,7 +117,8 @@ func main() {
 
 	codec, err := telephony.GetCodec(profile)
 	if err != nil {
-		log.Fatalf("Error creating codec: %v", err)
+		fmt.Fprintf(os.Stderr, "Error creating codec: %v\n", err)
+		os.Exit(1)
 	}
 	fmt.Printf("Codec: %T\n", codec)
 
@@ -134,7 +129,8 @@ func main() {
 
 	identity, err := loadOrCreateIdentity(*configDir + "/identity")
 	if err != nil {
-		log.Fatalf("Error loading identity: %v", err)
+		fmt.Fprintf(os.Stderr, "Error loading identity: %v\n", err)
+		os.Exit(1)
 	}
 	fmt.Printf("Identity hash: %v\n", formatHash(identity.HexHash))
 	fmt.Println()
@@ -143,7 +139,11 @@ func main() {
 		fmt.Printf("Config directory: %v\n", *configDir)
 	}
 
-	phone := NewPhone(cfg)
+	rnsLogger := rns.NewLogger()
+	rnsLogger.SetLogFilePath(logPath)
+	rnsLogger.SetLogDest(rns.LogDestFile)
+
+	phone := NewPhone(cfg, rnsLogger)
 
 	// Initialize RNS transport and endpoint.
 	// We pass "" so go-reticulum resolves the default config dir
@@ -158,19 +158,16 @@ func main() {
 		rnsConfig = ensureStandaloneRNSConfig(startupMilli)
 	}
 
-	rnsLogger := rns.NewLogger()
-	rnsLogger.SetLogFilePath(logPath)
-	rnsLogger.SetLogDest(rns.LogDestFile)
-
 	ts := rns.NewTransportSystem(rnsLogger)
 
 	reticulum, err := rns.NewReticulumWithLogger(ts, rnsConfig, rnsLogger)
 	if err != nil {
-		log.Fatalf("Error initializing Reticulum: %v", err)
+		fmt.Fprintf(os.Stderr, "Error initializing Reticulum: %v\n", err)
+		os.Exit(1)
 	}
 	defer func() {
 		if err := reticulum.Close(); err != nil {
-			log.Printf("reticulum.Close: %v", err)
+			rnsLogger.Info("reticulum.Close: %v", err)
 		}
 	}()
 
@@ -198,7 +195,8 @@ func main() {
 			host, port := parseHostPort(*listenFlag, "localhost", 4242)
 			srv, err := interfaces.NewTCPServerInterface("Local TCP Server", host, port, handler, nil)
 			if err != nil {
-				log.Fatalf("Error creating local TCP server: %v", err)
+				fmt.Fprintf(os.Stderr, "Error creating local TCP server: %v\n", err)
+				os.Exit(1)
 			}
 			ts.RegisterInterface(srv)
 			fmt.Printf("Local TCP:    listening on %v:%v\n", host, port)
@@ -207,16 +205,18 @@ func main() {
 			host, port := parseHostPort(*connectFlag, "localhost", 4242)
 			cli, err := interfaces.NewTCPClientInterface("Local TCP Client", host, port, false, handler)
 			if err != nil {
-				log.Fatalf("Error creating local TCP client: %v", err)
+				fmt.Fprintf(os.Stderr, "Error creating local TCP client: %v\n", err)
+				os.Exit(1)
 			}
 			ts.RegisterInterface(cli)
 			fmt.Printf("Local TCP:    connecting to %v:%v\n", host, port)
 		}
 	}
 
-	endpoint, err := NewTelephoneEndpoint(identity, ts)
+	endpoint, err := NewTelephoneEndpoint(identity, ts, rnsLogger)
 	if err != nil {
-		log.Fatalf("Error creating telephone endpoint: %v", err)
+		fmt.Fprintf(os.Stderr, "Error creating telephone endpoint: %v\n", err)
+		os.Exit(1)
 	}
 	fmt.Printf("Destination hash: %v\n", endpoint.DestinationHash())
 	endpoint.SetTelephone(tel)
