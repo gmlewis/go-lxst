@@ -1415,7 +1415,6 @@ func (tel *Telephone) ReconfigureTransmitPipeline() {
 // signals ESTABLISHED.
 func (tel *Telephone) OpenPipelines() {
 	tel.pipelineLock.Lock()
-	defer tel.pipelineLock.Unlock()
 
 	tel.mu.Lock()
 	isEstablished := tel.state == StateEstablished
@@ -1427,12 +1426,13 @@ func (tel *Telephone) OpenPipelines() {
 	tel.mu.Unlock()
 
 	if !isEstablished {
+		tel.pipelineLock.Unlock()
 		return
 	}
 
 	pktz := tel.packetizer
 
-	tel.PrepareDiallingPipelines()
+	tel.prepareDiallingPipelinesLocked()
 
 	if useAGC {
 		tel.filters = []filters.Filter{
@@ -1460,6 +1460,7 @@ func (tel *Telephone) OpenPipelines() {
 			tel.transmitMixer, transmitCodec, pktz,
 		)
 	}
+	tel.pipelineLock.Unlock()
 }
 
 // StartPipelines starts all audio pipelines for an active call,

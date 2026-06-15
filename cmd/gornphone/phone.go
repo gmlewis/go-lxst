@@ -7,6 +7,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"time"
 )
@@ -133,6 +134,7 @@ func (p *Phone) Redial() {
 // Dial initiates a call to the given identity hash.
 func (p *Phone) Dial(hash string) {
 	if !p.IsAvailable() {
+		log.Printf("Phone.Dial: not available (state=%d), ignoring dial", p.state)
 		return
 	}
 	p.lastDialledIdentityHash = hash
@@ -150,11 +152,14 @@ func (p *Phone) Dial(hash string) {
 	}
 
 	p.state = StateConnecting
+	log.Printf("Phone.Dial: dialing %v, state=Connecting", formatHash(hash))
 	fmt.Printf("Calling %v...\n", formatHash(hash))
 
 	if p.endpoint != nil {
 		go func() {
+			log.Printf("Phone.Dial: calling endpoint.Call for %v", formatHash(hash))
 			if err := p.endpoint.Call(hash, 30*time.Second); err != nil {
+				log.Printf("Phone.Dial: endpoint.Call failed: %v", err)
 				fmt.Printf("Call failed: %v\n", err)
 				p.Hangup()
 			}
@@ -191,15 +196,19 @@ func (p *Phone) Ringing(hash string) {
 // Answer accepts an incoming call.
 func (p *Phone) Answer() bool {
 	if !p.IsRinging() {
+		log.Printf("Phone.Answer: not ringing (state=%d), cannot answer", p.state)
 		return false
 	}
+	log.Printf("Phone.Answer: answering call from %v, state=Connecting", formatHash(p.callerHash))
 	fmt.Printf("Answering call from %v\n", formatHash(p.callerHash))
 	p.state = StateConnecting
 	if p.endpoint != nil {
 		if !p.endpoint.Answer() {
+			log.Printf("Phone.Answer: endpoint.Answer() returned false")
 			fmt.Printf("Could not answer call from %v\n", formatHash(p.callerHash))
 			return false
 		}
+		log.Printf("Phone.Answer: endpoint.Answer() succeeded")
 	}
 	return true
 }
