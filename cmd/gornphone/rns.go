@@ -334,6 +334,67 @@ func (tep *TelephoneEndpoint) incomingLinkEstablished(link *rns.Link) {
 	}
 }
 
+// handleSignallingData unpacks and processes signalling data received
+// through the link's PacketCallback. Msgpack deserializes keys as uint8
+// and values as int, so we handle both byte and uint8/int types.
+func (tep *TelephoneEndpoint) handleSignallingData(data []byte, link *rns.Link, identity *rns.Identity) {
+	unpacked, err := network.UnpackData(data)
+	if err != nil {
+		return
+	}
+
+	// Msgpack returns map[uint8]interface{} (same as map[byte]any) for byte-keyed maps
+	var signalling any
+	m, ok := unpacked.(map[byte]any)
+	if !ok {
+		return
+	}
+	signalling = m[network.FieldSignalling]
+
+	if signalling == nil {
+		return
+	}
+
+	arr, ok := signalling.([]any)
+	if !ok {
+		return
+	}
+
+	for _, s := range arr {
+		var signalByte byte
+		switch v := s.(type) {
+		case uint8:
+			signalByte = v
+		case int:
+			signalByte = byte(v)
+		case int64:
+			signalByte = byte(v)
+		case uint64:
+			signalByte = byte(v)
+		default:
+			continue
+		}
+
+		switch signalByte {
+		case telephony.SignallingAvailable:
+			log.Printf("Received SignallingAvailable, identifying to remote")
+			if identity != nil {
+				if err := link.Identify(identity); err != nil {
+					log.Printf("identify failed: %v", err)
+				}
+			}
+		case telephony.SignallingRinging:
+			log.Printf("Received SignallingRinging")
+		case telephony.SignallingBusy:
+			log.Printf("Received SignallingBusy")
+		case telephony.SignallingCalling:
+			log.Printf("Received SignallingCalling")
+		default:
+			log.Printf("Received unknown signalling: %d", signalByte)
+		}
+	}
+}
+
 // sendSignalling sends a signalling byte through the link as a raw
 // data packet, matching Python's signal() method. The receiver's
 // PacketCallback will receive the packet data.
@@ -455,30 +516,7 @@ func (tep *TelephoneEndpoint) Call(identityHash string, timeout time.Duration) e
 			}
 
 			// Try to handle signalling
-			unpacked, err := network.UnpackData(data)
-			if err != nil {
-				return
-			}
-			m, ok := unpacked.(map[byte]any)
-			if !ok {
-				return
-			}
-			if signalling, exists := m[network.FieldSignalling]; exists {
-				log.Printf("Caller received signalling data: %v", signalling)
-				switch v := signalling.(type) {
-				case []any:
-					for _, s := range v {
-						if b, ok := s.(byte); ok && b == telephony.SignallingAvailable {
-							log.Printf("Received SignallingAvailable, identifying to remote")
-							if identity != nil {
-								if err := l.Identify(identity); err != nil {
-									log.Printf("identify failed: %v", err)
-								}
-							}
-						}
-					}
-				}
-			}
+			tep.handleSignallingData(data, l, identity)
 		})
 
 		// Send SignallingCalling to indicate we're calling
@@ -545,9 +583,8 @@ func (tep *TelephoneEndpoint) Call(identityHash string, timeout time.Duration) e
 		return fmt.Errorf("link handshake timed out")
 	}
 
-	// Link is active — print newline to finish the line so that
-	// the callback's "Call established" output starts on a fresh line.
-	fmt.Println()
+	// Clear spinner — the callback will print the "Call established" message
+	fmt.Print("\r" + strings.Repeat(" ", 40) + "\r")
 
 	return nil
 }
