@@ -332,7 +332,7 @@ func defaultConfigDir() string {
 		if _, err := os.Stat(configDir + "/config"); err == nil {
 			return configDir
 		}
-		return home + ".rnphone"
+		return home + "/.rnphone"
 	}
 	return ".rnphone"
 }
