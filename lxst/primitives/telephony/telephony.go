@@ -527,13 +527,17 @@ func (tel *Telephone) Hangup() {
 
 	tel.StopPipelines()
 
-	tel.mu.Lock()
+	tel.pipelineLock.Lock()
 	tel.receiveMixer = nil
 	tel.transmitMixer = nil
 	tel.receivePipeline = nil
 	tel.transmitPipeline = nil
 	tel.audioOutput = nil
+	tel.audioInput = nil
 	tel.dialTone = nil
+	tel.pipelineLock.Unlock()
+
+	tel.mu.Lock()
 	tel.state = StateIdle
 	tel.receiveMuted = false
 	tel.transmitMuted = false
@@ -558,13 +562,17 @@ func (tel *Telephone) HangupWithReason(reason byte) {
 
 	tel.StopPipelines()
 
-	tel.mu.Lock()
+	tel.pipelineLock.Lock()
 	tel.receiveMixer = nil
 	tel.transmitMixer = nil
 	tel.receivePipeline = nil
 	tel.transmitPipeline = nil
 	tel.audioOutput = nil
+	tel.audioInput = nil
 	tel.dialTone = nil
+	tel.pipelineLock.Unlock()
+
+	tel.mu.Lock()
 	tel.state = StateIdle
 	tel.receiveMuted = false
 	tel.transmitMuted = false
@@ -679,8 +687,11 @@ func (tel *Telephone) Answer() bool {
 	tel.state = StateEstablished
 	cb := tel.establishedCallback
 	ll := tel.lowLatency
-	ao := tel.audioOutput
 	tel.mu.Unlock()
+
+	tel.pipelineLock.Lock()
+	ao := tel.audioOutput
+	tel.pipelineLock.Unlock()
 
 	if ll && ao != nil {
 		ao.EnableLowLatency()
@@ -918,50 +929,50 @@ func (tel *Telephone) TransmitCodec() codecs.Codec {
 
 // AudioOutput returns the current audio output sink.
 func (tel *Telephone) AudioOutput() *sinks.LineSink {
-	tel.mu.Lock()
-	defer tel.mu.Unlock()
+	tel.pipelineLock.Lock()
+	defer tel.pipelineLock.Unlock()
 	return tel.audioOutput
 }
 
 // AudioInput returns the current audio input source.
 func (tel *Telephone) AudioInput() *sources.LineSource {
-	tel.mu.Lock()
-	defer tel.mu.Unlock()
+	tel.pipelineLock.Lock()
+	defer tel.pipelineLock.Unlock()
 	return tel.audioInput
 }
 
 // DialTone returns the current dial tone generator.
 func (tel *Telephone) DialTone() *generators.ToneSource {
-	tel.mu.Lock()
-	defer tel.mu.Unlock()
+	tel.pipelineLock.Lock()
+	defer tel.pipelineLock.Unlock()
 	return tel.dialTone
 }
 
 // ReceiveMixer returns the current receive mixer.
 func (tel *Telephone) ReceiveMixer() *mixer.Mixer {
-	tel.mu.Lock()
-	defer tel.mu.Unlock()
+	tel.pipelineLock.Lock()
+	defer tel.pipelineLock.Unlock()
 	return tel.receiveMixer
 }
 
 // TransmitMixer returns the current transmit mixer.
 func (tel *Telephone) TransmitMixer() *mixer.Mixer {
-	tel.mu.Lock()
-	defer tel.mu.Unlock()
+	tel.pipelineLock.Lock()
+	defer tel.pipelineLock.Unlock()
 	return tel.transmitMixer
 }
 
 // ReceivePipeline returns the current receive pipeline.
 func (tel *Telephone) ReceivePipeline() *pipeline.Pipeline {
-	tel.mu.Lock()
-	defer tel.mu.Unlock()
+	tel.pipelineLock.Lock()
+	defer tel.pipelineLock.Unlock()
 	return tel.receivePipeline
 }
 
 // TransmitPipeline returns the current transmit pipeline.
 func (tel *Telephone) TransmitPipeline() *pipeline.Pipeline {
-	tel.mu.Lock()
-	defer tel.mu.Unlock()
+	tel.pipelineLock.Lock()
+	defer tel.pipelineLock.Unlock()
 	return tel.transmitPipeline
 }
 
@@ -981,29 +992,29 @@ func (tel *Telephone) SetBusyToneSeconds(secs float64) {
 
 // Filters returns the current audio filter chain.
 func (tel *Telephone) Filters() []filters.Filter {
-	tel.mu.Lock()
-	defer tel.mu.Unlock()
+	tel.pipelineLock.Lock()
+	defer tel.pipelineLock.Unlock()
 	return tel.filters
 }
 
 // SetFilters sets the audio filter chain for the transmit pipeline.
 func (tel *Telephone) SetFilters(f []filters.Filter) {
-	tel.mu.Lock()
-	defer tel.mu.Unlock()
+	tel.pipelineLock.Lock()
+	defer tel.pipelineLock.Unlock()
 	tel.filters = f
 }
 
 // Packetizer returns the current network packetizer.
 func (tel *Telephone) Packetizer() *network.Packetizer {
-	tel.mu.Lock()
-	defer tel.mu.Unlock()
+	tel.pipelineLock.Lock()
+	defer tel.pipelineLock.Unlock()
 	return tel.packetizer
 }
 
 // SetPacketizer sets the network packetizer for the transmit pipeline.
 func (tel *Telephone) SetPacketizer(p *network.Packetizer) {
-	tel.mu.Lock()
-	defer tel.mu.Unlock()
+	tel.pipelineLock.Lock()
+	defer tel.pipelineLock.Unlock()
 	tel.packetizer = p
 }
 
@@ -1214,10 +1225,10 @@ func (tel *Telephone) StopRingTone() {
 // EnableDialTone starts the receive mixer if needed and enables the dial
 // tone at a low gain level, matching the Python __enable_dial_tone method.
 func (tel *Telephone) EnableDialTone() {
-	tel.mu.Lock()
+	tel.pipelineLock.Lock()
 	receiveMixer := tel.receiveMixer
 	dialTone := tel.dialTone
-	tel.mu.Unlock()
+	tel.pipelineLock.Unlock()
 
 	if receiveMixer != nil && !receiveMixer.Running() {
 		_ = receiveMixer.Start()
@@ -1234,10 +1245,10 @@ func (tel *Telephone) EnableDialTone() {
 // MuteDialTone mutes the dial tone by setting gain to 0 while keeping it
 // running, matching the Python __mute_dial_tone method.
 func (tel *Telephone) MuteDialTone() {
-	tel.mu.Lock()
+	tel.pipelineLock.Lock()
 	receiveMixer := tel.receiveMixer
 	dialTone := tel.dialTone
-	tel.mu.Unlock()
+	tel.pipelineLock.Unlock()
 
 	if receiveMixer != nil && !receiveMixer.Running() {
 		_ = receiveMixer.Start()
@@ -1255,9 +1266,9 @@ func (tel *Telephone) MuteDialTone() {
 // DisableDialTone stops the dial tone entirely, matching the Python
 // __disable_dial_tone method.
 func (tel *Telephone) DisableDialTone() {
-	tel.mu.Lock()
+	tel.pipelineLock.Lock()
 	dialTone := tel.dialTone
-	tel.mu.Unlock()
+	tel.pipelineLock.Unlock()
 
 	if dialTone != nil && dialTone.Running() {
 		_ = dialTone.Stop()
@@ -1306,11 +1317,11 @@ func (tel *Telephone) PlayBusyTone() {
 		return
 	}
 
-	tel.mu.Lock()
+	tel.pipelineLock.Lock()
 	hasAudioOutput := tel.audioOutput != nil
 	hasReceiveMixer := tel.receiveMixer != nil
 	hasDialTone := tel.dialTone != nil
-	tel.mu.Unlock()
+	tel.pipelineLock.Unlock()
 
 	if !hasAudioOutput || !hasReceiveMixer || !hasDialTone {
 		tel.ResetDiallingPipelines()
@@ -1342,21 +1353,25 @@ func playBusyTone(duration float64, tel *Telephone) {
 // current profile's codec and frame time, and restarts them.
 func (tel *Telephone) ReconfigureTransmitPipeline() {
 	tel.mu.Lock()
-	hasTransmitPipeline := tel.transmitPipeline != nil
 	isEstablished := tel.state == StateEstablished
 	micDevice := tel.micDevice
-	targetFrameMs := tel.targetFrameTimeMs
 	transmitGain := tel.transmitGain
 	transmitMuted := tel.transmitMuted
 	transmitCodec := tel.transmitCodec
+	tel.mu.Unlock()
+
+	tel.pipelineLock.Lock()
+	hasTransmitPipeline := tel.transmitPipeline != nil
+	targetFrameMs := tel.targetFrameTimeMs
 	pktz := tel.packetizer
 	filterChain := tel.filters
-	tel.mu.Unlock()
+	tel.pipelineLock.Unlock()
 
 	if !hasTransmitPipeline || !isEstablished {
 		return
 	}
 
+	tel.pipelineLock.Lock()
 	if tel.audioInput != nil {
 		_ = tel.audioInput.Stop()
 	}
@@ -1391,6 +1406,7 @@ func (tel *Telephone) ReconfigureTransmitPipeline() {
 	if tel.transmitPipeline != nil {
 		_ = tel.transmitPipeline.Start()
 	}
+	tel.pipelineLock.Unlock()
 }
 
 // OpenPipelines sets up the audio pipelines for an established call,
@@ -1408,12 +1424,13 @@ func (tel *Telephone) OpenPipelines() {
 	transmitCodec := tel.transmitCodec
 	targetFrameMs := tel.targetFrameTimeMs
 	useAGC := tel.useAGC
-	pktz := tel.packetizer
 	tel.mu.Unlock()
 
 	if !isEstablished {
 		return
 	}
+
+	pktz := tel.packetizer
 
 	tel.PrepareDiallingPipelines()
 
@@ -1598,8 +1615,11 @@ func (tel *Telephone) SignallingReceived(signals []byte) {
 				tel.StartPipelines()
 				tel.DisableDialTone()
 			}
-			if ll && tel.audioOutput != nil {
-				tel.audioOutput.EnableLowLatency()
+			tel.pipelineLock.Lock()
+			ao := tel.audioOutput
+			tel.pipelineLock.Unlock()
+			if ll && ao != nil {
+				ao.EnableLowLatency()
 			}
 			if cb != nil {
 				cb()
@@ -1614,9 +1634,9 @@ func (tel *Telephone) SignallingReceived(signals []byte) {
 			if isEstablished {
 				tel.SwitchProfile(profile)
 			} else {
-				tel.mu.Lock()
+				tel.pipelineLock.Lock()
 				tel.selectCallProfile(profile)
-				tel.mu.Unlock()
+				tel.pipelineLock.Unlock()
 			}
 		}
 	}
@@ -1638,8 +1658,10 @@ func (tel *Telephone) SwitchProfile(profile byte) {
 	tel.currentProfile = profile
 	tel.mu.Unlock()
 
+	tel.pipelineLock.Lock()
 	tel.selectCallCodecs(profile)
 	tel.selectCallFrameTime(profile)
+	tel.pipelineLock.Unlock()
 
 	tel.ReconfigureTransmitPipeline()
 }
