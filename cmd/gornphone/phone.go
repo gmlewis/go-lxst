@@ -55,10 +55,10 @@ func NewPhone(cfg *PhoneConfig, logger *rns.Logger) *Phone {
 	}
 }
 
-// logf logs to the RNS logger.
+// logf logs to the RNS logger at Notice level.
 func (p *Phone) logf(format string, args ...any) {
 	if p.logger != nil {
-		p.logger.Info(format, args...)
+		p.logger.Notice(format, args...)
 	}
 }
 

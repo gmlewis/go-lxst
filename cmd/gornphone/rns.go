@@ -78,10 +78,11 @@ func NewTelephoneEndpoint(identity *rns.Identity, ts rns.Transport, logger *rns.
 	return tep, nil
 }
 
-// logf logs to the RNS logger.
+// logf logs to the RNS logger at Notice level, which is always emitted
+// regardless of the configured log level (default is LogNotice=3).
 func (tep *TelephoneEndpoint) logf(format string, args ...any) {
 	if tep.logger != nil {
-		tep.logger.Info(format, args...)
+		tep.logger.Notice(format, args...)
 	}
 }
 

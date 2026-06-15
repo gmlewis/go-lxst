@@ -150,7 +150,18 @@ func main() {
 	rnsLogger := rns.NewLogger()
 	rnsLogger.SetLogFilePath(logPath)
 	rnsLogger.SetLogDest(rns.LogDestFile)
-	rnsLogger.SetLogLevel(rns.LogInfo)
+
+	// Map -v flags to RNS log levels:
+	//   (none) = Notice (3): gornphone app messages only
+	//   -v     = Info (4): adds RNS internal info
+	//   -vv    = Verbose (5): adds RNS verbose
+	//   -vvv   = Debug (6): adds RNS debug
+	//   -vvvv  = Extreme (7): adds TCP frame-level debug
+	logLevel := rns.LogNotice + int(verbose)
+	if logLevel > rns.LogExtreme {
+		logLevel = rns.LogExtreme
+	}
+	rnsLogger.SetLogLevel(logLevel)
 	logBoth(rnsLogger, "gornphone %v starting, log file: %v", version, logPath)
 
 	phone := NewPhone(cfg, rnsLogger)
@@ -176,11 +187,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Ensure log level is at least Info after RNS config may have changed it.
-	// RNS config may set a lower log level, but gornphone needs Info for
+	// Ensure log level is at least Notice after RNS config may have changed it.
+	// RNS config may set a lower log level, but gornphone needs Notice for
 	// call lifecycle messages.
-	if rnsLogger.GetLogLevel() < rns.LogInfo {
-		rnsLogger.SetLogLevel(rns.LogInfo)
+	if rnsLogger.GetLogLevel() < rns.LogNotice {
+		rnsLogger.SetLogLevel(rns.LogNotice)
 	}
 	logBoth(rnsLogger, "gornphone %v initialized, RNS config: %v", version, rnsConfig)
 
@@ -503,10 +514,10 @@ ExecStart=/home/%v/.local/bin/gornphone --service -vvv
 WantedBy=graphical.target
 `
 
-// logBoth logs to the RNS logger.
+// logBoth logs to the RNS logger at Notice level.
 func logBoth(logger *rns.Logger, format string, args ...any) {
 	if logger != nil {
-		logger.Info(format, args...)
+		logger.Notice(format, args...)
 	}
 }
 
