@@ -55,6 +55,8 @@ func main() {
 	gainFlag := flag.Float64("gain", 0.0, "receive gain in dB")
 	micFlag := flag.String("mic", "", "microphone device name")
 	speakerFlag := flag.String("speaker", "", "speaker device name")
+	listenFlag := flag.String("listen", "", "listen for local TCP connections (host:port, e.g. localhost:4242)")
+	connectFlag := flag.String("connect", "", "connect to local TCP server (host:port, e.g. localhost:4242)")
 	flag.Parse()
 
 	if *showVersion {
