@@ -235,7 +235,7 @@ func (p *Phone) CallEstablished() {
 	if p.CallIsConnecting() || p.IsRinging() {
 		p.state = StateInCall
 		p.started = time.Now()
-		fmt.Printf("Call established with %v\n", formatHash(p.callerHash))
+		fmt.Printf("\nCall established with %v\n", formatHash(p.callerHash))
 	}
 }
 
