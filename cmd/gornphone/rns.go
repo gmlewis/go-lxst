@@ -328,6 +328,7 @@ func (tep *TelephoneEndpoint) incomingLinkEstablished(link *rns.Link) {
 
 		// Wire link to receive incoming packets
 		link.SetPacketCallback(func(data []byte, packet *rns.Packet) {
+			log.Printf("Responder received packet (len=%d)", len(data))
 			ap.ReceivePacket(data)
 		})
 	}
@@ -345,7 +346,12 @@ func (tep *TelephoneEndpoint) sendSignalling(link *rns.Link, signal byte) {
 	}
 	p := rns.NewPacket(link, packed)
 	p.CreateReceipt = false
-	if err := p.Send(); err != nil {
+	log.Printf("sendSignalling: sending signal %d (len=%d)", signal, len(packed))
+	if err := p.Pack(); err != nil {
+		log.Printf("sendSignalling: pack packet failed: %v", err)
+		return
+	}
+	if err := link.SendPacket(p); err != nil {
 		log.Printf("sendSignalling: send failed: %v", err)
 	}
 }
@@ -442,6 +448,8 @@ func (tep *TelephoneEndpoint) Call(identityHash string, timeout time.Duration) e
 
 		// Set up packet callback to handle incoming signalling
 		l.SetPacketCallback(func(data []byte, packet *rns.Packet) {
+			log.Printf("Caller received packet (len=%d)", len(data))
+
 			if ap != nil {
 				ap.ReceivePacket(data)
 			}
@@ -456,6 +464,7 @@ func (tep *TelephoneEndpoint) Call(identityHash string, timeout time.Duration) e
 				return
 			}
 			if signalling, exists := m[network.FieldSignalling]; exists {
+				log.Printf("Caller received signalling data: %v", signalling)
 				switch v := signalling.(type) {
 				case []any:
 					for _, s := range v {
