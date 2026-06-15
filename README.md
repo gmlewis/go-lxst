@@ -353,6 +353,41 @@ Configure who can call you in `~/.rnphone/config`:
     blocked_callers = f3e8c3359b39d36f3baff0a616a73d3e
 ```
 
+### Local Testing (Two gornphones on the Same Machine)
+
+When running two `gornphone` instances on the same machine, the external
+RNS testnets (Michmesh, Amsterdam, etc.) may not reliably route link
+handshake packets between them. Use `--listen` and `--connect` flags to
+establish a direct local TCP connection instead.
+
+**Terminal 1 — phone-a** (listens for incoming connections):
+
+```bash
+gornphone --config /tmp/gornphone-a --listen :4242
+```
+
+**Terminal 2 — phone-b** (connects to phone-a):
+
+```bash
+gornphone --config /tmp/gornphone-b --connect localhost:4242
+```
+
+The `--config` flag is critical — each instance needs its own config and
+identity directory. Without it, both would share `~/.rnphone/` and collide
+on the identity file.
+
+After both start up, note phone-a's identity hash (shown on startup), then
+dial it from phone-b:
+
+```
+> <phone-a's 32-char identity hash>
+```
+
+Phone-a will show the incoming call and you can answer it. The `--listen`
+flag starts a TCP server interface on the given address; `--connect` starts
+a TCP client interface to the given address. Both flags can be combined
+with other RNS config interfaces if needed.
+
 ### Bluetooth Audio on macOS
 
 On macOS with Bluetooth earbuds, the oto backend uses CoreAudio which
