@@ -8,11 +8,10 @@
 # run-all-tests.sh runs all unit tests and integration tests with timeouts.
 # This is the top-level test script for the go-lxst project.
 
-set -uo pipefail
+set -euo pipefail
 set -x
 
 RUN_ALL_TESTS_TIMEOUT_SECONDS="${RUN_ALL_TESTS_TIMEOUT_SECONDS:-120}"
-FAILED=0
 
 run_with_timeout() {
 	if command -v timeout >/dev/null 2>&1; then
@@ -39,13 +38,8 @@ except subprocess.TimeoutExpired:
 PY
 }
 
-run_with_timeout ./scripts/test-all.sh 2>&1 | tee test-failures.log || FAILED=$((FAILED+1))
-run_with_timeout ./scripts/test-integration.sh -short 2>&1 | tee short-test-failures.log || FAILED=$((FAILED+1))
-run_with_timeout ./scripts/test-integration.sh 2>&1 | tee full-test-failures.log || FAILED=$((FAILED+1))
+run_with_timeout ./scripts/test-all.sh 2>&1 | tee test-failures.log
+run_with_timeout ./scripts/test-integration.sh -short 2>&1 | tee short-test-failures.log
+run_with_timeout ./scripts/test-integration.sh 2>&1 | tee full-test-failures.log
 
-if [ "$FAILED" -eq 0 ]; then
-	echo "All tests completed successfully."
-else
-	echo "FAILED: $FAILED test suite(s) failed."
-	exit 1
-fi
+echo "All tests completed successfully."

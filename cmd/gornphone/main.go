@@ -515,6 +515,6 @@ func (w *reopeningWriter) Write(p []byte) (n int, err error) {
 	if err != nil {
 		return 0, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	return f.Write(p)
 }
