@@ -139,12 +139,12 @@ type benchSource struct {
 	running bool
 }
 
-func (s *benchSource) Start() error                                                   { return nil }
-func (s *benchSource) Stop() error                                                    { return nil }
-func (s *benchSource) Running() bool                                                  { return true }
-func (s *benchSource) CanReceive(fromSource sources.Source) bool                      { return true }
-func (s *benchSource) HandleFrame(frame [][]float32, fromSource sources.Source) error          { return nil }
-func (s *benchSource) HandleEncodedFrame(data []byte, fromSource sources.Source) error        { return nil }
+func (s *benchSource) Start() error                                                    { return nil }
+func (s *benchSource) Stop() error                                                     { return nil }
+func (s *benchSource) Running() bool                                                   { return true }
+func (s *benchSource) CanReceive(fromSource sources.Source) bool                       { return true }
+func (s *benchSource) HandleFrame(frame [][]float32, fromSource sources.Source) error  { return nil }
+func (s *benchSource) HandleEncodedFrame(data []byte, fromSource sources.Source) error { return nil }
 
 type benchSink struct {
 	mixer     *Mixer

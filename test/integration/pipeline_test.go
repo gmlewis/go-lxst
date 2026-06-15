@@ -49,9 +49,10 @@ func (c *collectingSink) CanReceive(_ sources.Source) bool {
 	return c.maxCols == 0 || len(c.frames) < c.maxCols
 }
 
-func (c *collectingSink) Start() error  { return nil }
-func (c *collectingSink) Stop() error   { return nil }
-func (c *collectingSink) Running() bool { return true }
+func (c *collectingSink) Start() error                                        { return nil }
+func (c *collectingSink) Stop() error                                         { return nil }
+func (c *collectingSink) Running() bool                                       { return true }
+func (c *collectingSink) HandleEncodedFrame(_ []byte, _ sources.Source) error { return nil }
 
 func (c *collectingSink) collected() [][][]float32 {
 	c.mu.Lock()

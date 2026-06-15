@@ -249,7 +249,7 @@ func TestMixer_SendsEncodedBytesWhenCodecPresent(t *testing.T) {
 	if err := m.Start(); err != nil {
 		t.Fatalf("Start failed: %v", err)
 	}
-	defer m.Stop()
+	defer func() { _ = m.Stop() }()
 
 	frame := [][]float32{{0.5, -0.3, 0.1, -0.2, 0.4, -0.1, 0.3, -0.4}}
 	_ = m.HandleFrame(frame, src)
@@ -291,7 +291,7 @@ func TestMixer_SendsUnencodedFramesWhenNoCodec(t *testing.T) {
 	if err := m.Start(); err != nil {
 		t.Fatalf("Start failed: %v", err)
 	}
-	defer m.Stop()
+	defer func() { _ = m.Stop() }()
 
 	frame := [][]float32{{0.5, -0.3, 0.1, -0.2, 0.4, -0.1, 0.3, -0.4}}
 	_ = m.HandleFrame(frame, src)
@@ -330,7 +330,7 @@ func TestMixer_SendsUnencodedFramesWithNullCodec(t *testing.T) {
 	if err := m.Start(); err != nil {
 		t.Fatalf("Start failed: %v", err)
 	}
-	defer m.Stop()
+	defer func() { _ = m.Stop() }()
 
 	frame := [][]float32{{0.5, -0.3, 0.1, -0.2, 0.4, -0.1, 0.3, -0.4}}
 	_ = m.HandleFrame(frame, src)

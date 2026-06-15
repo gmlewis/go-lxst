@@ -204,7 +204,7 @@ func TestToneSource_SendsEncodedBytesWhenCodecPresent(t *testing.T) {
 	if err := ts.Start(); err != nil {
 		t.Fatalf("Start failed: %v", err)
 	}
-	defer ts.Stop()
+	defer func() { _ = ts.Stop() }()
 
 	deadline := time.After(3 * time.Second)
 	ticker := time.NewTicker(10 * time.Millisecond)
@@ -238,7 +238,7 @@ func TestToneSource_SendsUnencodedFramesWhenNoCodec(t *testing.T) {
 	if err := ts.Start(); err != nil {
 		t.Fatalf("Start failed: %v", err)
 	}
-	defer ts.Stop()
+	defer func() { _ = ts.Stop() }()
 
 	deadline := time.After(3 * time.Second)
 	ticker := time.NewTicker(10 * time.Millisecond)
