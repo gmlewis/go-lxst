@@ -506,10 +506,6 @@ func (tep *TelephoneEndpoint) handleSignallingData(data []byte, link *rns.Link, 
 		case signalByte == telephony.SignallingConnecting:
 			log.Printf("Received SignallingConnecting: caller setting up packetizer and link source")
 			if tel != nil {
-				log.Printf("Processing SignallingConnecting: tel state=%v", tel.State())
-				tel.SignallingReceived([]byte{signalByte})
-				log.Printf("After SignallingConnecting: tel state=%v", tel.State())
-
 				tep.mu.Lock()
 				link := tep.activeLink
 				tep.mu.Unlock()
@@ -528,6 +524,10 @@ func (tep *TelephoneEndpoint) handleSignallingData(data []byte, link *rns.Link, 
 					})
 					tel.SetPacketizer(pktz)
 				}
+
+				log.Printf("Processing SignallingConnecting: tel state=%v, packetizer=%v", tel.State(), tel.Packetizer() != nil)
+				tel.SignallingReceived([]byte{signalByte})
+				log.Printf("After SignallingConnecting: tel state=%v", tel.State())
 			}
 
 		case signalByte == telephony.SignallingEstablished:
