@@ -151,7 +151,7 @@ func main() {
 	rnsLogger.SetLogFilePath(logPath)
 	rnsLogger.SetLogDest(rns.LogDestFile)
 	rnsLogger.SetLogLevel(rns.LogInfo)
-	rnsLogger.Info("gornphone %v starting, log file: %v", version, logPath)
+	logBoth(rnsLogger, "gornphone %v starting, log file: %v", version, logPath)
 
 	phone := NewPhone(cfg, rnsLogger)
 
@@ -182,11 +182,11 @@ func main() {
 	if rnsLogger.GetLogLevel() < rns.LogInfo {
 		rnsLogger.SetLogLevel(rns.LogInfo)
 	}
-	rnsLogger.Info("gornphone %v initialized, RNS config: %v", version, rnsConfig)
+	logBoth(rnsLogger, "gornphone %v initialized, RNS config: %v", version, rnsConfig)
 
 	defer func() {
 		if err := reticulum.Close(); err != nil {
-			rnsLogger.Info("reticulum.Close: %v", err)
+			logBoth(rnsLogger, "reticulum.Close: %v", err)
 		}
 	}()
 
@@ -502,6 +502,15 @@ ExecStart=/home/%v/.local/bin/gornphone --service -vvv
 [Install]
 WantedBy=graphical.target
 `
+
+// logBoth logs to both the RNS logger and stderr. Stderr is immune to
+// log file rotation and provides ground truth for manual testing.
+func logBoth(logger *rns.Logger, format string, args ...any) {
+	if logger != nil {
+		logger.Info(format, args...)
+	}
+	fmt.Fprintf(os.Stderr, format+"\n", args...)
+}
 
 // reopeningWriter is an io.Writer that opens the file on each Write call.
 // This matches the RNS logger's approach and survives log file rotation:

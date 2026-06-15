@@ -7,6 +7,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -53,6 +54,15 @@ func NewPhone(cfg *PhoneConfig, logger *rns.Logger) *Phone {
 		firstRun: true,
 		logger:   logger,
 	}
+}
+
+// logf logs to both the RNS logger and stderr. Stderr is immune to
+// log file rotation and provides ground truth for manual testing.
+func (p *Phone) logf(format string, args ...any) {
+	if p.logger != nil {
+		p.logger.Info(format, args...)
+	}
+	fmt.Fprintf(os.Stderr, format+"\n", args...)
 }
 
 // SetEndpoint attaches a TelephoneEndpoint for RNS integration.
@@ -137,7 +147,7 @@ func (p *Phone) Redial() {
 // Dial initiates a call to the given identity hash.
 func (p *Phone) Dial(hash string) {
 	if !p.IsAvailable() {
-		p.logger.Info("Phone.Dial: not available (state=%d), ignoring dial", p.state)
+		p.logf("Phone.Dial: not available (state=%d), ignoring dial", p.state)
 		return
 	}
 	p.lastDialledIdentityHash = hash
@@ -155,14 +165,14 @@ func (p *Phone) Dial(hash string) {
 	}
 
 	p.state = StateConnecting
-	p.logger.Info("Phone.Dial: dialing %v, state=Connecting", formatHash(hash))
+	p.logf("Phone.Dial: dialing %v, state=Connecting", formatHash(hash))
 	fmt.Printf("Calling %v...\n", formatHash(hash))
 
 	if p.endpoint != nil {
 		go func() {
-			p.logger.Info("Phone.Dial: calling endpoint.Call for %v", formatHash(hash))
+			p.logf("Phone.Dial: calling endpoint.Call for %v", formatHash(hash))
 			if err := p.endpoint.Call(hash, 30*time.Second); err != nil {
-				p.logger.Info("Phone.Dial: endpoint.Call failed: %v", err)
+				p.logf("Phone.Dial: endpoint.Call failed: %v", err)
 				fmt.Printf("Call failed: %v\n", err)
 				p.Hangup()
 			}
@@ -199,19 +209,19 @@ func (p *Phone) Ringing(hash string) {
 // Answer accepts an incoming call.
 func (p *Phone) Answer() bool {
 	if !p.IsRinging() {
-		p.logger.Info("Phone.Answer: not ringing (state=%d), cannot answer", p.state)
+		p.logf("Phone.Answer: not ringing (state=%d), cannot answer", p.state)
 		return false
 	}
-	p.logger.Info("Phone.Answer: answering call from %v, state=Connecting", formatHash(p.callerHash))
+	p.logf("Phone.Answer: answering call from %v, state=Connecting", formatHash(p.callerHash))
 	fmt.Printf("Answering call from %v\n", formatHash(p.callerHash))
 	p.state = StateConnecting
 	if p.endpoint != nil {
 		if !p.endpoint.Answer() {
-			p.logger.Info("Phone.Answer: endpoint.Answer() returned false")
+			p.logf("Phone.Answer: endpoint.Answer() returned false")
 			fmt.Printf("Could not answer call from %v\n", formatHash(p.callerHash))
 			return false
 		}
-		p.logger.Info("Phone.Answer: endpoint.Answer() succeeded")
+		p.logf("Phone.Answer: endpoint.Answer() succeeded")
 	}
 	return true
 }
@@ -219,6 +229,13 @@ func (p *Phone) Answer() bool {
 // Hangup terminates the current call.
 func (p *Phone) Hangup() {
 	if p.state == StateAvailable {
+		// Even if the Phone state is Available, the endpoint may have an
+		// active link (e.g. if the link was established via ratchets from
+		// a previous session and the LinkEstablished callbacks never fired).
+		// Always attempt to hang up the endpoint.
+		if p.endpoint != nil {
+			p.endpoint.Hangup()
+		}
 		return
 	}
 
@@ -316,6 +333,9 @@ func (p *Phone) processAvailableInput(input string) bool {
 		p.PrintPhonebook()
 	case "r", "redial":
 		p.Redial()
+	case "x", "hangup":
+		p.logf("Phone: force hangup requested while state=Available")
+		p.Hangup()
 	case "i", "identity":
 		if p.endpoint != nil {
 			p.PrintIdentity(p.endpoint.IdentityHash())
@@ -374,16 +394,17 @@ func (p *Phone) processInCallInput(input string) bool {
 
 func (p *Phone) printHelp() {
 	fmt.Print(`
- Available commands:
-   p - phonebook
-   r - redial last called
-   i - show identity (share this with others)
-   d - show destination hash (for RNS path/announce)
-   a - announce on network
-   q - quit
-   h - help
+  Available commands:
+    p - phonebook
+    r - redial last called
+    i - show identity (share this with others)
+    d - show destination hash (for RNS path/announce)
+    a - announce on network
+    x - force hangup (works even when call state is unknown)
+    q - quit
+    h - help
 
- Enter identity hash to call, or command:`)
+  Enter identity hash to call, or command:`)
 }
 
 // formatHash formats a hex hash string in Python rnphone style: <hexnohashno>
