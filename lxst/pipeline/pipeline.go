@@ -69,6 +69,9 @@ func (p *Pipeline) setCodec(codec codecs.Codec) {
 	if src, ok := p.source.(interface{ SetCodec(codecs.Codec) error }); ok {
 		_ = src.SetCodec(codec)
 	}
+	if sink, ok := p.sink.(interface{ SetCodec(codecs.Codec) }); ok {
+		sink.SetCodec(codec)
+	}
 }
 
 func (p *Pipeline) Codec() codecs.Codec {

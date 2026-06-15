@@ -12,6 +12,7 @@ package telephony
 
 import (
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -680,6 +681,7 @@ func (tel *Telephone) StartEstablishmentTimeout() {
 func (tel *Telephone) Answer() bool {
 	tel.mu.Lock()
 	if tel.state != StateRinging {
+		log.Printf("Telephone.Answer: not ringing (state=%v), returning false", tel.state)
 		tel.mu.Unlock()
 		return false
 	}
@@ -688,6 +690,8 @@ func (tel *Telephone) Answer() bool {
 	cb := tel.establishedCallback
 	ll := tel.lowLatency
 	tel.mu.Unlock()
+
+	log.Printf("Telephone.Answer: state=Established, lowLatency=%v, establishedCallback=%v", ll, cb != nil)
 
 	tel.pipelineLock.Lock()
 	ao := tel.audioOutput
@@ -1425,7 +1429,11 @@ func (tel *Telephone) OpenPipelines() {
 	useAGC := tel.useAGC
 	tel.mu.Unlock()
 
+	log.Printf("OpenPipelines: isEstablished=%v, micDevice=%v, transmitCodec=%T, targetFrameMs=%v, useAGC=%v, packetizer=%v",
+		isEstablished, micDevice, transmitCodec, targetFrameMs, useAGC, tel.packetizer != nil)
+
 	if !isEstablished {
+		log.Printf("OpenPipelines: not established, returning early")
 		tel.pipelineLock.Unlock()
 		return
 	}
@@ -1468,6 +1476,11 @@ func (tel *Telephone) OpenPipelines() {
 func (tel *Telephone) StartPipelines() {
 	tel.pipelineLock.Lock()
 	defer tel.pipelineLock.Unlock()
+
+	log.Printf("StartPipelines: receiveMixer=%v, transmitMixer=%v, audioInput=%v, transmitPipeline=%v, receivePipeline=%v, audioOutput=%v, packetizer=%v",
+		tel.receiveMixer != nil, tel.transmitMixer != nil, tel.audioInput != nil,
+		tel.transmitPipeline != nil, tel.receivePipeline != nil, tel.audioOutput != nil,
+		tel.packetizer != nil)
 
 	if tel.receiveMixer != nil {
 		_ = tel.receiveMixer.Start()

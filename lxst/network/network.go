@@ -11,6 +11,7 @@
 package network
 
 import (
+	"log"
 	"sync"
 
 	"github.com/gmlewis/go-lxst/lxst/codecs"
@@ -162,15 +163,18 @@ func (p *Packetizer) HandleFrame(frame [][]float32, fromSource sources.Source) e
 	defer p.mu.Unlock()
 
 	if p.sendFunc == nil {
+		log.Printf("Packetizer.HandleFrame: sendFunc is nil, dropping frame")
 		return nil
 	}
 
 	if p.codec == nil {
+		log.Printf("Packetizer.HandleFrame: codec is nil, dropping frame (len=%d)", len(frame))
 		return nil
 	}
 
 	encoded := p.codec.Encode(frame)
 	if len(encoded) == 0 {
+		log.Printf("Packetizer.HandleFrame: codec.Encode returned empty, dropping frame")
 		return nil
 	}
 
@@ -187,6 +191,7 @@ func (p *Packetizer) HandleFrame(frame [][]float32, fromSource sources.Source) e
 	}
 
 	if err := p.sendFunc(packed); err != nil {
+		log.Printf("Packetizer.HandleFrame: sendFunc failed: %v", err)
 		p.transmitFailure = true
 		if p.failureCallback != nil {
 			p.failureCallback()
@@ -201,6 +206,7 @@ func (p *Packetizer) Start() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.shouldRun = true
+	log.Printf("Packetizer.Start: shouldRun=true, sendFunc=%v, codec=%v", p.sendFunc != nil, p.codec != nil)
 	return nil
 }
 
@@ -229,6 +235,7 @@ func (p *Packetizer) SetCodec(codec codecs.Codec) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.codec = codec
+	log.Printf("Packetizer.SetCodec: codec=%T", codec)
 }
 
 // LinkSource receives audio frames over RNS links.
@@ -294,17 +301,20 @@ func (ls *LinkSource) ReceivePacket(data []byte) {
 
 	unpacked, err := UnpackData(data)
 	if err != nil {
+		log.Printf("LinkSource.ReceivePacket: UnpackData failed: %v", err)
 		return
 	}
 
 	m, ok := unpacked.(map[byte]any)
 	if !ok {
+		log.Printf("LinkSource.ReceivePacket: unpacked data is not map[byte]any, type=%T", unpacked)
 		return
 	}
 
 	if framesData, exists := m[FieldFrames]; exists {
 		frameData, ok := framesData.([]byte)
 		if !ok || len(frameData) < 1 {
+			log.Printf("LinkSource.ReceivePacket: FieldFrames present but invalid: type=%T len=%d", framesData, len(frameData))
 			return
 		}
 
@@ -313,6 +323,7 @@ func (ls *LinkSource) ReceivePacket(data []byte) {
 
 		newCodec, err := CodecTypeFromHeader(headerByte)
 		if err != nil {
+			log.Printf("LinkSource.ReceivePacket: unknown codec header 0x%02x", headerByte)
 			return
 		}
 
@@ -325,10 +336,25 @@ func (ls *LinkSource) ReceivePacket(data []byte) {
 		channels := ls.channels
 		ls.mu.Unlock()
 
-		if newCodec != nil && sink != nil && sink.CanReceive(ls) {
-			decoded := newCodec.Decode(payload, channels)
-			_ = sink.HandleFrame(decoded, ls)
+		if sink == nil {
+			log.Printf("LinkSource.ReceivePacket: sink is nil, dropping audio frame (codec=%T, payloadLen=%d)", newCodec, len(payload))
+			return
 		}
+		if !sink.CanReceive(ls) {
+			log.Printf("LinkSource.ReceivePacket: sink cannot receive, dropping audio frame (codec=%T)", newCodec)
+			return
+		}
+
+		decoded := newCodec.Decode(payload, channels)
+		_ = sink.HandleFrame(decoded, ls)
+	} else {
+		log.Printf("LinkSource.ReceivePacket: no FieldFrames in packet, signalling-only (fields=%v)", func() []byte {
+			keys := make([]byte, 0)
+			for k := range m {
+				keys = append(keys, k)
+			}
+			return keys
+		}())
 	}
 
 	if _, exists := m[FieldSignalling]; exists {
