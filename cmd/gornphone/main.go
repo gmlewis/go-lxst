@@ -131,7 +131,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error loading identity: %v", err)
 	}
-	fmt.Printf("Identity hash: %v\n", prettyHex(identity.HexHash))
+	fmt.Printf("Identity hash: %v\n", formatHash(identity.HexHash))
 	fmt.Println()
 
 	if *configDir != "" || cfg != nil {

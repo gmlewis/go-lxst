@@ -276,7 +276,7 @@ func (tep *TelephoneEndpoint) incomingLinkEstablished(link *rns.Link) {
 		link.SetRemoteIdentifiedCallback(func(l *rns.Link, id *rns.Identity) {
 			log.Printf("Remote identity identified: %v", id.HexHash)
 			hashHex := id.HexHash
-			fmt.Printf("Incoming call from %v\n", prettyHex(hashHex))
+			fmt.Printf("Incoming call from %v\n", formatHash(hashHex))
 
 			tep.mu.Lock()
 			onRinging := tep.onRinging
@@ -302,7 +302,7 @@ func (tep *TelephoneEndpoint) incomingLinkEstablished(link *rns.Link) {
 		// Don't call onRinging yet — wait for the caller to identify
 	} else {
 		hashHex := hex.EncodeToString(remoteIdentity.Hash)
-		fmt.Printf("Incoming call from %v\n", prettyHex(hashHex))
+		fmt.Printf("Incoming call from %v\n", formatHash(hashHex))
 		if !tep.IsCallerAllowed(hashHex) {
 			if onBusy != nil {
 				onBusy(remoteIdentity)

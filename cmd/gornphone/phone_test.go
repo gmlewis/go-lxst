@@ -326,21 +326,21 @@ func TestPhoneStatusStringInCall(t *testing.T) {
 	}
 }
 
-func TestPrettyHex(t *testing.T) {
+func TestFormatHash(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		input string
 		want  string
 	}{
-		{"aabbccdd11223344aabbccdd11223344", "aabbccdd:11223344:aabbccdd:11223344"},
-		{"1234567890abcdef1234567890abcdef", "12345678:90abcdef:12345678:90abcdef"},
-		{"short", "short"},
+		{"aabbccdd11223344aabbccdd11223344", "<aabbccdd11223344aabbccdd11223344>"},
+		{"1234567890abcdef1234567890abcdef", "<1234567890abcdef1234567890abcdef>"},
+		{"short", "<short>"},
 	}
 
 	for _, tt := range tests {
-		got := prettyHex(tt.input)
+		got := formatHash(tt.input)
 		if got != tt.want {
-			t.Errorf("prettyHex(%q) = %q, want %q", tt.input, got, tt.want)
+			t.Errorf("formatHash(%q) = %q, want %q", tt.input, got, tt.want)
 		}
 	}
 }

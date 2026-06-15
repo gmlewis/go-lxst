@@ -150,7 +150,7 @@ func (p *Phone) Dial(hash string) {
 	}
 
 	p.state = StateConnecting
-	fmt.Printf("Calling %v...\n", prettyHex(hash))
+	fmt.Printf("Calling %v...\n", formatHash(hash))
 
 	if p.endpoint != nil {
 		go func() {
@@ -177,7 +177,7 @@ func (p *Phone) Ringing(hash string) {
 		p.callerAlias = ""
 	}
 
-	fmt.Printf("\n\nIncoming call from %v\n", prettyHex(hash))
+	fmt.Printf("\n\nIncoming call from %v\n", formatHash(hash))
 	if p.callerName != "" {
 		fmt.Printf("  %v", p.callerName)
 		if p.callerAlias != "" {
@@ -193,7 +193,7 @@ func (p *Phone) Answer() bool {
 	if !p.IsRinging() {
 		return false
 	}
-	fmt.Printf("Answering call from %v\n", prettyHex(p.callerHash))
+	fmt.Printf("Answering call from %v\n", formatHash(p.callerHash))
 	p.state = StateConnecting
 	return true
 }
@@ -206,11 +206,11 @@ func (p *Phone) Hangup() {
 
 	switch {
 	case p.IsInCall():
-		fmt.Printf("Call with %v ended\n\n", prettyHex(p.callerHash))
+		fmt.Printf("Call with %v ended\n\n", formatHash(p.callerHash))
 	case p.IsRinging():
-		fmt.Printf("Call from %v was not answered\n\n", prettyHex(p.callerHash))
+		fmt.Printf("Call from %v was not answered\n\n", formatHash(p.callerHash))
 	case p.CallIsConnecting():
-		fmt.Printf("Call to %v could not be connected\n\n", prettyHex(p.callerHash))
+		fmt.Printf("Call to %v could not be connected\n\n", formatHash(p.callerHash))
 	}
 
 	if p.endpoint != nil {
@@ -226,7 +226,7 @@ func (p *Phone) Reject() {
 	if !p.IsRinging() {
 		return
 	}
-	fmt.Printf("Rejecting call from %v\n", prettyHex(p.callerHash))
+	fmt.Printf("Rejecting call from %v\n", formatHash(p.callerHash))
 	p.Hangup()
 }
 
@@ -235,18 +235,18 @@ func (p *Phone) CallEstablished() {
 	if p.CallIsConnecting() || p.IsRinging() {
 		p.state = StateInCall
 		p.started = time.Now()
-		fmt.Printf("Call established with %v\n", prettyHex(p.callerHash))
+		fmt.Printf("Call established with %v\n", formatHash(p.callerHash))
 	}
 }
 
 // PrintIdentity prints the identity hash of this telephone.
 func (p *Phone) PrintIdentity(hash string) {
-	fmt.Printf("Identity hash of this telephone: %v\n\n", prettyHex(hash))
+	fmt.Printf("Identity hash of this telephone: %v\n\n", formatHash(hash))
 }
 
 // PrintDestination prints the destination hash of this telephone.
 func (p *Phone) PrintDestination(hash string) {
-	fmt.Printf("Destination hash of this telephone: %v\n\n", prettyHex(hash))
+	fmt.Printf("Destination hash of this telephone: %v\n\n", formatHash(hash))
 }
 
 // PrintPhonebook displays the phonebook entries.
@@ -349,7 +349,7 @@ func (p *Phone) processRingingInput(input string) bool {
 }
 
 func (p *Phone) processInCallInput(input string) bool {
-	fmt.Printf("Hanging up call with %v\n", prettyHex(p.callerHash))
+	fmt.Printf("Hanging up call with %v\n", formatHash(p.callerHash))
 	p.Hangup()
 	return true
 }
@@ -368,11 +368,10 @@ func (p *Phone) printHelp() {
  Enter identity hash to call, or command:`)
 }
 
-func prettyHex(hash string) string {
-	if len(hash) != 32 {
-		return hash
-	}
-	return hash[:8] + ":" + hash[8:16] + ":" + hash[16:24] + ":" + hash[24:]
+// formatHash formats a hex hash string in Python rnphone style: <hexnohashno>
+// For a 32-char hash, this produces <4eb11c411539e336c177ec20b63ce6c0>.
+func formatHash(hash string) string {
+	return "<" + hash + ">"
 }
 
 func trimSpace(s string) string {
@@ -388,12 +387,14 @@ func trimSpace(s string) string {
 }
 
 // stripColons removes colon characters from a string, allowing users to
-// paste pretty-printed identity hashes like "6b0af935:90501f08:a2090b80:4131ec58".
+// stripColons removes colon and angle bracket characters from a string,
+// allowing users to paste identity hashes in any of these formats:
+// "6b0af935:90501f08:a2090b80:4131ec58" or "<6b0af93590501f08a2090b804131ec58>"
 func stripColons(s string) string {
 	var b strings.Builder
 	b.Grow(len(s))
 	for _, r := range s {
-		if r != ':' {
+		if r != ':' && r != '<' && r != '>' {
 			b.WriteRune(r)
 		}
 	}
