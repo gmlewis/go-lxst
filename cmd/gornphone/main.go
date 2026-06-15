@@ -10,6 +10,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"strconv"
@@ -38,6 +39,13 @@ func (v *verbosity) Set(_ string) error {
 func main() {
 	startupMilli := time.Now().UnixMilli()
 	logPath := fmt.Sprintf("/tmp/gornphone-%v.log", startupMilli)
+
+	// Redirect Go's log package to stderr so that go-reticulum's
+	// internal log.Printf calls don't pollute stdout (which is used
+	// for the interactive prompt). Gornphone application messages go
+	// through the RNS logger to the log file instead.
+	log.SetFlags(0)
+	log.SetOutput(os.Stderr)
 
 	listDevices := flag.Bool("l", false, "list available audio devices")
 	showVersion := flag.Bool("version", false, "show version")
@@ -142,6 +150,8 @@ func main() {
 	rnsLogger := rns.NewLogger()
 	rnsLogger.SetLogFilePath(logPath)
 	rnsLogger.SetLogDest(rns.LogDestFile)
+	rnsLogger.SetLogLevel(rns.LogInfo)
+	rnsLogger.Info("gornphone %v starting, log file: %v", version, logPath)
 
 	phone := NewPhone(cfg, rnsLogger)
 
@@ -165,6 +175,15 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error initializing Reticulum: %v\n", err)
 		os.Exit(1)
 	}
+
+	// Ensure log level is at least Info after RNS config may have changed it.
+	// RNS config may set a lower log level, but gornphone needs Info for
+	// call lifecycle messages.
+	if rnsLogger.GetLogLevel() < rns.LogInfo {
+		rnsLogger.SetLogLevel(rns.LogInfo)
+	}
+	rnsLogger.Info("gornphone %v initialized, RNS config: %v", version, rnsConfig)
+
 	defer func() {
 		if err := reticulum.Close(); err != nil {
 			rnsLogger.Info("reticulum.Close: %v", err)
