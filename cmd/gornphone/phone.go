@@ -7,7 +7,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -56,13 +55,11 @@ func NewPhone(cfg *PhoneConfig, logger *rns.Logger) *Phone {
 	}
 }
 
-// logf logs to both the RNS logger and stderr. Stderr is immune to
-// log file rotation and provides ground truth for manual testing.
+// logf logs to the RNS logger.
 func (p *Phone) logf(format string, args ...any) {
 	if p.logger != nil {
 		p.logger.Info(format, args...)
 	}
-	fmt.Fprintf(os.Stderr, format+"\n", args...)
 }
 
 // SetEndpoint attaches a TelephoneEndpoint for RNS integration.

@@ -503,13 +503,11 @@ ExecStart=/home/%v/.local/bin/gornphone --service -vvv
 WantedBy=graphical.target
 `
 
-// logBoth logs to both the RNS logger and stderr. Stderr is immune to
-// log file rotation and provides ground truth for manual testing.
+// logBoth logs to the RNS logger.
 func logBoth(logger *rns.Logger, format string, args ...any) {
 	if logger != nil {
 		logger.Info(format, args...)
 	}
-	fmt.Fprintf(os.Stderr, format+"\n", args...)
 }
 
 // reopeningWriter is an io.Writer that opens the file on each Write call.

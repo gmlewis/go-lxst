@@ -8,7 +8,6 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -79,13 +78,11 @@ func NewTelephoneEndpoint(identity *rns.Identity, ts rns.Transport, logger *rns.
 	return tep, nil
 }
 
-// logf logs to both the RNS logger and stderr. Stderr is immune to
-// log file rotation and provides ground truth for manual testing.
+// logf logs to the RNS logger.
 func (tep *TelephoneEndpoint) logf(format string, args ...any) {
 	if tep.logger != nil {
 		tep.logger.Info(format, args...)
 	}
-	fmt.Fprintf(os.Stderr, format+"\n", args...)
 }
 
 // Destination returns the underlying RNS Destination.
@@ -531,7 +528,7 @@ func (tep *TelephoneEndpoint) handleSignallingData(data []byte, link *rns.Link, 
 						return link.SendPacket(p)
 					}, func() {
 						tep.logf("Packetizer failure, terminating call")
-						tel.PacketizerFailure()
+						go tel.PacketizerFailure()
 					})
 					tel.SetPacketizer(pktz)
 				}
@@ -876,7 +873,7 @@ func (tep *TelephoneEndpoint) Answer() bool {
 		return link.SendPacket(p)
 	}, func() {
 		tep.logf("Packetizer failure, terminating call")
-		tel.PacketizerFailure()
+		go tel.PacketizerFailure()
 	})
 
 	tel.SetPacketizer(pktz)
