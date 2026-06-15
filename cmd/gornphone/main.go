@@ -219,6 +219,8 @@ func main() {
 		log.Fatalf("Error creating telephone endpoint: %v", err)
 	}
 	fmt.Printf("Destination hash: %v\n", endpoint.DestinationHash())
+	endpoint.SetTelephone(tel)
+	tel.SetProfile(profile)
 	phone.SetEndpoint(endpoint)
 
 	// Wire callbacks

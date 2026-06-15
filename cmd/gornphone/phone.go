@@ -195,6 +195,12 @@ func (p *Phone) Answer() bool {
 	}
 	fmt.Printf("Answering call from %v\n", formatHash(p.callerHash))
 	p.state = StateConnecting
+	if p.endpoint != nil {
+		if !p.endpoint.Answer() {
+			fmt.Printf("Could not answer call from %v\n", formatHash(p.callerHash))
+			return false
+		}
+	}
 	return true
 }
 

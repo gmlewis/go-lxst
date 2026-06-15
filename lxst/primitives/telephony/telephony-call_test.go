@@ -272,6 +272,21 @@ func TestOutgoingLinkEstablished_NotIdle(t *testing.T) {
 	}
 }
 
+func TestOutgoingLinkEstablished_FromCalling(t *testing.T) {
+	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel.Call(DefaultProfile)
+
+	if tel.State() != StateCalling {
+		t.Fatalf("Expected Calling state after Call, got %v", tel.State())
+	}
+
+	tel.OutgoingLinkEstablished(nil)
+
+	if tel.State() != StateRinging {
+		t.Errorf("Expected Ringing state after OutgoingLinkEstablished from Calling, got %v", tel.State())
+	}
+}
+
 func TestLinkClosed(t *testing.T) {
 	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
 	tel.SetState(StateEstablished)

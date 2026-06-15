@@ -731,11 +731,12 @@ func isAutoStatusCode(code byte) bool {
 }
 
 // OutgoingLinkEstablished handles the callback when an outgoing RNS
-// link is established. It sets up signalling handling and transitions
-// the call to the Ringing state.
+// link is established. It transitions the call from Calling or Idle
+// to Ringing state, matching the Python flow where the caller enters
+// the ringing/dialling state after the link is set up.
 func (tel *Telephone) OutgoingLinkEstablished(signalFunc func(byte) error) {
 	tel.mu.Lock()
-	if tel.state == StateIdle {
+	if tel.state == StateIdle || tel.state == StateCalling {
 		tel.state = StateRinging
 	}
 	tel.mu.Unlock()
