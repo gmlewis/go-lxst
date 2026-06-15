@@ -303,6 +303,14 @@ func (ls *LineSink) digestJobWithThread(thread *digestThreadInfo) {
 // Ensure LineSink implements sources.LocalSource
 var _ sources.LocalSource = (*LineSink)(nil)
 
+// HandleEncodedFrame handles already-encoded audio data. In the normal
+// LXST pipeline, LineSink receives unencoded float32 frames from the
+// receive Mixer (which has a Null codec). If encoded data arrives here,
+// it is dropped since LineSink has no codec to decode it.
+func (ls *LineSink) HandleEncodedFrame(data []byte, fromSource sources.Source) error {
+	return nil
+}
+
 // PreferredDevice returns the preferred audio output device name.
 func (ls *LineSink) PreferredDevice() string {
 	ls.mu.Lock()

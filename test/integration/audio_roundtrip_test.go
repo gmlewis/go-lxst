@@ -433,3 +433,4 @@ func (m *mockLocalSink) CanReceive(fromSource sources.Source) bool {
 func (m *mockLocalSink) Start() error  { return nil }
 func (m *mockLocalSink) Stop() error   { return nil }
 func (m *mockLocalSink) Running() bool { return true }
+func (m *mockLocalSink) HandleEncodedFrame(data []byte, fromSource sources.Source) error { return nil }

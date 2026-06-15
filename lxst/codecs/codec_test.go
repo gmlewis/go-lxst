@@ -106,3 +106,27 @@ func TestCodecError_Exists(t *testing.T) {
 		t.Errorf("Expected 'codec error', got '%s'", err.Error())
 	}
 }
+
+func TestIsNullCodec(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name  string
+		codec Codec
+		want  bool
+	}{
+		{"nil", nil, false},
+		{"NullCodec value", NullCodec{}, true},
+		{"NullCodec pointer", &NullCodec{}, true},
+		{"NullCodecBuffered pointer", &NullCodecBuffered{}, true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if got := IsNullCodec(tc.codec); got != tc.want {
+				t.Errorf("IsNullCodec(%v) = %v, want %v", tc.codec, got, tc.want)
+			}
+		})
+	}
+}

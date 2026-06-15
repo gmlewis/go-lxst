@@ -18,7 +18,6 @@ import (
 	"github.com/gmlewis/go-lxst/lxst/codecs/codec2"
 	"github.com/gmlewis/go-lxst/lxst/codecs/opus"
 	"github.com/gmlewis/go-lxst/lxst/codecs/raw"
-	"github.com/gmlewis/go-lxst/lxst/sinks"
 	"github.com/gmlewis/go-lxst/lxst/sources"
 )
 
@@ -155,35 +154,56 @@ func NewPacketizer(sendFunc func(data []byte) error, failureCallback func()) *Pa
 	}
 }
 
-// Ensure Packetizer implements sinks.Sink
-var _ sinks.Sink = (*Packetizer)(nil)
+// Ensure Packetizer implements sources.LocalSource
+var _ sources.LocalSource = (*Packetizer)(nil)
 
 func (p *Packetizer) HandleFrame(frame [][]float32, fromSource sources.Source) error {
 	p.mu.Lock()
-	defer p.mu.Unlock()
+	codec := p.codec
+	p.mu.Unlock()
 
-	if p.sendFunc == nil {
-		log.Printf("Packetizer.HandleFrame: sendFunc is nil, dropping frame")
-		return nil
-	}
-
-	if p.codec == nil {
+	if codec == nil {
 		log.Printf("Packetizer.HandleFrame: codec is nil, dropping frame (len=%d)", len(frame))
 		return nil
 	}
 
-	encoded := p.codec.Encode(frame)
+	encoded := codec.Encode(frame)
 	if len(encoded) == 0 {
-		log.Printf("Packetizer.HandleFrame: codec.Encode returned empty, dropping frame")
 		return nil
 	}
 
-	header, err := CodecHeaderByte(p.codec)
-	if err != nil {
+	return p.HandleEncodedFrame(encoded, fromSource)
+}
+
+// HandleEncodedFrame receives already-encoded audio data from the
+// transmit Mixer, prepends a codec header byte, and sends it over
+// the RNS link. This matches the Python Packetizer.handle_frame
+// which receives codec.encode(mixed_frame) from the Mixer.
+func (p *Packetizer) HandleEncodedFrame(data []byte, fromSource sources.Source) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.sendFunc == nil {
+		log.Printf("Packetizer.HandleEncodedFrame: sendFunc is nil, dropping frame")
+		return nil
+	}
+
+	if len(data) == 0 {
+		return nil
+	}
+
+	var header byte
+	if p.codec != nil {
+		var err error
+		header, err = CodecHeaderByte(p.codec)
+		if err != nil {
+			header = CodeNull
+		}
+	} else {
 		header = CodeNull
 	}
 
-	frameData := append([]byte{header}, encoded...)
+	frameData := append([]byte{header}, data...)
 	packetData := map[byte]any{FieldFrames: frameData}
 	packed, err := PackData(packetData)
 	if err != nil {
@@ -191,7 +211,7 @@ func (p *Packetizer) HandleFrame(frame [][]float32, fromSource sources.Source) e
 	}
 
 	if err := p.sendFunc(packed); err != nil {
-		log.Printf("Packetizer.HandleFrame: sendFunc failed: %v", err)
+		log.Printf("Packetizer.HandleEncodedFrame: sendFunc failed: %v", err)
 		p.transmitFailure = true
 		if p.failureCallback != nil {
 			p.failureCallback()
@@ -283,6 +303,28 @@ func (ls *LinkSource) HandleFrame(frame [][]float32, fromSource sources.Source) 
 	return nil
 }
 
+// HandleEncodedFrame is not used by LinkSource in normal pipeline
+// operation. LinkSource is the entry point for received audio and
+// sends decoded float32 frames to its sink.
+func (ls *LinkSource) HandleEncodedFrame(data []byte, fromSource sources.Source) error {
+	return nil
+}
+
+// Sink returns the current output destination for this LinkSource.
+func (ls *LinkSource) Sink() sources.LocalSource {
+	ls.mu.Lock()
+	defer ls.mu.Unlock()
+	return ls.sink
+}
+
+// SetSink sets the output destination for this LinkSource, matching
+// the Python LocalSource.sink property setter.
+func (ls *LinkSource) SetSink(sink sources.LocalSource) {
+	ls.mu.Lock()
+	defer ls.mu.Unlock()
+	ls.sink = sink
+}
+
 func (ls *LinkSource) SetCodec(codec codecs.Codec) {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
@@ -368,4 +410,12 @@ func (ls *LinkSource) Channels() int {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
 	return ls.channels
+}
+
+// SetChannels sets the channel count for this LinkSource, used
+// for decoding incoming audio frames.
+func (ls *LinkSource) SetChannels(channels int) {
+	ls.mu.Lock()
+	defer ls.mu.Unlock()
+	ls.channels = channels
 }

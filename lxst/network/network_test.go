@@ -7,6 +7,7 @@ package network
 
 import (
 	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/gmlewis/go-lxst/lxst/codecs"
@@ -494,3 +495,129 @@ func (m *mockNetworkSink) HandleFrame(frame [][]float32, fromSource sources.Sour
 	return nil
 }
 func (m *mockNetworkSink) CanReceive(fromSource sources.Source) bool { return m.canReceiveVal }
+func (m *mockNetworkSink) HandleEncodedFrame(data []byte, fromSource sources.Source) error {
+	return nil
+}
+
+func TestPipelineTransmitReceiveRoundtrip(t *testing.T) {
+	t.Parallel()
+
+	codec, err := raw.NewRaw(1, 16)
+	if err != nil {
+		t.Fatalf("NewRaw failed: %v", err)
+	}
+
+	var receivedPackets [][]byte
+	var pktMu sync.Mutex
+
+	sendFunc := func(data []byte) error {
+		pktMu.Lock()
+		receivedPackets = append(receivedPackets, data)
+		pktMu.Unlock()
+		return nil
+	}
+
+	pktz := NewPacketizer(sendFunc, nil)
+	pktz.SetCodec(codec)
+
+	frame := [][]float32{{0.5, -0.3, 0.1, -0.2}}
+	encoded := codec.Encode(frame)
+
+	err = pktz.HandleEncodedFrame(encoded, nil)
+	if err != nil {
+		t.Fatalf("HandleEncodedFrame failed: %v", err)
+	}
+
+	pktMu.Lock()
+	pkts := receivedPackets
+	pktMu.Unlock()
+
+	if len(pkts) != 1 {
+		t.Fatalf("Expected 1 packet sent, got %d", len(pkts))
+	}
+
+	sink := &frameCaptureSink{}
+	ls := NewLinkSource(nil, sink)
+	ls.SetChannels(1)
+
+	ls.ReceivePacket(pkts[0])
+
+	if !sink.gotFrame {
+		t.Error("LinkSource should have delivered decoded frame to sink")
+	}
+	if len(sink.lastFrame) == 0 {
+		t.Error("Decoded frame should not be empty")
+	}
+}
+
+type frameCaptureSink struct {
+	mu        sync.Mutex
+	gotFrame  bool
+	lastFrame [][]float32
+}
+
+func (f *frameCaptureSink) Start() error                              { return nil }
+func (f *frameCaptureSink) Stop() error                               { return nil }
+func (f *frameCaptureSink) Running() bool                             { return true }
+func (f *frameCaptureSink) CanReceive(fromSource sources.Source) bool { return true }
+func (f *frameCaptureSink) HandleFrame(frame [][]float32, fromSource sources.Source) error {
+	f.mu.Lock()
+	f.gotFrame = true
+	f.lastFrame = frame
+	f.mu.Unlock()
+	return nil
+}
+func (f *frameCaptureSink) HandleEncodedFrame(data []byte, fromSource sources.Source) error {
+	return nil
+}
+
+func TestFullCallPipelineRoundtrip(t *testing.T) {
+	t.Parallel()
+
+	codec, err := raw.NewRaw(1, 16)
+	if err != nil {
+		t.Fatalf("NewRaw failed: %v", err)
+	}
+
+	var receivedPackets [][]byte
+	var pktMu sync.Mutex
+
+	sendFunc := func(data []byte) error {
+		pktMu.Lock()
+		receivedPackets = append(receivedPackets, data)
+		pktMu.Unlock()
+		return nil
+	}
+
+	pktz := NewPacketizer(sendFunc, nil)
+	pktz.SetCodec(codec)
+
+	receiveSink := &frameCaptureSink{}
+	linkSrc := NewLinkSource(nil, receiveSink)
+	linkSrc.SetChannels(1)
+
+	testFrame := [][]float32{{0.5, -0.3, 0.1, -0.2, 0.4, -0.1, 0.3, -0.4}}
+
+	encoded := codec.Encode(testFrame)
+	err = pktz.HandleEncodedFrame(encoded, nil)
+	if err != nil {
+		t.Fatalf("Packetizer.HandleEncodedFrame failed: %v", err)
+	}
+
+	pktMu.Lock()
+	pkts := receivedPackets
+	pktMu.Unlock()
+	if len(pkts) != 1 {
+		t.Fatalf("Expected 1 packet, got %d", len(pkts))
+	}
+
+	linkSrc.ReceivePacket(pkts[0])
+
+	if !receiveSink.gotFrame {
+		t.Fatal("LinkSource should have delivered decoded frame to receive sink")
+	}
+
+	if len(receiveSink.lastFrame) != len(testFrame) {
+		t.Errorf("Decoded frame has %d samples, want %d", len(receiveSink.lastFrame), len(testFrame))
+	}
+}

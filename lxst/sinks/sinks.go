@@ -14,9 +14,13 @@ import (
 	"github.com/gmlewis/go-lxst/lxst/sources"
 )
 
-// Sink is the base interface for audio sinks.
+// Sink is the base interface for audio sinks. It matches the Python Sink
+// and LocalSource handle_frame pattern where encoded bytes flow through
+// the transmit path and unencoded float32 frames flow through the
+// receive path.
 type Sink interface {
 	HandleFrame(frame [][]float32, fromSource sources.Source) error
+	HandleEncodedFrame(data []byte, fromSource sources.Source) error
 	CanReceive(fromSource sources.Source) bool
 }
 
@@ -24,6 +28,10 @@ type Sink interface {
 type RemoteSink struct{}
 
 func (r *RemoteSink) HandleFrame(frame [][]float32, fromSource sources.Source) error {
+	return nil
+}
+
+func (r *RemoteSink) HandleEncodedFrame(data []byte, fromSource sources.Source) error {
 	return nil
 }
 
@@ -35,6 +43,10 @@ func (r *RemoteSink) CanReceive(fromSource sources.Source) bool {
 type LocalSink struct{}
 
 func (l *LocalSink) HandleFrame(frame [][]float32, fromSource sources.Source) error {
+	return nil
+}
+
+func (l *LocalSink) HandleEncodedFrame(data []byte, fromSource sources.Source) error {
 	return nil
 }
 

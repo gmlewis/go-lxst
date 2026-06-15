@@ -317,10 +317,10 @@ func (ls *LineSource) ingestJobWithThread(thread *threadInfo) {
 		}
 
 		// Encode and send to sink
-		if codec != nil && sink != nil {
+		if codec != nil && !codecs.IsNullCodec(codec) && sink != nil {
 			encoded := codec.Encode(frame)
 			if len(encoded) > 0 && sink.CanReceive(ls) {
-				_ = sink.HandleFrame(frame, ls)
+				_ = sink.HandleEncodedFrame(encoded, ls)
 			}
 		} else if sink != nil {
 			_ = sink.HandleFrame(frame, ls)
@@ -386,4 +386,26 @@ func (ls *LineSource) AvailableMicrophones() []string {
 		return nil
 	}
 	return backend.AllMicrophones()
+}
+
+// HandleEncodedFrame is not used by LineSource in normal pipeline
+// operation. LineSource is an audio input that generates frames from
+// a microphone and does not receive incoming encoded data.
+func (ls *LineSource) HandleEncodedFrame(data []byte, fromSource Source) error {
+	return nil
+}
+
+// Sink returns the current output destination for this LineSource.
+func (ls *LineSource) Sink() LocalSource {
+	ls.mu.Lock()
+	defer ls.mu.Unlock()
+	return ls.sink
+}
+
+// SetSink sets the output destination for this LineSource, matching
+// the Python LocalSource.sink property setter.
+func (ls *LineSource) SetSink(sink LocalSource) {
+	ls.mu.Lock()
+	defer ls.mu.Unlock()
+	ls.sink = sink
 }

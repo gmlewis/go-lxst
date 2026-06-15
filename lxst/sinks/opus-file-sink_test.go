@@ -225,3 +225,4 @@ func (m *mockSourceForSink) CanReceive(fromSource sources.Source) bool { return 
 func (m *mockSourceForSink) HandleFrame(frame [][]float32, fromSource sources.Source) error {
 	return nil
 }
+func (m *mockSourceForSink) HandleEncodedFrame(data []byte, fromSource sources.Source) error { return nil }

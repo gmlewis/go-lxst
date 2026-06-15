@@ -29,6 +29,21 @@ type Codec interface {
 	ValidFrameMs() []float64
 }
 
+// IsNullCodec reports whether the codec is a NullCodec or
+// NullCodecBuffered — a passthrough codec that does not actually
+// compress or transform audio data. In Python, the Null codec's
+// encode is a no-op that returns the original frame unchanged.
+func IsNullCodec(c Codec) bool {
+	if c == nil {
+		return false
+	}
+	switch c.(type) {
+	case NullCodec, *NullCodec, *NullCodecBuffered:
+		return true
+	}
+	return false
+}
+
 // NullCodec implements a passthrough codec for raw PCM.
 type NullCodec struct{}
 

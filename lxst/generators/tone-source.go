@@ -275,11 +275,11 @@ func (ts *ToneSource) generateJobWithThread(thread *generateThreadInfo) {
 			return
 		}
 
-		if codec != nil && sink != nil && sink.CanReceive(ts) {
+		if codec != nil && !codecs.IsNullCodec(codec) && sink != nil && sink.CanReceive(ts) {
 			frame := ts.generate()
 			encoded := codec.Encode(frame)
 			if len(encoded) > 0 && sink.CanReceive(ts) {
-				_ = sink.HandleFrame(frame, ts)
+				_ = sink.HandleEncodedFrame(encoded, ts)
 			}
 		} else if sink != nil && sink.CanReceive(ts) {
 			frame := ts.generate()
@@ -372,3 +372,24 @@ func (ts *ToneSource) HandleFrame(frame [][]float32, fromSource sources.Source) 
 
 // Ensure ToneSource implements sources.LocalSource
 var _ sources.LocalSource = (*ToneSource)(nil)
+
+// HandleEncodedFrame handles already-encoded audio data. ToneSource
+// is an audio generator and does not process incoming encoded data.
+func (ts *ToneSource) HandleEncodedFrame(data []byte, fromSource sources.Source) error {
+	return nil
+}
+
+// Sink returns the current output destination for this ToneSource.
+func (ts *ToneSource) Sink() sources.LocalSource {
+	ts.mu.Lock()
+	defer ts.mu.Unlock()
+	return ts.sink
+}
+
+// SetSink sets the output destination for this ToneSource, matching
+// the Python LocalSource.sink property setter.
+func (ts *ToneSource) SetSink(sink sources.LocalSource) {
+	ts.mu.Lock()
+	defer ts.mu.Unlock()
+	ts.sink = sink
+}

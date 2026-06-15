@@ -34,9 +34,15 @@ type Source interface {
 	Running() bool
 }
 
+// LocalSource is the interface for audio sources that can receive frames
+// from other sources in a pipeline. It extends Source with frame handling
+// methods. In the LXST architecture, HandleFrame receives unencoded
+// [][]float32 frames (receive path), while HandleEncodedFrame receives
+// already-encoded []byte data (transmit path from Mixer with codec).
 type LocalSource interface {
 	Source
 	HandleFrame(frame [][]float32, fromSource Source) error
+	HandleEncodedFrame(data []byte, fromSource Source) error
 	CanReceive(fromSource Source) bool
 }
 
@@ -115,6 +121,31 @@ func (l *Loopback) HandleFrame(frame [][]float32, fromSource Source) error {
 	return nil
 }
 
+// HandleEncodedFrame forwards already-encoded audio data to this
+// loopback's sink, matching the Python pattern where encoded bytes
+// flow through the pipeline after codec encoding at the source.
+func (l *Loopback) HandleEncodedFrame(data []byte, fromSource Source) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	if !l.shouldRun {
+		return ErrSourceNotRunning
+	}
+
+	if l.sink == nil {
+		return nil
+	}
+
+	if len(data) == 0 {
+		return nil
+	}
+
+	if l.sink.CanReceive(l) {
+		return l.sink.HandleEncodedFrame(data, l)
+	}
+	return nil
+}
+
 func (l *Loopback) SetSource(src Source) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -125,4 +156,19 @@ func (l *Loopback) GetSource() Source {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	return l.source
+}
+
+// Sink returns the current output destination for this loopback.
+func (l *Loopback) Sink() LocalSource {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.sink
+}
+
+// SetSink sets the output destination for this loopback, matching the
+// Python LocalSource.sink property setter.
+func (l *Loopback) SetSink(sink LocalSource) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.sink = sink
 }

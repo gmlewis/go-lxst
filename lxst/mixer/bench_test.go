@@ -143,7 +143,8 @@ func (s *benchSource) Start() error                                             
 func (s *benchSource) Stop() error                                                    { return nil }
 func (s *benchSource) Running() bool                                                  { return true }
 func (s *benchSource) CanReceive(fromSource sources.Source) bool                      { return true }
-func (s *benchSource) HandleFrame(frame [][]float32, fromSource sources.Source) error { return nil }
+func (s *benchSource) HandleFrame(frame [][]float32, fromSource sources.Source) error          { return nil }
+func (s *benchSource) HandleEncodedFrame(data []byte, fromSource sources.Source) error        { return nil }
 
 type benchSink struct {
 	mixer     *Mixer
@@ -164,3 +165,4 @@ func (s *benchSink) HandleFrame(frame [][]float32, fromSource sources.Source) er
 	s.framesIn++
 	return nil
 }
+func (s *benchSink) HandleEncodedFrame(data []byte, fromSource sources.Source) error { return nil }

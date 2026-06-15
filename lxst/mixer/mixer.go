@@ -309,6 +309,27 @@ func (m *Mixer) HandleFrame(frame [][]float32, fromSource sources.Source) error 
 	return nil
 }
 
+// HandleEncodedFrame decodes already-encoded audio data and inserts
+// it into the mixing queue, matching the Python pattern where a
+// source with a codec sends encoded data downstream.
+func (m *Mixer) HandleEncodedFrame(data []byte, fromSource sources.Source) error {
+	m.mu.Lock()
+	codec := m.codec
+	channels := m.channels
+	m.mu.Unlock()
+
+	if codec == nil || len(data) == 0 || channels == 0 {
+		return nil
+	}
+
+	frame := codec.Decode(data, channels)
+	if len(frame) == 0 {
+		return nil
+	}
+
+	return m.HandleFrame(frame, fromSource)
+}
+
 func (m *Mixer) mixerJobWithThread(thread *mixerThreadInfo) {
 	defer thread.wg.Done()
 
@@ -334,7 +355,7 @@ func (m *Mixer) mixerJobWithThread(thread *mixerThreadInfo) {
 		sinkOk := m.sink != nil
 		m.mu.Unlock()
 
-		if sinkOk && m.sink.CanReceive(m) {
+		if sinkOk {
 			m.insertLock.Lock()
 			sourceCount := 0
 			var mixedFrame [][]float32
@@ -386,16 +407,17 @@ func (m *Mixer) mixerJobWithThread(thread *mixerThreadInfo) {
 				sink := m.sink
 				m.mu.Unlock()
 
-				if codec != nil {
+				if codec != nil && !codecs.IsNullCodec(codec) {
 					encoded := codec.Encode(mixedFrame)
+					putFrame(mixedFrame)
 					if len(encoded) > 0 && sink != nil && sink.CanReceive(m) {
-						_ = sink.HandleFrame(mixedFrame, m)
+						_ = sink.HandleEncodedFrame(encoded, m)
 					}
-				} else if sink != nil {
+				} else if sink != nil && sink.CanReceive(m) {
 					_ = sink.HandleFrame(mixedFrame, m)
+				} else {
+					putFrame(mixedFrame)
 				}
-
-				putFrame(mixedFrame)
 			} else {
 				m.mu.Lock()
 				ft := m.frameTime
@@ -457,6 +479,24 @@ func (m *Mixer) SetSource(src sources.Source) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.source = src
+}
+
+// Sink returns the current output destination for this mixer, matching
+// the Python Mixer.sink property getter.
+func (m *Mixer) Sink() sources.LocalSource {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.sink
+}
+
+// SetSink sets the output destination for this mixer, matching the
+// Python Mixer.sink property setter. The Pipeline calls this during
+// construction to wire the mixer to its downstream sink (Packetizer or
+// LineSink).
+func (m *Mixer) SetSink(sink sources.LocalSource) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.sink = sink
 }
 
 // Ensure Mixer implements sources.LocalSource

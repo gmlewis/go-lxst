@@ -325,3 +325,9 @@ func (fs *OpusFileSink) digestJob() {
 
 // Ensure OpusFileSink implements sources.LocalSource
 var _ sources.LocalSource = (*OpusFileSink)(nil)
+
+// HandleEncodedFrame handles already-encoded audio data. OpusFileSink
+// writes float32 frames to Opus files, so encoded data is dropped.
+func (o *OpusFileSink) HandleEncodedFrame(data []byte, fromSource sources.Source) error {
+	return nil
+}

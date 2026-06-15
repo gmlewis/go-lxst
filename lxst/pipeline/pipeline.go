@@ -13,7 +13,6 @@ import (
 	"errors"
 
 	"github.com/gmlewis/go-lxst/lxst/codecs"
-	"github.com/gmlewis/go-lxst/lxst/sinks"
 	"github.com/gmlewis/go-lxst/lxst/sources"
 )
 
@@ -27,14 +26,17 @@ type PipelineError string
 
 func (e PipelineError) Error() string { return string(e) }
 
-// Pipeline connects a source, codec, and sink into an audio processing chain.
+// Pipeline connects a source, codec, and sink into an audio processing chain,
+// matching the Python Pipeline class. It wires the source's sink to the
+// pipeline's sink during construction, enabling data to flow from the source
+// through the codec to the sink.
 type Pipeline struct {
 	codecImpl codecs.Codec
 	source    sources.LocalSource
-	sink      sinks.Sink
+	sink      sources.LocalSource
 }
 
-func NewPipeline(source sources.LocalSource, codec codecs.Codec, sink sinks.Sink) (*Pipeline, error) {
+func NewPipeline(source sources.LocalSource, codec codecs.Codec, sink sources.LocalSource) (*Pipeline, error) {
 	if source == nil {
 		return nil, ErrInvalidSource
 	}
@@ -51,14 +53,18 @@ func NewPipeline(source sources.LocalSource, codec codecs.Codec, sink sinks.Sink
 		codecImpl: codec,
 	}
 
-	p.setCodec(codec)
-
-	if ls, ok := sink.(*sinks.LineSink); ok {
-		_ = ls
+	if setter, ok := source.(interface{ SetSink(sources.LocalSource) }); ok {
+		setter.SetSink(sink)
 	}
+
+	p.setCodec(codec)
 
 	if loopback, ok := sink.(*sources.Loopback); ok {
 		loopback.SetSource(source)
+	}
+
+	if setter, ok := sink.(interface{ SetSource(sources.Source) }); ok {
+		setter.SetSource(source)
 	}
 
 	return p, nil
@@ -82,7 +88,7 @@ func (p *Pipeline) Source() sources.LocalSource {
 	return p.source
 }
 
-func (p *Pipeline) Sink() sinks.Sink {
+func (p *Pipeline) Sink() sources.LocalSource {
 	return p.sink
 }
 

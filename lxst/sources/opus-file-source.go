@@ -365,6 +365,12 @@ func (src *OpusFileSource) HandleFrame(frame [][]float32, fromSource Source) err
 	return nil
 }
 
+// HandleEncodedFrame is not used by OpusFileSource in normal pipeline
+// operation. OpusFileSource is an audio input that reads from files.
+func (src *OpusFileSource) HandleEncodedFrame(data []byte, fromSource Source) error {
+	return nil
+}
+
 func (src *OpusFileSource) GetSink() LocalSource {
 	src.mu.Lock()
 	defer src.mu.Unlock()

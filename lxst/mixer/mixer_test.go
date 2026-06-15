@@ -7,9 +7,13 @@ package mixer
 
 import (
 	"math"
+	"sync"
 	"testing"
+	"time"
 
+	"github.com/gmlewis/go-lxst/lxst/codecs"
 	opusPkg "github.com/gmlewis/go-lxst/lxst/codecs/opus"
+	"github.com/gmlewis/go-lxst/lxst/codecs/raw"
 	"github.com/gmlewis/go-lxst/lxst/sources"
 )
 
@@ -165,3 +169,191 @@ func (m *mockMixerSource) SampleRate() int                                      
 func (m *mockMixerSource) Channels() int                                                  { return m.channels }
 func (m *mockMixerSource) CanReceive(fromSource sources.Source) bool                      { return true }
 func (m *mockMixerSource) HandleFrame(frame [][]float32, fromSource sources.Source) error { return nil }
+func (m *mockMixerSource) HandleEncodedFrame(data []byte, fromSource sources.Source) error {
+	return nil
+}
+
+func TestMixer_SetSink(t *testing.T) {
+	t.Parallel()
+
+	sink := &captureSink{}
+	m := NewMixer(40.0, 48000, nil, sink, 1.0)
+
+	if m.Sink() != sink {
+		t.Error("Sink should return the sink passed to NewMixer")
+	}
+
+	newSink := &captureSink{}
+	m.SetSink(newSink)
+	if m.Sink() != newSink {
+		t.Error("Sink should return the new sink after SetSink")
+	}
+}
+
+type captureSink struct {
+	mu           sync.Mutex
+	lastFrame    [][]float32
+	lastEncoded  []byte
+	gotEncoded   bool
+	gotUnencoded bool
+}
+
+func (c *captureSink) Start() error                              { return nil }
+func (c *captureSink) Stop() error                               { return nil }
+func (c *captureSink) Running() bool                             { return true }
+func (c *captureSink) CanReceive(fromSource sources.Source) bool { return true }
+func (c *captureSink) HandleFrame(frame [][]float32, fromSource sources.Source) error {
+	c.mu.Lock()
+	c.gotUnencoded = true
+	c.lastFrame = frame
+	c.mu.Unlock()
+	return nil
+}
+func (c *captureSink) HandleEncodedFrame(data []byte, fromSource sources.Source) error {
+	c.mu.Lock()
+	c.gotEncoded = true
+	c.lastEncoded = data
+	c.mu.Unlock()
+	return nil
+}
+func (c *captureSink) IsGotEncoded() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.gotEncoded
+}
+func (c *captureSink) IsGotUnencoded() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.gotUnencoded
+}
+func (c *captureSink) LastEncoded() []byte {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.lastEncoded
+}
+
+func TestMixer_SendsEncodedBytesWhenCodecPresent(t *testing.T) {
+	t.Parallel()
+
+	codec, err := raw.NewRaw(1, 16)
+	if err != nil {
+		t.Fatalf("NewRaw failed: %v", err)
+	}
+
+	sink := &captureSink{}
+	m := NewMixer(40.0, 48000, codec, sink, 1.0)
+	m.SetSink(sink)
+
+	src := &mockMixerSource{sampleRate: 48000, channels: 1}
+
+	if err := m.Start(); err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	defer m.Stop()
+
+	frame := [][]float32{{0.5, -0.3, 0.1, -0.2, 0.4, -0.1, 0.3, -0.4}}
+	_ = m.HandleFrame(frame, src)
+
+	deadline := time.After(3 * time.Second)
+	ticker := time.NewTicker(10 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-deadline:
+			t.Fatal("Timed out waiting for mixer to process frame")
+		case <-ticker.C:
+			if sink.IsGotEncoded() || sink.IsGotUnencoded() {
+				goto done
+			}
+		}
+	}
+done:
+
+	if !sink.IsGotEncoded() {
+		t.Error("Expected sink to receive encoded bytes via HandleEncodedFrame")
+	}
+	if sink.IsGotUnencoded() {
+		t.Error("Expected sink NOT to receive unencoded frames via HandleFrame")
+	}
+	if len(sink.LastEncoded()) == 0 {
+		t.Error("Expected non-empty encoded data")
+	}
+}
+
+func TestMixer_SendsUnencodedFramesWhenNoCodec(t *testing.T) {
+	t.Parallel()
+
+	sink := &captureSink{}
+	m := NewMixer(40.0, 48000, nil, sink, 1.0)
+
+	src := &mockMixerSource{sampleRate: 48000, channels: 1}
+
+	if err := m.Start(); err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	defer m.Stop()
+
+	frame := [][]float32{{0.5, -0.3, 0.1, -0.2, 0.4, -0.1, 0.3, -0.4}}
+	_ = m.HandleFrame(frame, src)
+
+	deadline := time.After(3 * time.Second)
+	ticker := time.NewTicker(10 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-deadline:
+			t.Fatal("Timed out waiting for mixer to process frame")
+		case <-ticker.C:
+			if sink.IsGotUnencoded() || sink.IsGotEncoded() {
+				goto done2
+			}
+		}
+	}
+done2:
+
+	if sink.IsGotEncoded() {
+		t.Error("Expected sink NOT to receive encoded bytes when no codec")
+	}
+	if !sink.IsGotUnencoded() {
+		t.Error("Expected sink to receive unencoded frames via HandleFrame")
+	}
+}
+
+func TestMixer_SendsUnencodedFramesWithNullCodec(t *testing.T) {
+	t.Parallel()
+
+	sink := &captureSink{}
+	m := NewMixer(40.0, 48000, codecs.NullCodec{}, sink, 1.0)
+
+	src := &mockMixerSource{sampleRate: 48000, channels: 1}
+
+	if err := m.Start(); err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	defer m.Stop()
+
+	frame := [][]float32{{0.5, -0.3, 0.1, -0.2, 0.4, -0.1, 0.3, -0.4}}
+	_ = m.HandleFrame(frame, src)
+
+	deadline := time.After(3 * time.Second)
+	ticker := time.NewTicker(10 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-deadline:
+			t.Fatal("Timed out waiting for mixer to process frame")
+		case <-ticker.C:
+			if sink.IsGotUnencoded() || sink.IsGotEncoded() {
+				goto done3
+			}
+		}
+	}
+done3:
+
+	if sink.IsGotEncoded() {
+		t.Error("Expected sink NOT to receive encoded bytes with NullCodec")
+	}
+	if !sink.IsGotUnencoded() {
+		t.Error("Expected sink to receive unencoded frames via HandleFrame with NullCodec")
+	}
+}

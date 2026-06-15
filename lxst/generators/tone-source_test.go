@@ -7,9 +7,13 @@ package generators
 
 import (
 	"math"
+	"sync"
 	"testing"
+	"time"
 
 	opusPkg "github.com/gmlewis/go-lxst/lxst/codecs/opus"
+	"github.com/gmlewis/go-lxst/lxst/codecs/raw"
+	"github.com/gmlewis/go-lxst/lxst/sources"
 )
 
 func TestToneSource_New(t *testing.T) {
@@ -184,4 +188,110 @@ func TestToneSource_SetGain(t *testing.T) {
 	if ts.Gain() != 0.5 {
 		t.Errorf("Expected gain 0.5, got %f", ts.Gain())
 	}
+}
+
+func TestToneSource_SendsEncodedBytesWhenCodecPresent(t *testing.T) {
+	t.Parallel()
+
+	codec, err := raw.NewRaw(1, 16)
+	if err != nil {
+		t.Fatalf("NewRaw failed: %v", err)
+	}
+
+	sink := &toneCaptureSink{}
+	ts := NewToneSource(440.0, 0.1, false, 20.0, 40.0, codec, sink, 1)
+
+	if err := ts.Start(); err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	defer ts.Stop()
+
+	deadline := time.After(3 * time.Second)
+	ticker := time.NewTicker(10 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-deadline:
+			t.Fatal("Timed out waiting for ToneSource to send encoded data")
+		case <-ticker.C:
+			if sink.IsGotEncoded() {
+				goto done
+			}
+		}
+	}
+done:
+
+	if !sink.IsGotEncoded() {
+		t.Error("Expected sink to receive encoded bytes via HandleEncodedFrame")
+	}
+	if sink.IsGotUnencoded() {
+		t.Error("Expected sink NOT to receive unencoded frames via HandleFrame")
+	}
+}
+
+func TestToneSource_SendsUnencodedFramesWhenNoCodec(t *testing.T) {
+	t.Parallel()
+
+	sink := &toneCaptureSink{}
+	ts := NewToneSource(440.0, 0.1, false, 20.0, 40.0, nil, sink, 1)
+
+	if err := ts.Start(); err != nil {
+		t.Fatalf("Start failed: %v", err)
+	}
+	defer ts.Stop()
+
+	deadline := time.After(3 * time.Second)
+	ticker := time.NewTicker(10 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-deadline:
+			t.Fatal("Timed out waiting for ToneSource to send unencoded data")
+		case <-ticker.C:
+			if sink.IsGotUnencoded() {
+				goto done2
+			}
+		}
+	}
+done2:
+
+	if sink.IsGotEncoded() {
+		t.Error("Expected sink NOT to receive encoded bytes when no codec")
+	}
+	if !sink.IsGotUnencoded() {
+		t.Error("Expected sink to receive unencoded frames via HandleFrame")
+	}
+}
+
+type toneCaptureSink struct {
+	mu           sync.Mutex
+	gotEncoded   bool
+	gotUnencoded bool
+}
+
+func (c *toneCaptureSink) Start() error                              { return nil }
+func (c *toneCaptureSink) Stop() error                               { return nil }
+func (c *toneCaptureSink) Running() bool                             { return true }
+func (c *toneCaptureSink) CanReceive(fromSource sources.Source) bool { return true }
+func (c *toneCaptureSink) HandleFrame(frame [][]float32, fromSource sources.Source) error {
+	c.mu.Lock()
+	c.gotUnencoded = true
+	c.mu.Unlock()
+	return nil
+}
+func (c *toneCaptureSink) HandleEncodedFrame(data []byte, fromSource sources.Source) error {
+	c.mu.Lock()
+	c.gotEncoded = true
+	c.mu.Unlock()
+	return nil
+}
+func (c *toneCaptureSink) IsGotEncoded() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.gotEncoded
+}
+func (c *toneCaptureSink) IsGotUnencoded() bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.gotUnencoded
 }

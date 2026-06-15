@@ -102,6 +102,8 @@ func (m *mockSink) CanReceive(fromSource Source) bool {
 	return m.canReceive
 }
 
+func (m *mockSink) HandleEncodedFrame(data []byte, fromSource Source) error { return nil }
+
 // We need a minimal Source interface implementation for testing
 type testSource struct {
 	running bool
@@ -120,6 +122,8 @@ func (t *testSource) Stop() error {
 func (t *testSource) Running() bool {
 	return t.running
 }
+
+func (t *testSource) HandleEncodedFrame(data []byte, fromSource Source) error { return nil }
 
 func TestLoopback_HandleFrame(t *testing.T) {
 	t.Parallel()
