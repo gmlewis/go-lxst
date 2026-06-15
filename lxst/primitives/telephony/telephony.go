@@ -1416,12 +1416,15 @@ func (tel *Telephone) ReconfigureTransmitPipeline() {
 // OpenPipelines sets up the audio pipelines for an established call,
 // matching the Python __open_pipelines method. It creates the transmit
 // mixer, audio input, transmit pipeline, receive link source, and
-// signals ESTABLISHED.
+// signals ESTABLISHED. It can be called in either Established or
+// Connecting state — the caller side opens pipelines when it receives
+// CONNECTING (state=Connecting), while the responder side opens them
+// in Answer() (state=Established).
 func (tel *Telephone) OpenPipelines() {
 	tel.pipelineLock.Lock()
 
 	tel.mu.Lock()
-	isEstablished := tel.state == StateEstablished
+	state := tel.state
 	micDevice := tel.micDevice
 	transmitGain := tel.transmitGain
 	transmitCodec := tel.transmitCodec
@@ -1429,11 +1432,11 @@ func (tel *Telephone) OpenPipelines() {
 	useAGC := tel.useAGC
 	tel.mu.Unlock()
 
-	log.Printf("OpenPipelines: isEstablished=%v, micDevice=%v, transmitCodec=%T, targetFrameMs=%v, useAGC=%v, packetizer=%v",
-		isEstablished, micDevice, transmitCodec, targetFrameMs, useAGC, tel.packetizer != nil)
+	log.Printf("OpenPipelines: state=%v, micDevice=%v, transmitCodec=%T, targetFrameMs=%v, useAGC=%v, packetizer=%v",
+		state, micDevice, transmitCodec, targetFrameMs, useAGC, tel.packetizer != nil)
 
-	if !isEstablished {
-		log.Printf("OpenPipelines: not established, returning early")
+	if state != StateEstablished && state != StateConnecting {
+		log.Printf("OpenPipelines: state=%v is not Established or Connecting, returning early", state)
 		tel.pipelineLock.Unlock()
 		return
 	}
