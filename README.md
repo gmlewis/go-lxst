@@ -273,6 +273,7 @@ When `gornphone` is in the available state:
 | `i` | identity | Show identity hash (share this with others to call you) |
 | `d` | desthash | Show destination hash (for RNS path/announce) |
 | `a` | announce | Send an announce on the network |
+| `x` | hangup | Force hangup (works even when call state is unknown) |
 | `q` | quit | Exit gornphone |
 | `h` | help | Show help |
 
@@ -355,26 +356,28 @@ Configure who can call you in `~/.rnphone/config`:
 
 ### Local Testing (Two gornphones on the Same Machine)
 
-When running two `gornphone` instances on the same machine, the external
-RNS testnets (Michmesh, Amsterdam, etc.) may not reliably route link
-handshake packets between them. Use `--listen` and `--connect` flags to
-establish a direct local TCP connection instead.
+When running two `gornphone` instances on the same machine, each needs
+its own standalone RNS stack (the default shared-instance mode can't route
+link requests to the correct destination). Use `--standalone` to force
+`share_instance = No`, and `--listen`/`--connect` to establish a direct
+local TCP connection between them.
 
 **Terminal 1 — phone-a** (listens for incoming connections):
 
 ```bash
-gornphone --config /tmp/gornphone-a --listen :4242
+gornphone --config /tmp/gornphone-a --standalone --listen :4242
 ```
 
 **Terminal 2 — phone-b** (connects to phone-a):
 
 ```bash
-gornphone --config /tmp/gornphone-b --connect localhost:4242
+gornphone --config /tmp/gornphone-b --standalone --connect localhost:4242
 ```
 
 The `--config` flag is critical — each instance needs its own config and
 identity directory. Without it, both would share `~/.rnphone/` and collide
-on the identity file.
+on the identity file. The `--standalone` flag ensures each instance runs
+its own independent RNS stack instead of connecting to a shared `rnsd`.
 
 After both start up, note phone-a's identity hash (shown on startup), then
 dial it from phone-b:
@@ -387,6 +390,20 @@ Phone-a will show the incoming call and you can answer it. The `--listen`
 flag starts a TCP server interface on the given address; `--connect` starts
 a TCP client interface to the given address. Both flags can be combined
 with other RNS config interfaces if needed.
+
+### Verbosity
+
+The `-v` flag controls log verbosity. By default, gornphone logs at Notice
+level (compact — only application messages and RNS errors). Add `-v` flags
+for more detail:
+
+| Flag | RNS Log Level | What's included |
+|------|--------------|-----------------|
+| (none) | Notice | gornphone app messages, RNS errors |
+| `-v` | Info | adds RNS internal info |
+| `-vv` | Verbose | adds RNS verbose messages |
+| `-vvv` | Debug | adds RNS debug (still no TCP frame noise) |
+| `-vvvv` | Extreme | everything including TCP HDLC frame traces |
 
 ### Bluetooth Audio on macOS
 

@@ -61,6 +61,7 @@ func main() {
 	speakerFlag := flag.String("speaker", "", "speaker device name")
 	listenFlag := flag.String("listen", "", "listen for local TCP connections (host:port, e.g. localhost:4242)")
 	connectFlag := flag.String("connect", "", "connect to local TCP server (host:port, e.g. localhost:4242)")
+	standaloneFlag := flag.Bool("standalone", false, "run standalone RNS (for testing multiple phones on one machine)")
 	flag.Parse()
 
 	if *showVersion {
@@ -167,15 +168,13 @@ func main() {
 	phone := NewPhone(cfg, rnsLogger)
 
 	// Initialize RNS transport and endpoint.
-	// We pass "" so go-reticulum resolves the default config dir
-	// (~/.reticulum), but override share_instance = No so each
-	// gornphone runs its own standalone RNS stack with its own
-	// destinations registered locally. Shared instance mode doesn't
-	// work for gornphone because each instance's destinations are
-	// registered on different TransportSystems, so incoming link
-	// requests can't be routed to the correct destination.
+	// By default, gornphone connects to the existing RNS shared instance
+	// (rnsd) or runs standalone per the default RNS config. The --standalone
+	// flag forces share_instance = No for testing multiple phones on one
+	// machine, where each phone needs its own RNS stack so that incoming
+	// link requests are routed to the correct destination.
 	rnsConfig := *rnsConfigDir
-	if rnsConfig == "" {
+	if *standaloneFlag {
 		rnsConfig = ensureStandaloneRNSConfig(startupMilli)
 	}
 
