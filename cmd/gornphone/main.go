@@ -157,7 +157,7 @@ func main() {
 	// This matches Python rnphone which displays [Error] messages on screen.
 	logFile := &reopeningWriter{path: logPath}
 	rnsLogger.SetLogCallback(func(logString string) {
-		fmt.Fprintln(logFile, logString)
+		_, _ = fmt.Fprintln(logFile, logString)
 		if strings.Contains(logString, "[Error]") || strings.Contains(logString, "[Critical]") {
 			fmt.Fprintln(os.Stderr, logString)
 		}
