@@ -150,7 +150,19 @@ func main() {
 
 	rnsLogger := rns.NewLogger()
 	rnsLogger.SetLogFilePath(logPath)
-	rnsLogger.SetLogDest(rns.LogDestFile)
+
+	// Use a callback-based logger that splits output:
+	// - Error and Critical messages go to both the log file AND stderr
+	// - All other levels go to the log file only
+	// This matches Python rnphone which displays [Error] messages on screen.
+	logFile := &reopeningWriter{path: logPath}
+	rnsLogger.SetLogCallback(func(logString string) {
+		fmt.Fprintln(logFile, logString)
+		if strings.Contains(logString, "[Error]") || strings.Contains(logString, "[Critical]") {
+			fmt.Fprintln(os.Stderr, logString)
+		}
+	})
+	rnsLogger.SetLogDest(rns.LogCallback)
 
 	// Map -v flags to RNS log levels:
 	//   (none) = Notice (3): gornphone app messages only

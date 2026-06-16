@@ -687,9 +687,11 @@ func (tep *TelephoneEndpoint) Call(identityHash string, timeout time.Duration) e
 	tempID.HexHash = identityHash
 	destHash := rns.CalculateHash(tempID, appName, primitiveName)
 
-	// Request a path if we don't have one, with spinner (matching Python rnphone dial())
+	// Request a path if we don't have one, with spinner (matching Python rnphone dial()).
+	// Show identity hash in user-facing messages, not destination hash, matching Python
+	// rnphone which displays "Requesting path for call to <identity_hash>".
 	if !ts.HasPath(destHash) {
-		fmt.Printf("No path to %x, requesting...\n", destHash)
+		fmt.Printf("Requesting path for call to %v\n", formatHash(identityHash))
 		if err := ts.RequestPath(destHash); err != nil {
 			return fmt.Errorf("requesting path: %w", err)
 		}
@@ -707,7 +709,7 @@ func (tep *TelephoneEndpoint) Call(identityHash string, timeout time.Duration) e
 			return fmt.Errorf("path request timed out (is the remote phone announced and reachable?)")
 		}
 	}
-	fmt.Printf("Path found to %x (hops=%v)\n", destHash, ts.HopsTo(destHash))
+	fmt.Printf("Path found to %v (hops=%v)\n", formatHash(identityHash), ts.HopsTo(destHash))
 
 	remoteID := ts.Recall(destHash)
 	if remoteID == nil {
