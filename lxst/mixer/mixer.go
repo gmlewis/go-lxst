@@ -360,19 +360,19 @@ func (m *Mixer) mixerJobWithThread(thread *mixerThreadInfo) {
 			sourceCount := 0
 			var mixedFrame [][]float32
 
-		for src, q := range m.incomingFrames {
-			if len(q.frames) > 0 {
-				nextFrame := q.frames[0]
-				q.frames = q.frames[1:]
+			for src, q := range m.incomingFrames {
+				if len(q.frames) > 0 {
+					nextFrame := q.frames[0]
+					q.frames = q.frames[1:]
 
-				if len(nextFrame) == 0 {
-					continue
-				}
+					if len(nextFrame) == 0 {
+						continue
+					}
 
-				g := m.mixingGain()
+					g := m.mixingGain()
 
-				if sourceCount == 0 {
-					mixedFrame = getFrame(len(nextFrame), len(nextFrame[0]))
+					if sourceCount == 0 {
+						mixedFrame = getFrame(len(nextFrame), len(nextFrame[0]))
 						for i := range nextFrame {
 							for j := range nextFrame[i] {
 								mixedFrame[i][j] = nextFrame[i][j] * float32(g)
