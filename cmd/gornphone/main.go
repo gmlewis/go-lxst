@@ -30,9 +30,9 @@ var (
 
 type verbosity int
 
-func (v *verbosity) String() string     { return strconv.Itoa(int(*v)) }
-func (v *verbosity) Set(string) error   { *v++; return nil }
-func (v *verbosity) IsBoolFlag() bool   { return true }
+func (v *verbosity) String() string   { return strconv.Itoa(int(*v)) }
+func (v *verbosity) Set(string) error { *v++; return nil }
+func (v *verbosity) IsBoolFlag() bool { return true }
 
 // expandVerboseArgs converts -vv, -vvv, etc. into repeated -v flags
 // so that Go's flag.Parse can handle them, matching Python argparse's
