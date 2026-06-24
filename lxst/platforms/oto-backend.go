@@ -9,6 +9,9 @@ package platforms
 import (
 	"errors"
 	"io"
+	"os/exec"
+	"runtime"
+	"strings"
 	"sync"
 	"time"
 	"unsafe"
@@ -115,14 +118,187 @@ func (ob *OtoBackend) initContext() {
 
 	// Wait for context to be ready
 	<-readyChan
-	close(ob.ready)
 
-	// Cache device names (oto doesn't provide enumeration directly,
-	// so we use generic names)
-	ob.mu.Lock()
-	ob.micNames = []string{"default"}
-	ob.speakerNames = []string{"default"}
-	ob.mu.Unlock()
+	// Enumerate actual platform devices before signaling ready
+	ob.micNames = enumerateMicrophones()
+	ob.speakerNames = enumerateSpeakers()
+
+	close(ob.ready)
+}
+
+// enumerateMicrophones returns a list of available microphone device names
+// using platform-specific tools. Falls back to ["default"] if enumeration fails.
+func enumerateMicrophones() []string {
+	switch runtime.GOOS {
+	case "darwin":
+		return enumerateMacOSAudio("input")
+	case "linux":
+		return enumerateLinuxAudio("input")
+	case "windows":
+		return enumerateWindowsAudio("input")
+	default:
+		return []string{"default"}
+	}
+}
+
+// enumerateSpeakers returns a list of available speaker device names
+// using platform-specific tools. Falls back to ["default"] if enumeration fails.
+func enumerateSpeakers() []string {
+	switch runtime.GOOS {
+	case "darwin":
+		return enumerateMacOSAudio("output")
+	case "linux":
+		return enumerateLinuxAudio("output")
+	case "windows":
+		return enumerateWindowsAudio("output")
+	default:
+		return []string{"default"}
+	}
+}
+
+// enumerateMacOSAudio uses CoreAudio via system_profiler to list audio devices.
+func enumerateMacOSAudio(direction string) []string {
+	out, err := exec.Command("system_profiler", "SPAudioDataType").Output()
+	if err != nil {
+		return []string{"default"}
+	}
+
+	var result []string
+	lines := strings.Split(string(out), "\n")
+
+	var currentDevice string
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+
+		// Device names appear as indented lines ending with ":"
+		// under the "Devices:" section. They are indented more than
+		// the "Devices:" header itself.
+		if strings.HasSuffix(trimmed, ":") && !strings.HasPrefix(trimmed, "_") && len(trimmed) > 3 {
+			deviceName := strings.TrimSuffix(trimmed, ":")
+			deviceName = strings.TrimSpace(deviceName)
+			// Skip section headers like "Audio:", "Devices:"
+			if deviceName == "Audio" || deviceName == "Devices" {
+				continue
+			}
+			currentDevice = deviceName
+		}
+
+		if currentDevice == "" {
+			continue
+		}
+
+		if strings.HasPrefix(trimmed, "Input Channels:") {
+			channelsStr := strings.TrimPrefix(trimmed, "Input Channels:")
+			channelsStr = strings.TrimSpace(channelsStr)
+			if direction == "input" {
+				result = append(result, "<Microphone "+currentDevice+" ("+channelsStr+" channels)>")
+			}
+			currentDevice = ""
+		} else if strings.HasPrefix(trimmed, "Output Channels:") {
+			channelsStr := strings.TrimPrefix(trimmed, "Output Channels:")
+			channelsStr = strings.TrimSpace(channelsStr)
+			if direction == "output" {
+				result = append(result, "<Speaker "+currentDevice+" ("+channelsStr+" channels)>")
+			}
+			currentDevice = ""
+		}
+	}
+
+	if len(result) == 0 {
+		return []string{"default"}
+	}
+	return result
+}
+
+// enumerateLinuxAudio uses arecord/aplay to list audio devices on Linux.
+func enumerateLinuxAudio(direction string) []string {
+	var result []string
+
+	if direction == "input" {
+		out, err := exec.Command("arecord", "-l").Output()
+		if err != nil {
+			return []string{"default"}
+		}
+		for _, line := range strings.Split(string(out), "\n") {
+			if strings.Contains(line, "card") && strings.Contains(line, "device") {
+				// Extract device name from lines like "card 0: PCH [HDA Intel PCH], device 0: ALC892 Analog [ALC892 Analog]"
+				if name := extractALSAMicName(line); name != "" {
+					result = append(result, "<Microphone "+name+">")
+				}
+			}
+		}
+	} else {
+		out, err := exec.Command("aplay", "-l").Output()
+		if err != nil {
+			return []string{"default"}
+		}
+		for _, line := range strings.Split(string(out), "\n") {
+			if strings.Contains(line, "card") && strings.Contains(line, "device") {
+				if name := extractALSASpeakerName(line); name != "" {
+					result = append(result, "<Speaker "+name+">")
+				}
+			}
+		}
+	}
+
+	if len(result) == 0 {
+		return []string{"default"}
+	}
+	return result
+}
+
+// extractALSAMicName extracts a mic device name from an arecord output line.
+func extractALSAMicName(line string) string {
+	// Format: "card 0: PCH [HDA Intel PCH], device 0: ALC892 Analog [ALC892 Analog]"
+	idx := strings.Index(line, "[")
+	if idx < 0 {
+		return ""
+	}
+	end := strings.Index(line[idx:], "]")
+	if end < 0 {
+		return ""
+	}
+	return line[idx+1 : idx+end]
+}
+
+// extractALSASpeakerName extracts a speaker device name from an aplay output line.
+func extractALSASpeakerName(line string) string {
+	idx := strings.Index(line, "[")
+	if idx < 0 {
+		return ""
+	}
+	end := strings.Index(line[idx:], "]")
+	if end < 0 {
+		return ""
+	}
+	return line[idx+1 : idx+end]
+}
+
+// enumerateWindowsAudio uses PowerShell to list audio devices on Windows.
+func enumerateWindowsAudio(direction string) []string {
+	var result []string
+
+	psScript := `Get-WmiObject Win32_SoundDevice | Select-Object Name | ForEach-Object { $_.Name }`
+	out, err := exec.Command("powershell", "-Command", psScript).Output()
+	if err != nil {
+		return []string{"default"}
+	}
+
+	for _, line := range strings.Split(string(out), "\n") {
+		name := strings.TrimSpace(line)
+		if name != "" {
+			if direction == "input" {
+				result = append(result, "<Microphone "+name+">")
+			} else {
+				result = append(result, "<Speaker "+name+">")
+			}
+		}
+	}
+
+	if len(result) == 0 {
+		return []string{"default"}
+	}
+	return result
 }
 
 // waitReady waits for the oto context to be initialized.
