@@ -38,7 +38,7 @@ func (v *verbosity) Set(_ string) error {
 
 func main() {
 	startupMilli := time.Now().UnixMilli()
-	logPath := fmt.Sprintf("/tmp/gornphone-%v.log", startupMilli)
+	logPath := fmt.Sprintf("%v/gornphone-%v.log", os.TempDir(), startupMilli)
 
 	// Redirect Go's log package to the log file so that go-reticulum's
 	// internal log.Printf calls don't pollute the terminal. We use a
@@ -357,7 +357,7 @@ func defaultConfigDir() string {
 // TransportSystems and the server can't route link requests to a client's
 // destinations.
 func ensureStandaloneRNSConfig(startupMilli int64) string {
-	rnsDir := fmt.Sprintf("/tmp/gornphone-rns-%v", startupMilli)
+	rnsDir := fmt.Sprintf("%v/gornphone-rns-%v", os.TempDir(), startupMilli)
 	configPath := rnsDir + "/config"
 
 	_ = os.MkdirAll(rnsDir, 0o755)
