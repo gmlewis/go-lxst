@@ -6,6 +6,7 @@
 package sinks
 
 import (
+	"log"
 	"sync"
 	"time"
 
@@ -87,8 +88,8 @@ func (ls *LineSink) HandleFrame(frame [][]float32, fromSource sources.Source) er
 	ls.insertLock.Lock()
 	ls.frameDeque = append(ls.frameDeque, frame)
 
-	if ls.samplesPerFrame == 0 && len(frame) > 0 {
-		ls.samplesPerFrame = len(frame)
+	if ls.samplesPerFrame == 0 && len(frame) > 0 && len(frame[0]) > 0 {
+		ls.samplesPerFrame = len(frame[0])
 		ls.frameTime = float64(ls.samplesPerFrame) / float64(ls.samplerate)
 	}
 	dequeLen := len(ls.frameDeque)
@@ -204,13 +205,17 @@ func (ls *LineSink) digestJobWithThread(thread *digestThreadInfo) {
 	ls.digestLock.Lock()
 	defer ls.digestLock.Unlock()
 
-	ls.mu.Lock()
+	ls.insertLock.Lock()
 	backendSPF := ls.samplesPerFrame
+	ls.insertLock.Unlock()
+
+	ls.mu.Lock()
 	lowLatency := ls.lowLatency
 	ls.mu.Unlock()
 
 	player, err := ls.backend.GetPlayer(backendSPF, lowLatency)
 	if err != nil {
+		log.Printf("LineSink.digestJob: GetPlayer failed (spf=%d, lowLatency=%v): %v", backendSPF, lowLatency, err)
 		return
 	}
 	ls.mu.Lock()

@@ -1492,7 +1492,9 @@ func (tel *Telephone) StartPipelines() {
 		_ = tel.transmitMixer.Start()
 	}
 	if tel.audioInput != nil {
-		_ = tel.audioInput.Start()
+		if err := tel.audioInput.Start(); err != nil {
+			log.Printf("StartPipelines: audioInput.Start failed: %v", err)
+		}
 	}
 	if tel.transmitPipeline != nil {
 		_ = tel.transmitPipeline.Start()

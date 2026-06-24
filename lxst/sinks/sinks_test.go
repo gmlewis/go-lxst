@@ -104,9 +104,10 @@ func TestLineSink_HandleFrame_SetsSamplesPerFrame(t *testing.T) {
 		t.Errorf("Expected initial samples_per_frame=0, got %d", ls.SamplesPerFrame())
 	}
 
-	frame := make([][]float32, 160)
+	frame := make([][]float32, 2)
 	for i := range frame {
-		frame[i] = []float32{0.5, 0.5}
+		frame[i] = make([]float32, 160)
+		frame[i][0] = 0.5
 	}
 
 	err := ls.HandleFrame(frame, nil)
@@ -124,9 +125,9 @@ func TestLineSink_Autostart(t *testing.T) {
 
 	ls := NewLineSink("", true, false)
 
-	frame := make([][]float32, 160)
+	frame := make([][]float32, 2)
 	for i := range frame {
-		frame[i] = []float32{0.0, 0.0}
+		frame[i] = make([]float32, 160)
 	}
 
 	err := ls.HandleFrame(frame, &testSource{})
