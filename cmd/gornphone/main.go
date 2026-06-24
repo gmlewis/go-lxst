@@ -13,6 +13,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -36,9 +37,16 @@ func (v *verbosity) Set(_ string) error {
 	return nil
 }
 
+func logTempDir() string {
+	if runtime.GOOS == "windows" {
+		return os.TempDir()
+	}
+	return "/tmp"
+}
+
 func main() {
 	startupMilli := time.Now().UnixMilli()
-	logPath := fmt.Sprintf("%v/gornphone-%v.log", os.TempDir(), startupMilli)
+	logPath := fmt.Sprintf("%v/gornphone-%v.log", logTempDir(), startupMilli)
 
 	// Redirect Go's log package to the log file so that go-reticulum's
 	// internal log.Printf calls don't pollute the terminal. We use a
@@ -357,7 +365,7 @@ func defaultConfigDir() string {
 // TransportSystems and the server can't route link requests to a client's
 // destinations.
 func ensureStandaloneRNSConfig(startupMilli int64) string {
-	rnsDir := fmt.Sprintf("%v/gornphone-rns-%v", os.TempDir(), startupMilli)
+	rnsDir := fmt.Sprintf("%v/gornphone-rns-%v", logTempDir(), startupMilli)
 	configPath := rnsDir + "/config"
 
 	_ = os.MkdirAll(rnsDir, 0o755)
