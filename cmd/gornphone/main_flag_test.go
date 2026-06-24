@@ -132,3 +132,100 @@ func TestFlagSetDefaults(t *testing.T) {
 		t.Error("--speaker should default to empty")
 	}
 }
+
+func TestExpandVerboseArgs(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		in   []string
+		want []string
+	}{
+		{
+			name: "single -v unchanged",
+			in:   []string{"-v"},
+			want: []string{"-v"},
+		},
+		{
+			name: "-vv expands to two -v",
+			in:   []string{"-vv"},
+			want: []string{"-v", "-v"},
+		},
+		{
+			name: "-vvv expands to three -v",
+			in:   []string{"-vvv"},
+			want: []string{"-v", "-v", "-v"},
+		},
+		{
+			name: "-vvvv expands to four -v",
+			in:   []string{"-vvvv"},
+			want: []string{"-v", "-v", "-v", "-v"},
+		},
+		{
+			name: "mixed flags",
+			in:   []string{"-vvv", "-l", "--config", "/tmp/x"},
+			want: []string{"-v", "-v", "-v", "-l", "--config", "/tmp/x"},
+		},
+		{
+			name: "passthrough non-v flags",
+			in:   []string{"-profile", "0x40", "-gain", "3.5"},
+			want: []string{"-profile", "0x40", "-gain", "3.5"},
+		},
+		{
+			name: "empty args",
+			in:   []string{},
+			want: []string{},
+		},
+		{
+			name: "-vvvv with other args",
+			in:   []string{"gornphone", "-vvvv", "--version"},
+			want: []string{"gornphone", "-v", "-v", "-v", "-v", "--version"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := expandVerboseArgs(tt.in)
+			if len(got) != len(tt.want) {
+				t.Fatalf("got %d args, want %d: got=%v want=%v", len(got), len(tt.want), got, tt.want)
+			}
+			for i := range got {
+				if got[i] != tt.want[i] {
+					t.Errorf("arg[%d]: got %q, want %q", i, got[i], tt.want[i])
+				}
+			}
+		})
+	}
+}
+
+func TestVerbosityWithFlagParse(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		args []string
+		want int
+	}{
+		{"no flags", []string{}, 0},
+		{"-v", []string{"-v"}, 1},
+		{"-vv", []string{"-vv"}, 2},
+		{"-vvv", []string{"-vvv"}, 3},
+		{"-vvvv", []string{"-vvvv"}, 4},
+		{"-v -v -v", []string{"-v", "-v", "-v"}, 3},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			args := expandVerboseArgs(tt.args)
+			var v verbosity
+			fs := flag.NewFlagSet("test", flag.ContinueOnError)
+			fs.Var(&v, "v", "verbosity")
+			if err := fs.Parse(args); err != nil {
+				t.Fatalf("parse failed: %v", err)
+			}
+			if int(v) != tt.want {
+				t.Errorf("verbosity = %d, want %d", v, tt.want)
+			}
+		})
+	}
+}

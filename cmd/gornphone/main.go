@@ -30,11 +30,31 @@ var (
 
 type verbosity int
 
-func (v *verbosity) String() string { return fmt.Sprintf("%d", *v) }
+func (v *verbosity) String() string     { return strconv.Itoa(int(*v)) }
+func (v *verbosity) Set(string) error   { *v++; return nil }
+func (v *verbosity) IsBoolFlag() bool   { return true }
 
-func (v *verbosity) Set(_ string) error {
-	*v++
-	return nil
+// expandVerboseArgs converts -vv, -vvv, etc. into repeated -v flags
+// so that Go's flag.Parse can handle them, matching Python argparse's
+// action="count" behavior for -v, -vv, -vvv, -vvvv.
+func expandVerboseArgs(args []string) []string {
+	var out []string
+	for _, arg := range args {
+		if len(arg) >= 3 && arg[0] == '-' {
+			vCount := 0
+			for i := 1; i < len(arg) && arg[i] == 'v'; i++ {
+				vCount++
+			}
+			if vCount >= 2 && vCount == len(arg)-1 {
+				for i := 0; i < vCount; i++ {
+					out = append(out, "-v")
+				}
+				continue
+			}
+		}
+		out = append(out, arg)
+	}
+	return out
 }
 
 func logTempDir() string {
@@ -70,6 +90,10 @@ func main() {
 	listenFlag := flag.String("listen", "", "listen for local TCP connections (host:port, e.g. localhost:4242)")
 	connectFlag := flag.String("connect", "", "connect to local TCP server (host:port, e.g. localhost:4242)")
 	standaloneFlag := flag.Bool("standalone", false, "run standalone RNS (for testing multiple phones on one machine)")
+
+	// Pre-process args: convert -vv, -vvv, etc. into repeated -v flags
+	// so that flag.Parse sees "-v -v -v" instead of "-vvv".
+	os.Args = expandVerboseArgs(os.Args)
 	flag.Parse()
 
 	if *showVersion {
