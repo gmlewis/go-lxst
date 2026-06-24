@@ -13,12 +13,15 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/gmlewis/go-lxst/testutils"
 )
 
 func TestRNSConfigFlagAccepted(t *testing.T) {
 	t.Parallel()
 
-	tmpDir := t.TempDir()
+	tmpDir, cleanup := testutils.TempDir(t, "gornphone-test-")
+	defer cleanup()
 	configDir := filepath.Join(tmpDir, "rnsconfig")
 
 	if err := os.MkdirAll(configDir, 0o755); err != nil {

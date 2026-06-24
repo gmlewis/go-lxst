@@ -11,6 +11,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/gmlewis/go-lxst/testutils"
 )
 
 //go:embed testdata/test.ogg
@@ -68,11 +70,8 @@ func (z *zeroReader) Read(p []byte) (int, error) {
 
 func tempDir(t *testing.T) string {
 	t.Helper()
-	dir, err := os.MkdirTemp("/tmp", "go-lxst-vorbis-test-")
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = os.RemoveAll(dir) })
+	dir, cleanup := testutils.TempDir(t, "go-lxst-vorbis-test-")
+	t.Cleanup(cleanup)
 	return dir
 }
 

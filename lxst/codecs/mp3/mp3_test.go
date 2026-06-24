@@ -10,15 +10,14 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/gmlewis/go-lxst/testutils"
 )
 
 func tempDir(t *testing.T) string {
 	t.Helper()
-	dir, err := os.MkdirTemp("/tmp", "go-lxst-mp3-test-")
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = os.RemoveAll(dir) })
+	dir, cleanup := testutils.TempDir(t, "go-lxst-mp3-test-")
+	t.Cleanup(cleanup)
 	return dir
 }
 

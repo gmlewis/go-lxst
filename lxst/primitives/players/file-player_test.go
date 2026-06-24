@@ -11,12 +11,15 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/gmlewis/go-lxst/testutils"
 )
 
 func createTestWavForPlayer(t *testing.T, sampleRate, numChannels, sampleCount int, frequency float64) string {
 	t.Helper()
 
-	tmpDir := t.TempDir()
+	tmpDir, cleanup := testutils.TempDir(t, "go-lxst-player-test-")
+	t.Cleanup(cleanup)
 	path := filepath.Join(tmpDir, "test.wav")
 
 	f, err := os.Create(path)

@@ -19,15 +19,13 @@ import (
 	"github.com/gmlewis/go-lxst/lxst/filters"
 	"github.com/gmlewis/go-lxst/lxst/network"
 	"github.com/gmlewis/go-lxst/lxst/sinks"
+	"github.com/gmlewis/go-lxst/testutils"
 )
 
 func tempDir(t *testing.T) string {
 	t.Helper()
-	dir, err := os.MkdirTemp("/tmp", "lxst-test-*")
-	if err != nil {
-		t.Fatalf("create temp dir: %v", err)
-	}
-	t.Cleanup(func() { _ = os.RemoveAll(dir) })
+	dir, cleanup := testutils.TempDir(t, "go-lxst-telephony-test-")
+	t.Cleanup(cleanup)
 	return dir
 }
 

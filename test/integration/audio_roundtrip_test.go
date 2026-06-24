@@ -19,13 +19,15 @@ import (
 	"github.com/gmlewis/go-lxst/lxst/filters"
 	"github.com/gmlewis/go-lxst/lxst/sinks"
 	"github.com/gmlewis/go-lxst/lxst/sources"
+	"github.com/gmlewis/go-lxst/testutils"
 )
 
 // createTestWav creates a minimal WAV file with a sine wave.
 func createTestWav(t *testing.T, sampleRate, numChannels, sampleCount int, frequency float64) string {
 	t.Helper()
 
-	tmpDir := t.TempDir()
+	tmpDir, cleanup := testutils.TempDir(t, "go-lxst-roundtrip-test-")
+	t.Cleanup(cleanup)
 	path := filepath.Join(tmpDir, "test.wav")
 
 	f, err := os.Create(path)
@@ -329,7 +331,8 @@ func TestIntegration_OpusFileRoundtrip(t *testing.T) {
 	}
 
 	// Create OpusFileSink with temp output file
-	tmpDir := t.TempDir()
+	tmpDir, cleanup := testutils.TempDir(t, "go-lxst-roundtrip-test-")
+	t.Cleanup(cleanup)
 	outputPath := filepath.Join(tmpDir, "output.opus")
 
 	sink, err := sinks.NewOpusFileSink(outputPath, false, opusPkg.PROFILE_VOICE_LOW)

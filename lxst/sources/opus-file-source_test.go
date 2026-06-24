@@ -13,12 +13,14 @@ import (
 	"testing"
 
 	opusPkg "github.com/gmlewis/go-lxst/lxst/codecs/opus"
+	"github.com/gmlewis/go-lxst/testutils"
 )
 
 func createTestWavFile(t *testing.T, sampleRate, numChannels, sampleCount int, frequency float64) string {
 	t.Helper()
 
-	tmpDir := t.TempDir()
+	tmpDir, cleanup := testutils.TempDir(t, "go-lxst-source-test-")
+	t.Cleanup(cleanup)
 	path := filepath.Join(tmpDir, "test.wav")
 
 	f, err := os.Create(path)
