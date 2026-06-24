@@ -8,6 +8,7 @@ package sources
 
 import (
 	"errors"
+	"log"
 	"math"
 	"sync"
 	"time"
@@ -255,11 +256,13 @@ func (ls *LineSource) ingestJobWithThread(thread *threadInfo) {
 		}
 
 		if recorder == nil {
+			log.Printf("LineSource.ingestJob: recorder is nil, stopping")
 			return
 		}
 
 		frame, err := recorder.Record(samplesPerFrame)
 		if err != nil {
+			log.Printf("LineSource.ingestJob: recorder.Record failed: %v", err)
 			continue
 		}
 
