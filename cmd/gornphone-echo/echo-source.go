@@ -37,7 +37,7 @@ type EchoSource struct {
 	linkSource *network.LinkSource
 
 	// Tone generation state
-	phase    float64
+	phase      float64
 	sampleRate float64
 
 	// Echo buffer: stores frames with timestamps for delayed playback
@@ -178,6 +178,7 @@ func (es *EchoSource) HandleFrame(frame [][]float32, fromSource sources.Source) 
 func (es *EchoSource) HandleEncodedFrame(data []byte, fromSource sources.Source) error {
 	return nil
 }
+
 // generateLoop runs in a background goroutine, generating tone frames
 // and emitting delayed echo frames at the target frame rate.
 func (es *EchoSource) generateLoop() {

@@ -126,10 +126,15 @@ func main() {
 	rnsLogger := rns.NewLogger()
 	rnsLogger.SetLogFilePath(logPath)
 	rnsLogger.SetLogCallback(func(logString string) {
-		f, _ := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
-		if f != nil {
-			fmt.Fprintln(f, logString)
-			_ = f.Close()
+		f, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+		if err != nil {
+			log.Fatalf("os.OpenFile: %v", err)
+		}
+		if _, err := fmt.Fprintln(f, logString); err != nil {
+			log.Fatalf("fmt.Fprintln: %v", err)
+		}
+		if err := f.Close(); err != nil {
+			log.Fatalf("f.Close: %v", err)
 		}
 		if strings.Contains(logString, "[Error]") || strings.Contains(logString, "[Critical]") {
 			fmt.Fprintln(os.Stderr, logString)

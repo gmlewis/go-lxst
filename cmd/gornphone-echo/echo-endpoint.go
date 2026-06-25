@@ -8,6 +8,7 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
@@ -37,12 +38,12 @@ type EchoEndpoint struct {
 	lastAnnounce  time.Time
 	announceIntvl time.Duration
 
-	codec     codecs.Codec
-	profile   byte
-	frameMs   float64
-	delay     time.Duration
-	freq      float64
-	gain      float64
+	codec   codecs.Codec
+	profile byte
+	frameMs float64
+	delay   time.Duration
+	freq    float64
+	gain    float64
 
 	// Audio pipeline components (created on answer)
 	transmitMixer *mixer.Mixer
@@ -263,12 +264,20 @@ func (tep *EchoEndpoint) answer(link *rns.Link) bool {
 	tep.mu.Unlock()
 
 	// Send ESTABLISHED.
-	_ = signalFunc(telephony.SignallingEstablished)
+	if err := signalFunc(telephony.SignallingEstablished); err != nil {
+		log.Fatalf("signalFunc: %v", err)
+	}
 
 	// Start everything.
-	_ = transmitMixer.Start()
-	_ = linkSrc.Start()
-	echoSrc.Start()
+	if err := transmitMixer.Start(); err != nil {
+		log.Fatalf("transmitMixer.Start: %v", err)
+	}
+	if err := linkSrc.Start(); err != nil {
+		log.Fatalf("linkSrc.Start: %v", err)
+	}
+	if err := echoSrc.Start(); err != nil {
+		log.Fatalf("echoSrc.Start: %v", err)
+	}
 
 	// Replace packet callback to feed LinkSource AND handle signalling.
 	link.SetPacketCallback(func(data []byte, packet *rns.Packet) {
@@ -362,7 +371,7 @@ func (tep *EchoEndpoint) sendSignalling(link *rns.Link, signal int) {
 func (tep *EchoEndpoint) hangup() {
 	tep.mu.Lock()
 	link := tep.activeLink
-	pktz := tep.packetizer
+	// pktz := tep.packetizer
 	ls := tep.linkSource
 	es := tep.echoSource
 	tm := tep.transmitMixer
@@ -374,15 +383,20 @@ func (tep *EchoEndpoint) hangup() {
 	tep.mu.Unlock()
 
 	if es != nil {
-		es.Stop()
+		if err := es.Stop(); err != nil {
+			log.Fatalf("es.Stop: %v", err)
+		}
 	}
 	if ls != nil {
-		_ = ls.Stop()
+		if err := ls.Stop(); err != nil {
+			log.Fatalf("ls.Stop: %v", err)
+		}
 	}
 	if tm != nil {
-		_ = tm.Stop()
+		if err := tm.Stop(); err != nil {
+			log.Fatalf("tm.Stop: %v", err)
+		}
 	}
-	_ = pktz
 	if link != nil {
 		link.Teardown()
 	}

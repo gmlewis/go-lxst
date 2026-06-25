@@ -555,14 +555,19 @@ func (tep *TelephoneEndpoint) handleSignallingData(data []byte, link *rns.Link, 
 				tep.mu.Unlock()
 
 				if link != nil {
-					ls := network.NewLinkSource(nil, tel.ReceiveMixer())
-					tel.ReceiveMixer().SetSourceMaxFrames(ls, 2)
+					rm := tel.ReceiveMixer()
+					if rm != nil {
+						ls := network.NewLinkSource(nil, rm)
+						rm.SetSourceMaxFrames(ls, 2)
 
-					link.SetPacketCallback(func(data []byte, packet *rns.Packet) {
-						tep.logf("Caller received packet (len=%d)", len(data))
-						ls.ReceivePacket(data)
-						tep.handleSignallingData(data, link, tep.identity)
-					})
+						link.SetPacketCallback(func(data []byte, packet *rns.Packet) {
+							tep.logf("Caller received packet (len=%d)", len(data))
+							ls.ReceivePacket(data)
+							tep.handleSignallingData(data, link, tep.identity)
+						})
+					} else {
+						tep.logf("SignallingEstablished: receive mixer is nil, cannot set up link source")
+					}
 				}
 			}
 			tep.mu.Lock()
@@ -893,21 +898,34 @@ func (tep *TelephoneEndpoint) Answer() bool {
 	tel.PrepareDiallingPipelines()
 	tel.OpenPipelines()
 
-	ls := network.NewLinkSource(nil, tel.ReceiveMixer())
-	tel.ReceiveMixer().SetSourceMaxFrames(ls, 2)
+	var ls *network.LinkSource
+	rm := tel.ReceiveMixer()
+	if rm != nil {
+		ls = network.NewLinkSource(nil, rm)
+		rm.SetSourceMaxFrames(ls, 2)
+	} else {
+		tep.logf("TelephoneEndpoint.Answer(): receive mixer is nil, audio receive disabled")
+	}
 
 	tep.logf("TelephoneEndpoint.Answer(): sending ESTABLISHED signal")
 	_ = signalFunc(telephony.SignallingEstablished)
 
 	tel.StartPipelines()
 
-	link.SetPacketCallback(func(data []byte, packet *rns.Packet) {
-		tep.logf("Responder received packet (len=%d)", len(data))
+	if ls != nil {
+		link.SetPacketCallback(func(data []byte, packet *rns.Packet) {
+			tep.logf("Responder received packet (len=%d)", len(data))
 
-		ls.ReceivePacket(data)
+			ls.ReceivePacket(data)
 
-		tep.handleSignallingData(data, link, identity)
-	})
+			tep.handleSignallingData(data, link, identity)
+		})
+	} else {
+		link.SetPacketCallback(func(data []byte, packet *rns.Packet) {
+			tep.logf("Responder received packet (len=%d)", len(data))
+			tep.handleSignallingData(data, link, identity)
+		})
+	}
 
 	tep.logf("TelephoneEndpoint.Answer(): call fully established, audio pipelines running")
 	return true
