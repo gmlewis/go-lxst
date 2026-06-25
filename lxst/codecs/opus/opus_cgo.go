@@ -145,40 +145,46 @@ func (o *Opus) Encode(frame [][]float32) []byte {
 		return []byte{}
 	}
 
-	if len(frame[0]) > o.inputChannels {
-		newFrame := make([][]float32, len(frame))
+	// frame is [samples][channels] — outer dimension is samples,
+	// inner dimension is channels.
+	samples := len(frame)
+	channels := len(frame[0])
+
+	// Adjust channel count to match the encoder's expected input channels.
+	if channels > o.inputChannels {
+		// Trim extra channels.
 		for i := range frame {
-			newFrame[i] = frame[i][:o.inputChannels]
+			frame[i] = frame[i][:o.inputChannels]
 		}
-		frame = newFrame
-	} else if len(frame[0]) < o.inputChannels {
-		newFrame := make([][]float32, len(frame))
+		channels = o.inputChannels
+	} else if channels < o.inputChannels {
+		// Pad by duplicating the last channel.
 		for i := range frame {
-			newFrame[i] = make([]float32, o.inputChannels)
-			for c := 0; c < len(frame[i]); c++ {
-				newFrame[i][c] = frame[i][c]
+			extra := make([]float32, o.inputChannels-channels)
+			lastVal := frame[i][channels-1]
+			for c := range extra {
+				extra[c] = lastVal
 			}
-			for c := len(frame[i]); c < o.inputChannels; c++ {
-				newFrame[i][c] = frame[i][len(frame[i])-1]
-			}
+			frame[i] = append(frame[i], extra...)
 		}
-		frame = newFrame
+		channels = o.inputChannels
 	}
 
-	inputSamples := make([]int16, len(frame)*o.inputChannels)
-	for i, s := range frame {
-		for c := 0; c < o.inputChannels; c++ {
-			val := s[c] * TYPE_MAP_FACTOR
+	// Interleave samples: [s0ch0, s0ch1, s1ch0, s1ch1, ...]
+	inputSamples := make([]int16, samples*channels)
+	for i := 0; i < samples; i++ {
+		for c := 0; c < channels; c++ {
+			val := frame[i][c] * TYPE_MAP_FACTOR
 			if val > 32767 {
 				val = 32767
 			} else if val < -32768 {
 				val = -32768
 			}
-			inputSamples[i*o.inputChannels+c] = int16(val)
+			inputSamples[i*channels+c] = int16(val)
 		}
 	}
 
-	frameDurationMs := float64(len(frame)) / float64(o.sourceSampleRate) * 1000.0
+	frameDurationMs := float64(samples) / float64(o.sourceSampleRate) * 1000.0
 	o.updateBitrate(frameDurationMs)
 
 	if !o.encoderConfigured {
@@ -187,7 +193,7 @@ func (o *Opus) Encode(frame [][]float32) []byte {
 	}
 
 	maxBytes := MaxBytesPerFrame(o.bitrateCeiling, frameDurationMs)
-	encoded, err := o.opusEncoder.Encode(inputSamples, len(frame), maxBytes)
+	encoded, err := o.opusEncoder.Encode(inputSamples, samples, maxBytes)
 	if err != nil {
 		return []byte{}
 	}
@@ -234,8 +240,11 @@ func (o *Opus) Decode(frameBytes []byte, channelsHint int) [][]float32 {
 		}
 	}
 
-	result := make([][]float32, len(decoded)/o.channels)
-	for i := range result {
+	// decoded is interleaved int16: [s0ch0, s0ch1, s1ch0, s1ch1, ...]
+	// Convert to [][]float32 where outer dim is samples, inner is channels.
+	samplesPerChannel := len(decoded) / o.channels
+	result := make([][]float32, samplesPerChannel)
+	for i := 0; i < samplesPerChannel; i++ {
 		result[i] = make([]float32, o.channels)
 		for c := 0; c < o.channels; c++ {
 			result[i][c] = float32(decoded[i*o.channels+c]) / TYPE_MAP_FACTOR
