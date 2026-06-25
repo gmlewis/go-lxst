@@ -101,7 +101,7 @@ func createTestWavFile(t *testing.T, sampleRate, numChannels, sampleCount int, f
 func TestSelectCallCodecs_BandwidthUltraLow(t *testing.T) {
 	t.Parallel()
 
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.selectCallCodecs(ProfileBandwidthUltraLow)
 
 	rxCodec := tel.ReceiveCodec()
@@ -118,7 +118,7 @@ func TestSelectCallCodecs_BandwidthUltraLow(t *testing.T) {
 func TestSelectCallCodecs_QualityMedium(t *testing.T) {
 	t.Parallel()
 
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.selectCallCodecs(ProfileQualityMedium)
 
 	rxCodec := tel.ReceiveCodec()
@@ -150,7 +150,7 @@ func TestSelectCallFrameTime(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+		tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 		tel.selectCallFrameTime(tt.profile)
 		got := tel.TargetFrameTimeMs()
 		if got != tt.want {
@@ -171,7 +171,7 @@ func TestSelectCallProfile(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+		tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 		tel.SetState(StateCalling)
 		tel.SetProfile(tt.profile)
 		tel.selectCallProfile(tt.profile)
@@ -197,7 +197,7 @@ func TestSelectCallProfile(t *testing.T) {
 func TestSelectCallProfile_Default(t *testing.T) {
 	t.Parallel()
 
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateCalling)
 	tel.selectCallProfile(0)
 
@@ -208,7 +208,7 @@ func TestSelectCallProfile_Default(t *testing.T) {
 }
 
 func TestPrepareDiallingPipelines_CreatesComponents(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateCalling)
 	tel.SetProfile(ProfileQualityMedium)
 
@@ -226,7 +226,7 @@ func TestPrepareDiallingPipelines_CreatesComponents(t *testing.T) {
 }
 
 func TestPrepareDiallingPipelines_DialToneFrequency(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateCalling)
 	tel.SetProfile(ProfileQualityMedium)
 
@@ -242,7 +242,7 @@ func TestPrepareDiallingPipelines_DialToneFrequency(t *testing.T) {
 }
 
 func TestPrepareDiallingPipelines_DialToneEaseTime(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateCalling)
 	tel.SetProfile(ProfileQualityMedium)
 
@@ -255,7 +255,7 @@ func TestPrepareDiallingPipelines_DialToneEaseTime(t *testing.T) {
 }
 
 func TestResetDiallingPipelines_ResetsAndRecreates(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateCalling)
 	tel.SetProfile(ProfileQualityMedium)
 
@@ -278,7 +278,7 @@ func TestResetDiallingPipelines_ResetsAndRecreates(t *testing.T) {
 }
 
 func TestPrepareDiallingPipelines_UsesReceiveGain(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 5.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 5.0, 0.0)
 	tel.SetState(StateCalling)
 	tel.SetProfile(ProfileQualityMedium)
 
@@ -294,7 +294,7 @@ func TestPrepareDiallingPipelines_UsesReceiveGain(t *testing.T) {
 }
 
 func TestPrepareDiallingPipelines_TargetFrameTime(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateCalling)
 	tel.SetProfile(ProfileQualityMedium)
 
@@ -307,7 +307,7 @@ func TestPrepareDiallingPipelines_TargetFrameTime(t *testing.T) {
 }
 
 func TestPrepareDiallingPipelines_BandwidthUltraLowFrameTime(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateCalling)
 	tel.SetProfile(ProfileBandwidthUltraLow)
 
@@ -334,7 +334,7 @@ func typeName(v any) string {
 }
 
 func TestActivateRingTone_NoRingtonePath(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateRinging)
 	tel.SetIncoming(true)
 
@@ -349,7 +349,7 @@ func TestActivateRingTone_NoRingtonePath(t *testing.T) {
 }
 
 func TestActivateRingTone_NonexistentPath(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateRinging)
 	tel.SetIncoming(true)
 	tel.SetRingtonePath("/nonexistent/ringtone.wav")
@@ -367,7 +367,7 @@ func TestActivateRingTone_NonexistentPath(t *testing.T) {
 func TestActivateRingTone_CreatesRingerPipeline(t *testing.T) {
 	path := createTestWavFile(t, 8000, 1, 8000, 440.0)
 
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateRinging)
 	tel.SetIncoming(true)
 	tel.SetRingtonePath(path)
@@ -388,7 +388,7 @@ func TestActivateRingTone_CreatesRingerPipeline(t *testing.T) {
 func TestActivateRingTone_RingerSourceLoop(t *testing.T) {
 	path := createTestWavFile(t, 8000, 1, 8000, 440.0)
 
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateRinging)
 	tel.SetIncoming(true)
 	tel.SetRingtonePath(path)
@@ -407,7 +407,7 @@ func TestActivateRingTone_RingerSourceLoop(t *testing.T) {
 func TestStopRingTone(t *testing.T) {
 	path := createTestWavFile(t, 8000, 1, 8000, 440.0)
 
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateRinging)
 	tel.SetIncoming(true)
 	tel.SetRingtonePath(path)
@@ -421,7 +421,7 @@ func TestStopRingTone(t *testing.T) {
 func TestIncoming_SetIncoming(t *testing.T) {
 	t.Parallel()
 
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	if tel.Incoming() {
 		t.Error("Incoming should default to false")
 	}
@@ -438,7 +438,7 @@ func TestIncoming_SetIncoming(t *testing.T) {
 }
 
 func TestPlayBusyTone_ZeroDuration(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetBusyToneSeconds(0)
 
 	// Should return immediately without error
@@ -446,7 +446,7 @@ func TestPlayBusyTone_ZeroDuration(t *testing.T) {
 }
 
 func TestPlayBusyTone_ResetsDiallingPipelinesWhenNeeded(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateCalling)
 	tel.SetProfile(ProfileQualityMedium)
 	tel.SetBusyToneSeconds(0.01) // Very short duration for fast test
@@ -462,7 +462,7 @@ func TestPlayBusyTone_ResetsDiallingPipelinesWhenNeeded(t *testing.T) {
 }
 
 func TestEnableDialTone_StartsMixerAndTone(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateCalling)
 	tel.SetProfile(ProfileQualityMedium)
 	tel.PrepareDiallingPipelines()
@@ -480,7 +480,7 @@ func TestEnableDialTone_StartsMixerAndTone(t *testing.T) {
 }
 
 func TestMuteDialTone_SetsGainToZero(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateCalling)
 	tel.SetProfile(ProfileQualityMedium)
 	tel.PrepareDiallingPipelines()
@@ -499,7 +499,7 @@ func TestMuteDialTone_SetsGainToZero(t *testing.T) {
 }
 
 func TestDisableDialTone_StopsTone(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateCalling)
 	tel.SetProfile(ProfileQualityMedium)
 	tel.PrepareDiallingPipelines()
@@ -524,7 +524,7 @@ func TestDisableDialTone_StopsTone(t *testing.T) {
 }
 
 func TestActivateDialTone_StartsDialPattern(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateCalling)
 	tel.SetProfile(ProfileQualityMedium)
 	tel.SetIncoming(false) // Outgoing call
@@ -557,7 +557,7 @@ func TestActivateDialTone_StartsDialPattern(t *testing.T) {
 }
 
 func TestActivateDialTone_DoesNotStartWhenNotRinging(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateCalling) // Not Ringing state
 	tel.SetIncoming(false)
 	tel.PrepareDiallingPipelines()
@@ -582,7 +582,7 @@ func TestActivateDialTone_DoesNotStartWhenNotRinging(t *testing.T) {
 }
 
 func TestReconfigureTransmitPipeline_NotEstablished(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateCalling) // Not Established
 
 	// Should return early without panic
@@ -590,7 +590,7 @@ func TestReconfigureTransmitPipeline_NotEstablished(t *testing.T) {
 }
 
 func TestReconfigureTransmitPipeline_NoTransmitPipeline(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateEstablished)
 
 	// No transmit pipeline set, should return early
@@ -598,7 +598,7 @@ func TestReconfigureTransmitPipeline_NoTransmitPipeline(t *testing.T) {
 }
 
 func TestOpenPipelines_NotEstablished(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateCalling) // Not Established
 
 	// Should return early without panic
@@ -606,7 +606,7 @@ func TestOpenPipelines_NotEstablished(t *testing.T) {
 }
 
 func TestOpenPipelines_CreatesFiltersWithAGC(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateEstablished)
 	tel.SetProfile(ProfileQualityMedium)
 	tel.PrepareDiallingPipelines()
@@ -629,7 +629,7 @@ func TestOpenPipelines_CreatesFiltersWithAGC(t *testing.T) {
 }
 
 func TestOpenPipelines_CreatesFiltersWithoutAGC(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetUseAGC(false)
 	tel.SetState(StateEstablished)
 	tel.SetProfile(ProfileQualityMedium)
@@ -647,7 +647,7 @@ func TestOpenPipelines_CreatesFiltersWithoutAGC(t *testing.T) {
 }
 
 func TestStartStopPipelines_NoPipelines(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 
 	// Should not panic with nil pipelines
 	tel.StartPipelines()
@@ -665,7 +665,7 @@ func TestPacketizer_SinkInterface(t *testing.T) {
 }
 
 func TestFiltersAccessors(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 
 	if len(tel.Filters()) != 0 {
 		t.Errorf("Expected no filters initially, got %d", len(tel.Filters()))
@@ -680,7 +680,7 @@ func TestFiltersAccessors(t *testing.T) {
 }
 
 func TestPacketizerAccessors(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 
 	if tel.Packetizer() != nil {
 		t.Error("Expected nil packetizer initially")
@@ -695,7 +695,7 @@ func TestPacketizerAccessors(t *testing.T) {
 }
 
 func TestSignallingReceived_Busy(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateCalling)
 	tel.SetIncoming(false)
 	tel.SetProfile(ProfileQualityMedium)
@@ -703,7 +703,7 @@ func TestSignallingReceived_Busy(t *testing.T) {
 	busyCalled := false
 	tel.SetBusyCallback(func() { busyCalled = true })
 
-	tel.SignallingReceived([]byte{SignallingBusy})
+	tel.SignallingReceived([]int{SignallingBusy}, nil)
 
 	if tel.State() != StateIdle {
 		t.Errorf("Expected Idle state after BUSY, got %v", tel.State())
@@ -714,14 +714,14 @@ func TestSignallingReceived_Busy(t *testing.T) {
 }
 
 func TestSignallingReceived_Rejected(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateCalling)
 	tel.SetIncoming(false)
 
 	rejectedCalled := false
 	tel.SetRejectedCallback(func() { rejectedCalled = true })
 
-	tel.SignallingReceived([]byte{SignallingRejected})
+	tel.SignallingReceived([]int{SignallingRejected}, nil)
 
 	if tel.State() != StateIdle {
 		t.Errorf("Expected Idle state after REJECTED, got %v", tel.State())
@@ -732,7 +732,7 @@ func TestSignallingReceived_Rejected(t *testing.T) {
 }
 
 func TestSignallingReceived_Ringing(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateCalling)
 	tel.SetIncoming(false)
 	tel.SetProfile(ProfileQualityMedium)
@@ -740,7 +740,7 @@ func TestSignallingReceived_Ringing(t *testing.T) {
 	ringingCalled := false
 	tel.SetRingingCallback(func() { ringingCalled = true })
 
-	tel.SignallingReceived([]byte{SignallingRinging})
+	tel.SignallingReceived([]int{SignallingRinging}, nil)
 
 	if tel.State() != StateRinging {
 		t.Errorf("Expected Ringing state, got %v", tel.State())
@@ -751,7 +751,7 @@ func TestSignallingReceived_Ringing(t *testing.T) {
 }
 
 func TestSignallingReceived_Established(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateConnecting)
 	tel.SetIncoming(false)
 	tel.SetProfile(ProfileQualityMedium)
@@ -760,7 +760,7 @@ func TestSignallingReceived_Established(t *testing.T) {
 	establishedCalled := false
 	tel.SetEstablishedCallback(func() { establishedCalled = true })
 
-	tel.SignallingReceived([]byte{SignallingEstablished})
+	tel.SignallingReceived([]int{SignallingEstablished}, nil)
 
 	if tel.State() != StateEstablished {
 		t.Errorf("Expected Established state, got %v", tel.State())
@@ -771,13 +771,13 @@ func TestSignallingReceived_Established(t *testing.T) {
 }
 
 func TestSignallingReceived_PreferredProfile(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateIdle)
 
 	profile := byte(0x40) // ProfileQualityMedium
-	signal := SignallingPreferredProfile + profile
+	signal := SignallingPreferredProfile + int(profile)
 
-	tel.SignallingReceived([]byte{signal})
+	tel.SignallingReceived([]int{signal}, nil)
 
 	// When not established, should select the profile
 	if tel.CurrentProfile() != profile {
@@ -786,10 +786,10 @@ func TestSignallingReceived_PreferredProfile(t *testing.T) {
 }
 
 func TestSignallingReceived_Available(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateCalling)
 
-	tel.SignallingReceived([]byte{SignallingAvailable})
+	tel.SignallingReceived([]int{SignallingAvailable}, nil)
 
 	// AVAILABLE sets state to Idle
 	if tel.State() != StateIdle {
@@ -798,11 +798,11 @@ func TestSignallingReceived_Available(t *testing.T) {
 }
 
 func TestSwitchProfile(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateEstablished)
 	tel.SetProfile(ProfileQualityMedium)
 
-	tel.SwitchProfile(ProfileQualityHigh)
+	tel.SwitchProfile(ProfileQualityHigh, nil)
 
 	if tel.CurrentProfile() != ProfileQualityHigh {
 		t.Errorf("Expected profile 0x%02x, got 0x%02x", ProfileQualityHigh, tel.CurrentProfile())
@@ -810,12 +810,12 @@ func TestSwitchProfile(t *testing.T) {
 }
 
 func TestSwitchProfile_SameProfile(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateEstablished)
 	tel.SetProfile(ProfileQualityMedium)
 
 	ftBefore := tel.TargetFrameTimeMs()
-	tel.SwitchProfile(ProfileQualityMedium)
+	tel.SwitchProfile(ProfileQualityMedium, nil)
 	ftAfter := tel.TargetFrameTimeMs()
 
 	// Should not change when same profile
@@ -825,10 +825,10 @@ func TestSwitchProfile_SameProfile(t *testing.T) {
 }
 
 func TestSwitchProfile_NotEstablished(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateIdle)
 
-	tel.SwitchProfile(ProfileQualityHigh)
+	tel.SwitchProfile(ProfileQualityHigh, nil)
 
 	// Should not change profile when not established
 	if tel.CurrentProfile() != DefaultProfile {
@@ -837,7 +837,7 @@ func TestSwitchProfile_NotEstablished(t *testing.T) {
 }
 
 func TestDialToneActive(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 
 	if tel.DialToneActive() {
 		t.Error("DialToneActive should default to false")

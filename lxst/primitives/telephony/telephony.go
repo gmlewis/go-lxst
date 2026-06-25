@@ -179,19 +179,20 @@ func NextProfile(profile byte) byte {
 	return AvailableProfiles[(idx+1)%len(AvailableProfiles)]
 }
 
-// Signalling status codes
+// Signalling status codes. These are int (not byte) because
+// PREFERRED_PROFILE + profile can exceed 255 (e.g. 0xFF + 0x80 = 0x17F).
 const (
-	SignallingBusy             byte = 0x00
-	SignallingRejected         byte = 0x01
-	SignallingCalling          byte = 0x02
-	SignallingAvailable        byte = 0x03
-	SignallingRinging          byte = 0x04
-	SignallingConnecting       byte = 0x05
-	SignallingEstablished      byte = 0x06
-	SignallingPreferredProfile byte = 0xFF
+	SignallingBusy             int = 0x00
+	SignallingRejected         int = 0x01
+	SignallingCalling          int = 0x02
+	SignallingAvailable        int = 0x03
+	SignallingRinging          int = 0x04
+	SignallingConnecting       int = 0x05
+	SignallingEstablished      int = 0x06
+	SignallingPreferredProfile int = 0xFF
 )
 
-var AutoStatusCodes = []byte{
+var AutoStatusCodes = []int{
 	SignallingCalling,
 	SignallingAvailable,
 	SignallingRinging,
@@ -199,7 +200,7 @@ var AutoStatusCodes = []byte{
 	SignallingEstablished,
 }
 
-func StatusName(status byte) string {
+func StatusName(status int) string {
 	switch status {
 	case SignallingBusy:
 		return "Busy"
@@ -275,7 +276,7 @@ func (s TelephoneState) String() string {
 }
 
 // StateFromSignalling converts a Signalling status code to a TelephoneState.
-func StateFromSignalling(status byte) TelephoneState {
+func StateFromSignalling(status int) TelephoneState {
 	switch status {
 	case SignallingBusy:
 		return StateBusy
@@ -304,7 +305,7 @@ type Telephone struct {
 	ringTime       int
 	waitTime       int
 	connectTime    int
-	autoAnswer     bool
+	autoAnswer     time.Duration
 	allowed        byte
 	receiveGain    float64
 	transmitGain   float64
@@ -362,9 +363,14 @@ type Telephone struct {
 
 	// Dialling state
 	dialToneActive bool
+
+	// Auto-answer callback set by the endpoint, called after the
+	// auto-answer delay expires. Matching Python's __caller_identified
+	// which spawns a thread to call self.answer(identity).
+	autoAnswerFunc func()
 }
 
-func NewTelephone(ringTime, waitTime int, autoAnswer bool, allowed byte, receiveGain, transmitGain float64) *Telephone {
+func NewTelephone(ringTime, waitTime int, autoAnswer time.Duration, allowed byte, receiveGain, transmitGain float64) *Telephone {
 	return &Telephone{
 		ringTime:             ringTime,
 		waitTime:             waitTime,
@@ -396,16 +402,26 @@ func (tel *Telephone) SetState(state TelephoneState) {
 	tel.state = state
 }
 
-func (tel *Telephone) AutoAnswer() bool {
+func (tel *Telephone) AutoAnswer() time.Duration {
 	tel.mu.Lock()
 	defer tel.mu.Unlock()
 	return tel.autoAnswer
 }
 
-func (tel *Telephone) SetAutoAnswer(auto bool) {
+func (tel *Telephone) SetAutoAnswer(auto time.Duration) {
 	tel.mu.Lock()
 	defer tel.mu.Unlock()
 	tel.autoAnswer = auto
+}
+
+// SetAutoAnswerFunc sets the callback invoked when the auto-answer
+// delay expires after a caller is identified. The endpoint sets this
+// to its Answer method so the auto-answer can open pipelines and
+// signal ESTABLISHED, matching Python's __caller_identified flow.
+func (tel *Telephone) SetAutoAnswerFunc(fn func()) {
+	tel.mu.Lock()
+	defer tel.mu.Unlock()
+	tel.autoAnswerFunc = fn
 }
 
 func (tel *Telephone) CurrentProfile() byte {
@@ -553,7 +569,7 @@ func (tel *Telephone) Hangup() {
 // HangupWithReason terminates the call with a specific reason code.
 // It fires the busy callback for BUSY, rejected callback for REJECTED,
 // or the ended callback for no specific reason.
-func (tel *Telephone) HangupWithReason(reason byte) {
+func (tel *Telephone) HangupWithReason(reason int) {
 	tel.mu.Lock()
 	if tel.state == StateIdle {
 		tel.mu.Unlock()
@@ -719,7 +735,7 @@ func (tel *Telephone) Call(profile byte) {
 
 // Signal sends a signalling code and updates the call state for
 // auto status codes (CALLING, AVAILABLE, RINGING, CONNECTING, ESTABLISHED).
-func (tel *Telephone) Signal(signal byte, sendFunc func(data []byte) error, immediate bool) {
+func (tel *Telephone) Signal(signal int, sendFunc func(data []byte) error, immediate bool) {
 	if isAutoStatusCode(signal) {
 		tel.mu.Lock()
 		tel.state = StateFromSignalling(signal)
@@ -736,7 +752,7 @@ func (tel *Telephone) Signal(signal byte, sendFunc func(data []byte) error, imme
 	}
 }
 
-func isAutoStatusCode(code byte) bool {
+func isAutoStatusCode(code int) bool {
 	for _, c := range AutoStatusCodes {
 		if c == code {
 			return true
@@ -746,15 +762,13 @@ func isAutoStatusCode(code byte) bool {
 }
 
 // OutgoingLinkEstablished handles the callback when an outgoing RNS
-// link is established. It transitions the call from Calling or Idle
-// to Ringing state, matching the Python flow where the caller enters
-// the ringing/dialling state after the link is set up.
-func (tel *Telephone) OutgoingLinkEstablished(signalFunc func(byte) error) {
-	tel.mu.Lock()
-	if tel.state == StateIdle || tel.state == StateCalling {
-		tel.state = StateRinging
-	}
-	tel.mu.Unlock()
+// link is established. Matching Python's __outgoing_link_established,
+// it does NOT change the call status — it only ensures the packet
+// callback is wired up (handled by the endpoint). The call state
+// transitions are driven entirely by signalling messages.
+func (tel *Telephone) OutgoingLinkEstablished(signalFunc func(int) error) {
+	// Python __outgoing_link_established does not change call_status.
+	// State transitions are driven by signalling_received only.
 }
 
 // LinkClosed handles the callback when the RNS link is closed by the
@@ -1563,7 +1577,9 @@ func (tel *Telephone) SetRejectedCallback(fn func()) {
 // matching the Python signalling_received method. It handles state transitions
 // for BUSY, REJECTED, AVAILABLE, RINGING, CONNECTING, ESTABLISHED, and
 // PREFERRED_PROFILE signals, triggering pipeline operations and callbacks.
-func (tel *Telephone) SignallingReceived(signals []byte) {
+// The signalFunc is used to send PREFERRED_PROFILE back to the remote when
+// RINGING is received (matching Python line 708).
+func (tel *Telephone) SignallingReceived(signals []int, signalFunc func(int) error) {
 	for _, signal := range signals {
 		switch {
 		case signal == SignallingBusy:
@@ -1596,19 +1612,21 @@ func (tel *Telephone) SignallingReceived(signals []byte) {
 			tel.mu.Lock()
 			tel.state = StateIdle
 			tel.mu.Unlock()
-			// In the full implementation, this would call
-			// source.identify(tel.identity) on the RNS link
 
 		case signal == SignallingRinging:
 			tel.mu.Lock()
 			tel.state = StateRinging
 			isOutgoing := !tel.incoming
+			profile := tel.currentProfile
 			cb := tel.ringingCallback
 			tel.mu.Unlock()
 
 			tel.prepareDiallingPipelinesLocked()
 			if isOutgoing {
 				tel.ActivateDialTone()
+				if signalFunc != nil {
+					_ = signalFunc(SignallingPreferredProfile + int(profile))
+				}
 			}
 			if cb != nil {
 				cb()
@@ -1645,13 +1663,13 @@ func (tel *Telephone) SignallingReceived(signals []byte) {
 			}
 
 		case signal >= SignallingPreferredProfile:
-			profile := signal - SignallingPreferredProfile
+			profile := byte(signal - SignallingPreferredProfile)
 			tel.mu.Lock()
 			isEstablished := tel.state == StateEstablished
 			tel.mu.Unlock()
 
 			if isEstablished {
-				tel.SwitchProfile(profile)
+				tel.SwitchProfile(profile, signalFunc)
 			} else {
 				tel.pipelineLock.Lock()
 				tel.selectCallProfile(profile)
@@ -1663,8 +1681,10 @@ func (tel *Telephone) SignallingReceived(signals []byte) {
 
 // SwitchProfile switches the audio profile during an active call,
 // matching the Python switch_profile method. It reconfigures the
-// transmit pipeline with the new codec and frame time.
-func (tel *Telephone) SwitchProfile(profile byte) {
+// transmit pipeline with the new codec and frame time. If signalFunc
+// is non-nil, it sends PREFERRED_PROFILE+profile to the remote peer
+// (matching Python line 490).
+func (tel *Telephone) SwitchProfile(profile byte, signalFunc func(int) error) {
 	tel.mu.Lock()
 	if tel.state != StateEstablished {
 		tel.mu.Unlock()
@@ -1676,6 +1696,10 @@ func (tel *Telephone) SwitchProfile(profile byte) {
 	}
 	tel.currentProfile = profile
 	tel.mu.Unlock()
+
+	if signalFunc != nil {
+		_ = signalFunc(SignallingPreferredProfile + int(profile))
+	}
 
 	tel.pipelineLock.Lock()
 	tel.selectCallCodecs(profile)
@@ -1773,7 +1797,7 @@ func (tel *Telephone) IsCallerAllowed(identityHash string) bool {
 // If the line is busy (active call or externally busy), it signals BUSY
 // and calls teardownFunc. Otherwise it marks the call as incoming and
 // signals AVAILABLE to the remote peer.
-func (tel *Telephone) IncomingLinkEstablished(signalFunc func(byte) error, teardownFunc func()) {
+func (tel *Telephone) IncomingLinkEstablished(signalFunc func(int) error, teardownFunc func()) {
 	tel.mu.Lock()
 	if tel.state != StateIdle || tel.externalBusy {
 		tel.mu.Unlock()
@@ -1796,7 +1820,7 @@ func (tel *Telephone) IncomingLinkEstablished(signalFunc func(byte) error, teard
 // Otherwise it transitions to Ringing state, resets dialling pipelines,
 // signals RINGING, and activates the ringtone. It returns true if the
 // caller is accepted (ringing), or false if rejected (busy/not allowed).
-func (tel *Telephone) CallerIdentified(identityHash string, signalFunc func(byte) error, teardownFunc func()) bool {
+func (tel *Telephone) CallerIdentified(identityHash string, signalFunc func(int) error, teardownFunc func()) bool {
 	tel.mu.Lock()
 	if tel.state != StateIdle || tel.externalBusy {
 		tel.mu.Unlock()
@@ -1819,6 +1843,8 @@ func (tel *Telephone) CallerIdentified(identityHash string, signalFunc func(byte
 	tel.state = StateRinging
 	tel.incoming = true
 	cb := tel.ringingCallback
+	autoAnswerDelay := tel.autoAnswer
+	autoAnswerFunc := tel.autoAnswerFunc
 	tel.mu.Unlock()
 
 	tel.ResetDiallingPipelines()
@@ -1827,6 +1853,13 @@ func (tel *Telephone) CallerIdentified(identityHash string, signalFunc func(byte
 
 	if cb != nil {
 		cb()
+	}
+
+	if autoAnswerDelay > 0 && autoAnswerFunc != nil {
+		go func() {
+			time.Sleep(autoAnswerDelay)
+			autoAnswerFunc()
+		}()
 	}
 
 	return true

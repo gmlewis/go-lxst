@@ -7,6 +7,7 @@ package telephony
 
 import (
 	"testing"
+	"time"
 
 	"github.com/gmlewis/go-lxst/lxst/codecs/codec2"
 	"github.com/gmlewis/go-lxst/lxst/codecs/opus"
@@ -185,7 +186,7 @@ func TestStatusName(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		status byte
+		status int
 		want   string
 	}{
 		{SignallingBusy, "Busy"},
@@ -224,7 +225,7 @@ func TestAutoStatusCodes(t *testing.T) {
 func TestTelephone_New(t *testing.T) {
 	t.Parallel()
 
-	tel := NewTelephone(60, 70, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(60, 70, 0, AllowAll, 0.0, 0.0)
 	if tel == nil {
 		t.Fatal("NewTelephone returned nil")
 	}
@@ -239,7 +240,7 @@ func TestTelephone_New(t *testing.T) {
 func TestTelephone_Call(t *testing.T) {
 	t.Parallel()
 
-	tel := NewTelephone(60, 70, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(60, 70, 0, AllowAll, 0.0, 0.0)
 	tel.Call(ProfileQualityMedium)
 
 	if !tel.IsCalling() {
@@ -253,7 +254,7 @@ func TestTelephone_Call(t *testing.T) {
 func TestTelephone_CallFromNonIdle(t *testing.T) {
 	t.Parallel()
 
-	tel := NewTelephone(60, 70, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(60, 70, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateEstablished)
 	tel.Call(ProfileQualityMedium)
 
@@ -265,7 +266,7 @@ func TestTelephone_CallFromNonIdle(t *testing.T) {
 func TestTelephone_Answer(t *testing.T) {
 	t.Parallel()
 
-	tel := NewTelephone(60, 70, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(60, 70, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateRinging)
 	ok := tel.Answer()
 
@@ -280,7 +281,7 @@ func TestTelephone_Answer(t *testing.T) {
 func TestTelephone_AnswerFromNonRinging(t *testing.T) {
 	t.Parallel()
 
-	tel := NewTelephone(60, 70, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(60, 70, 0, AllowAll, 0.0, 0.0)
 	ok := tel.Answer()
 
 	if ok {
@@ -294,7 +295,7 @@ func TestTelephone_AnswerFromNonRinging(t *testing.T) {
 func TestTelephone_Hangup(t *testing.T) {
 	t.Parallel()
 
-	tel := NewTelephone(60, 70, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(60, 70, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateEstablished)
 	tel.Hangup()
 
@@ -306,7 +307,7 @@ func TestTelephone_Hangup(t *testing.T) {
 func TestTelephone_MuteReceive(t *testing.T) {
 	t.Parallel()
 
-	tel := NewTelephone(60, 70, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(60, 70, 0, AllowAll, 0.0, 0.0)
 	tel.MuteReceive(true)
 	if !tel.ReceiveMuted() {
 		t.Error("Receive should be muted")
@@ -320,7 +321,7 @@ func TestTelephone_MuteReceive(t *testing.T) {
 func TestTelephone_MuteTransmit(t *testing.T) {
 	t.Parallel()
 
-	tel := NewTelephone(60, 70, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(60, 70, 0, AllowAll, 0.0, 0.0)
 	tel.MuteTransmit(true)
 	if !tel.TransmitMuted() {
 		t.Error("Transmit should be muted")
@@ -334,7 +335,7 @@ func TestTelephone_MuteTransmit(t *testing.T) {
 func TestTelephone_Gain(t *testing.T) {
 	t.Parallel()
 
-	tel := NewTelephone(60, 70, true, AllowAll, 5.0, 3.0)
+	tel := NewTelephone(60, 70, 0, AllowAll, 5.0, 3.0)
 	if tel.ReceiveGain() != 5.0 {
 		t.Errorf("Expected receive gain 5.0, got %f", tel.ReceiveGain())
 	}
@@ -351,7 +352,7 @@ func TestTelephone_Gain(t *testing.T) {
 func TestTelephone_Profile(t *testing.T) {
 	t.Parallel()
 
-	tel := NewTelephone(60, 70, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(60, 70, 0, AllowAll, 0.0, 0.0)
 	if tel.CurrentProfile() != DefaultProfile {
 		t.Errorf("Expected default profile 0x%02x, got 0x%02x", DefaultProfile, tel.CurrentProfile())
 	}
@@ -364,20 +365,20 @@ func TestTelephone_Profile(t *testing.T) {
 func TestTelephone_AutoAnswer(t *testing.T) {
 	t.Parallel()
 
-	tel := NewTelephone(60, 70, true, AllowAll, 0.0, 0.0)
-	if !tel.AutoAnswer() {
-		t.Error("AutoAnswer should default to true")
+	tel := NewTelephone(60, 70, 5*time.Second, AllowAll, 0.0, 0.0)
+	if tel.AutoAnswer() != 5*time.Second {
+		t.Error("AutoAnswer should default to 5s")
 	}
-	tel.SetAutoAnswer(false)
-	if tel.AutoAnswer() {
-		t.Error("AutoAnswer should be false after SetAutoAnswer(false)")
+	tel.SetAutoAnswer(0)
+	if tel.AutoAnswer() != 0 {
+		t.Error("AutoAnswer should be 0 after SetAutoAnswer(0)")
 	}
 }
 
 func TestTelephone_IsEstablished(t *testing.T) {
 	t.Parallel()
 
-	tel := NewTelephone(60, 70, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(60, 70, 0, AllowAll, 0.0, 0.0)
 	if tel.IsEstablished() {
 		t.Error("Should not be established initially")
 	}
@@ -391,7 +392,7 @@ func TestStateFromSignalling(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		status byte
+		status int
 		want   TelephoneState
 	}{
 		{SignallingBusy, StateBusy},
@@ -415,7 +416,7 @@ func TestStateFromSignalling(t *testing.T) {
 func TestTelephone_Devices(t *testing.T) {
 	t.Parallel()
 
-	tel := NewTelephone(60, 70, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(60, 70, 0, AllowAll, 0.0, 0.0)
 	tel.SetSpeakerDevice("speaker")
 	tel.SetMicDevice("mic")
 	tel.SetRingtonePath("/path/to/ringtone.opus")
@@ -434,7 +435,7 @@ func TestTelephone_Devices(t *testing.T) {
 func TestTelephone_LowLatency(t *testing.T) {
 	t.Parallel()
 
-	tel := NewTelephone(60, 70, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(60, 70, 0, AllowAll, 0.0, 0.0)
 	if tel.LowLatency() {
 		t.Error("LowLatency should default to false")
 	}
@@ -447,7 +448,7 @@ func TestTelephone_LowLatency(t *testing.T) {
 func TestTelephone_UseAGC(t *testing.T) {
 	t.Parallel()
 
-	tel := NewTelephone(60, 70, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(60, 70, 0, AllowAll, 0.0, 0.0)
 	if !tel.UseAGC() {
 		t.Error("AGC should default to true")
 	}

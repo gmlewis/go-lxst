@@ -12,7 +12,7 @@ import (
 )
 
 func TestAnswer_RingingState(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateRinging)
 	tel.SetIncoming(true)
 
@@ -33,7 +33,7 @@ func TestAnswer_RingingState(t *testing.T) {
 }
 
 func TestAnswer_NonRingingState(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 
 	if ok := tel.Answer(); ok {
 		t.Error("Answer should return false when not in Ringing state")
@@ -44,7 +44,7 @@ func TestAnswer_NonRingingState(t *testing.T) {
 }
 
 func TestAnswer_CallingState(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateCalling)
 
 	if ok := tel.Answer(); ok {
@@ -53,7 +53,7 @@ func TestAnswer_CallingState(t *testing.T) {
 }
 
 func TestAnswer_EstablishedState(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateEstablished)
 
 	if ok := tel.Answer(); ok {
@@ -62,7 +62,7 @@ func TestAnswer_EstablishedState(t *testing.T) {
 }
 
 func TestHangup_FromEstablished(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateEstablished)
 	tel.SetProfile(ProfileQualityMedium)
 
@@ -82,7 +82,7 @@ func TestHangup_FromEstablished(t *testing.T) {
 }
 
 func TestHangup_FromRinging(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateRinging)
 	tel.SetIncoming(true)
 
@@ -102,7 +102,7 @@ func TestHangup_FromRinging(t *testing.T) {
 }
 
 func TestHangup_WithBusyReason(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateCalling)
 
 	var busyCalled atomic.Int32
@@ -121,7 +121,7 @@ func TestHangup_WithBusyReason(t *testing.T) {
 }
 
 func TestHangup_WithRejectedReason(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateRinging)
 	tel.SetIncoming(true)
 
@@ -141,7 +141,7 @@ func TestHangup_WithRejectedReason(t *testing.T) {
 }
 
 func TestHangup_WithNoReason(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateEstablished)
 
 	var endedCalled atomic.Int32
@@ -160,7 +160,7 @@ func TestHangup_WithNoReason(t *testing.T) {
 }
 
 func TestHangup_IdleState(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 
 	// Hangup from idle should not panic
 	tel.Hangup()
@@ -172,7 +172,7 @@ func TestHangup_IdleState(t *testing.T) {
 
 func TestSignal_UpdatesStateForAutoStatusCodes(t *testing.T) {
 	tests := []struct {
-		signal byte
+		signal int
 		want   TelephoneState
 	}{
 		{SignallingCalling, StateCalling},
@@ -183,7 +183,7 @@ func TestSignal_UpdatesStateForAutoStatusCodes(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+		tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 		tel.Signal(tt.signal, nil, true)
 		if tel.State() != tt.want {
 			t.Errorf("Signal(0x%02x): expected state %v, got %v", tt.signal, tt.want, tel.State())
@@ -192,7 +192,7 @@ func TestSignal_UpdatesStateForAutoStatusCodes(t *testing.T) {
 }
 
 func TestSignal_DoesNotUpdateStateForNonAutoCodes(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.Signal(SignallingBusy, nil, true)
 	// BUSY is not an auto status code, so state should stay Idle
 	if tel.State() != StateIdle {
@@ -201,7 +201,7 @@ func TestSignal_DoesNotUpdateStateForNonAutoCodes(t *testing.T) {
 }
 
 func TestSetConnectTimeout(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 
 	tel.SetConnectTimeout(10)
 	if tel.ConnectTimeout() != 10 {
@@ -210,7 +210,7 @@ func TestSetConnectTimeout(t *testing.T) {
 }
 
 func TestSetAnnounceInterval(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 
 	tel.SetAnnounceInterval(3600)
 	if tel.AnnounceInterval() != 3600 {
@@ -219,7 +219,7 @@ func TestSetAnnounceInterval(t *testing.T) {
 }
 
 func TestSetAnnounceInterval_Minimum(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 
 	// Setting below minimum should clamp to minimum
 	tel.SetAnnounceInterval(100)
@@ -229,7 +229,7 @@ func TestSetAnnounceInterval_Minimum(t *testing.T) {
 }
 
 func TestSetAllowed_AllowAll(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowNone, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowNone, 0.0, 0.0)
 	tel.SetAllowed(AllowAll)
 	if tel.IsCallerAllowed("any_hash") != true {
 		t.Error("AllowAll should allow any caller")
@@ -237,7 +237,7 @@ func TestSetAllowed_AllowAll(t *testing.T) {
 }
 
 func TestSetAllowed_AllowNone(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetAllowed(AllowNone)
 	if tel.IsCallerAllowed("any_hash") != false {
 		t.Error("AllowNone should reject all callers")
@@ -245,24 +245,26 @@ func TestSetAllowed_AllowNone(t *testing.T) {
 }
 
 func TestOutgoingLinkEstablished(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 
-	_ = func(code byte) error { return nil }
+	_ = func(code int) error { return nil }
 
 	tel.OutgoingLinkEstablished(nil)
 
-	// Outgoing link established should transition to Ringing state
-	// and prepare the signalling handler
-	if tel.State() != StateRinging {
-		t.Errorf("Expected Ringing state after OutgoingLinkEstablished, got %v", tel.State())
+	// OutgoingLinkEstablished should NOT change state — state
+	// transitions are driven by signalling messages only, matching
+	// Python's __outgoing_link_established which does not change
+	// call_status.
+	if tel.State() != StateIdle {
+		t.Errorf("Expected Idle state (unchanged) after OutgoingLinkEstablished, got %v", tel.State())
 	}
 }
 
 func TestOutgoingLinkEstablished_NotIdle(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateEstablished)
 
-	signalFunc := func(code byte) error { return nil }
+	signalFunc := func(code int) error { return nil }
 
 	tel.OutgoingLinkEstablished(signalFunc)
 
@@ -273,7 +275,7 @@ func TestOutgoingLinkEstablished_NotIdle(t *testing.T) {
 }
 
 func TestOutgoingLinkEstablished_FromCalling(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.Call(DefaultProfile)
 
 	if tel.State() != StateCalling {
@@ -282,13 +284,16 @@ func TestOutgoingLinkEstablished_FromCalling(t *testing.T) {
 
 	tel.OutgoingLinkEstablished(nil)
 
-	if tel.State() != StateRinging {
-		t.Errorf("Expected Ringing state after OutgoingLinkEstablished from Calling, got %v", tel.State())
+	// OutgoingLinkEstablished should NOT change state — matching
+	// Python's __outgoing_link_established which does not change
+	// call_status. State stays Calling until signalling arrives.
+	if tel.State() != StateCalling {
+		t.Errorf("Expected Calling state (unchanged) after OutgoingLinkEstablished, got %v", tel.State())
 	}
 }
 
 func TestLinkClosed(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateEstablished)
 
 	var endedCalled atomic.Int32
@@ -307,7 +312,7 @@ func TestLinkClosed(t *testing.T) {
 }
 
 func TestPacketizerFailure(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateEstablished)
 
 	var endedCalled atomic.Int32
@@ -332,7 +337,7 @@ func TestStartRingTimeout_NotRinging(t *testing.T) {
 	var sleepCalls []time.Duration
 	sleep = func(d time.Duration) { sleepCalls = append(sleepCalls, d) }
 
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	// Not in Ringing state, so goroutine should exit immediately
 	tel.SetState(StateCalling)
 
@@ -353,7 +358,7 @@ func TestStartEstablishmentTimeout_AlreadyRinging(t *testing.T) {
 
 	sleep = func(d time.Duration) {}
 
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	// Already in Ringing state, so establishment timeout should exit
 	tel.SetState(StateRinging)
 

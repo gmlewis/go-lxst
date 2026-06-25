@@ -192,6 +192,13 @@ func (p *Packetizer) HandleEncodedFrame(data []byte, fromSource sources.Source) 
 		return nil
 	}
 
+	// Stop sending after a transmit failure to prevent repeated
+	// send-on-closed-link errors. The failure callback will trigger
+	// call termination, which will stop the pipeline.
+	if p.transmitFailure {
+		return nil
+	}
+
 	var header byte
 	if p.codec != nil {
 		var err error

@@ -13,7 +13,7 @@ import (
 func TestSetBusyAndBusyProperty(t *testing.T) {
 	t.Parallel()
 
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 
 	// Initially not busy
 	if tel.Busy() {
@@ -36,7 +36,7 @@ func TestSetBusyAndBusyProperty(t *testing.T) {
 func TestBusyReflectsCallState(t *testing.T) {
 	t.Parallel()
 
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 
 	// When state is not Idle, Busy() should return true
 	tel.Call(DefaultProfile)
@@ -58,7 +58,7 @@ func TestBusyReflectsCallState(t *testing.T) {
 func TestActiveProfileReturnsZeroWhenNoCall(t *testing.T) {
 	t.Parallel()
 
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 
 	// ActiveProfile should return 0 (no profile) when no active call
 	if tel.ActiveProfile() != 0 {
@@ -69,7 +69,7 @@ func TestActiveProfileReturnsZeroWhenNoCall(t *testing.T) {
 func TestActiveProfileReturnsProfileDuringCall(t *testing.T) {
 	t.Parallel()
 
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 
 	// Set up a call
 	tel.Call(ProfileQualityHigh)
@@ -83,7 +83,7 @@ func TestActiveProfileReturnsProfileDuringCall(t *testing.T) {
 func TestBusyConcurrentAccess(t *testing.T) {
 	t.Parallel()
 
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 
 	var wg sync.WaitGroup
 	for i := 0; i < 100; i++ {

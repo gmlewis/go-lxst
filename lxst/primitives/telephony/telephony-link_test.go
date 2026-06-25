@@ -8,14 +8,15 @@ package telephony
 import (
 	"sync/atomic"
 	"testing"
+	"time"
 )
 
 func TestIncomingLinkEstablished_IdleNotBusy(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 
-	var signalled byte
+	var signalled int
 	var signalledCount int
-	signalFunc := func(code byte) error {
+	signalFunc := func(code int) error {
 		signalled = code
 		signalledCount++
 		return nil
@@ -40,11 +41,11 @@ func TestIncomingLinkEstablished_IdleNotBusy(t *testing.T) {
 }
 
 func TestIncomingLinkEstablished_BusyDueToState(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateCalling)
 
-	var signalled byte
-	signalFunc := func(code byte) error {
+	var signalled int
+	signalFunc := func(code int) error {
 		signalled = code
 		return nil
 	}
@@ -62,11 +63,11 @@ func TestIncomingLinkEstablished_BusyDueToState(t *testing.T) {
 }
 
 func TestIncomingLinkEstablished_BusyDueToExternalBusy(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetBusy(true)
 
-	var signalled byte
-	signalFunc := func(code byte) error {
+	var signalled int
+	signalFunc := func(code int) error {
 		signalled = code
 		return nil
 	}
@@ -84,10 +85,10 @@ func TestIncomingLinkEstablished_BusyDueToExternalBusy(t *testing.T) {
 }
 
 func TestIncomingLinkEstablished_SignalsAvailableWhenNotBusy(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 
-	var signalled byte
-	signalFunc := func(code byte) error {
+	var signalled int
+	signalFunc := func(code int) error {
 		signalled = code
 		return nil
 	}
@@ -100,11 +101,11 @@ func TestIncomingLinkEstablished_SignalsAvailableWhenNotBusy(t *testing.T) {
 }
 
 func TestCallerIdentified_Allowed(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 
-	var signalled byte
+	var signalled int
 	var signalledCount int
-	signalFunc := func(code byte) error {
+	signalFunc := func(code int) error {
 		signalled = code
 		signalledCount++
 		return nil
@@ -141,11 +142,11 @@ func TestCallerIdentified_Allowed(t *testing.T) {
 }
 
 func TestCallerIdentified_BlockedList(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetBlockedList([]string{"abcdef1234567890"})
 
-	var signalled byte
-	signalFunc := func(code byte) error {
+	var signalled int
+	signalFunc := func(code int) error {
 		signalled = code
 		return nil
 	}
@@ -164,10 +165,10 @@ func TestCallerIdentified_BlockedList(t *testing.T) {
 }
 
 func TestCallerIdentified_AllowNone(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowNone, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowNone, 0.0, 0.0)
 
-	var signalled byte
-	signalFunc := func(code byte) error {
+	var signalled int
+	signalFunc := func(code int) error {
 		signalled = code
 		return nil
 	}
@@ -186,11 +187,11 @@ func TestCallerIdentified_AllowNone(t *testing.T) {
 }
 
 func TestCallerIdentified_AllowList(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowNone, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowNone, 0.0, 0.0)
 	tel.SetAllowList([]string{"allowed_hash_1", "allowed_hash_2"})
 
-	var signalled byte
-	signalFunc := func(code byte) error {
+	var signalled int
+	signalFunc := func(code int) error {
 		signalled = code
 		return nil
 	}
@@ -209,11 +210,11 @@ func TestCallerIdentified_AllowList(t *testing.T) {
 }
 
 func TestCallerIdentified_NotInAllowList(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowNone, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowNone, 0.0, 0.0)
 	tel.SetAllowList([]string{"allowed_hash_1"})
 
-	var signalled byte
-	signalFunc := func(code byte) error {
+	var signalled int
+	signalFunc := func(code int) error {
 		signalled = code
 		return nil
 	}
@@ -232,11 +233,11 @@ func TestCallerIdentified_NotInAllowList(t *testing.T) {
 }
 
 func TestCallerIdentified_BusyDueToState(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetState(StateCalling)
 
-	var signalled byte
-	signalFunc := func(code byte) error {
+	var signalled int
+	signalFunc := func(code int) error {
 		signalled = code
 		return nil
 	}
@@ -255,11 +256,11 @@ func TestCallerIdentified_BusyDueToState(t *testing.T) {
 }
 
 func TestCallerIdentified_BusyDueToExternalBusy(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetBusy(true)
 
-	var signalled byte
-	signalFunc := func(code byte) error {
+	var signalled int
+	signalFunc := func(code int) error {
 		signalled = code
 		return nil
 	}
@@ -278,10 +279,10 @@ func TestCallerIdentified_BusyDueToExternalBusy(t *testing.T) {
 }
 
 func TestCallerIdentified_ResetsDiallingPipelines(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetProfile(ProfileQualityMedium)
 
-	signalFunc := func(code byte) error { return nil }
+	signalFunc := func(code int) error { return nil }
 
 	if ok := tel.CallerIdentified("somehash", signalFunc, nil); !ok {
 		t.Fatal("CallerIdentified should return true for allowed caller")
@@ -298,23 +299,21 @@ func TestCallerIdentified_ResetsDiallingPipelines(t *testing.T) {
 }
 
 func TestCallerIdentified_AutoAnswer(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, true, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 5*time.Second, AllowAll, 0.0, 0.0)
 
-	signalFunc := func(code byte) error { return nil }
+	signalFunc := func(code int) error { return nil }
 
 	if ok := tel.CallerIdentified("somehash", signalFunc, nil); !ok {
 		t.Fatal("CallerIdentified should return true for allowed caller")
 	}
 
-	// When autoAnswer is true, CallerIdentified should return true
-	// indicating the caller should schedule auto-answer
-	if !tel.AutoAnswer() {
-		t.Error("AutoAnswer should be true")
+	if tel.AutoAnswer() != 5*time.Second {
+		t.Error("AutoAnswer should be 5s")
 	}
 }
 
 func TestIsCallerAllowed_AllowAll(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 
 	if !tel.IsCallerAllowed("any_hash") {
 		t.Error("AllowAll should allow any caller")
@@ -322,7 +321,7 @@ func TestIsCallerAllowed_AllowAll(t *testing.T) {
 }
 
 func TestIsCallerAllowed_AllowNone(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowNone, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowNone, 0.0, 0.0)
 
 	if tel.IsCallerAllowed("any_hash") {
 		t.Error("AllowNone should reject all callers")
@@ -330,7 +329,7 @@ func TestIsCallerAllowed_AllowNone(t *testing.T) {
 }
 
 func TestIsCallerAllowed_BlockedList(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 	tel.SetBlockedList([]string{"blocked_hash"})
 
 	if tel.IsCallerAllowed("blocked_hash") {
@@ -342,7 +341,7 @@ func TestIsCallerAllowed_BlockedList(t *testing.T) {
 }
 
 func TestIsCallerAllowed_AllowList(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowNone, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowNone, 0.0, 0.0)
 	tel.SetAllowList([]string{"allowed_hash"})
 
 	if !tel.IsCallerAllowed("allowed_hash") {
@@ -354,7 +353,7 @@ func TestIsCallerAllowed_AllowList(t *testing.T) {
 }
 
 func TestIsCallerAllowed_BlockListOverridesAllowList(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowNone, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowNone, 0.0, 0.0)
 	tel.SetAllowList([]string{"hash1"})
 	tel.SetBlockedList([]string{"hash1"})
 
@@ -365,7 +364,7 @@ func TestIsCallerAllowed_BlockListOverridesAllowList(t *testing.T) {
 }
 
 func TestSetBlockedList(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowAll, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 
 	list := []string{"hash1", "hash2"}
 	tel.SetBlockedList(list)
@@ -377,7 +376,7 @@ func TestSetBlockedList(t *testing.T) {
 }
 
 func TestSetAllowList(t *testing.T) {
-	tel := NewTelephone(RingTime, WaitTime, false, AllowNone, 0.0, 0.0)
+	tel := NewTelephone(RingTime, WaitTime, 0, AllowNone, 0.0, 0.0)
 
 	list := []string{"hash1", "hash2", "hash3"}
 	tel.SetAllowList(list)

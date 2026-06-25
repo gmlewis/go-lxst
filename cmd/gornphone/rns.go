@@ -47,7 +47,7 @@ type TelephoneEndpoint struct {
 
 	// Test hooks
 	testIdentifyFunc       func(link *rns.Link, identity *rns.Identity) error
-	testSendSignallingFunc func(link *rns.Link, signal byte)
+	testSendSignallingFunc func(link *rns.Link, signal int)
 }
 
 // NewTelephoneEndpoint creates a new TelephoneEndpoint bound to the given identity and transport.
@@ -265,7 +265,7 @@ func (tep *TelephoneEndpoint) testSetIdentifyFunc(fn func(*rns.Link, *rns.Identi
 	tep.testIdentifyFunc = fn
 }
 
-func (tep *TelephoneEndpoint) testSetSendSignallingFunc(fn func(*rns.Link, byte)) {
+func (tep *TelephoneEndpoint) testSetSendSignallingFunc(fn func(*rns.Link, int)) {
 	tep.mu.Lock()
 	defer tep.mu.Unlock()
 	tep.testSendSignallingFunc = fn
@@ -320,7 +320,7 @@ func (tep *TelephoneEndpoint) incomingLinkEstablished(link *rns.Link) {
 	if tel != nil {
 		tel.SetIncoming(true)
 		tep.logf("incomingLinkEstablished: set incoming=true, state=%v, busy=%v", tel.State(), tel.Busy())
-		signalFunc := func(signal byte) error {
+		signalFunc := func(signal int) error {
 			tep.sendSignalling(link, signal)
 			return nil
 		}
@@ -378,7 +378,7 @@ func (tep *TelephoneEndpoint) callerIdentified(hashHex string, link *rns.Link) {
 	tep.logf("callerIdentified: hash=%v, tel=%v", formatHash(hashHex), tel != nil)
 
 	if tel != nil {
-		signalFunc := func(signal byte) error {
+		signalFunc := func(signal int) error {
 			tep.sendSignalling(link, signal)
 			return nil
 		}
@@ -420,7 +420,7 @@ func (tep *TelephoneEndpoint) outgoingLinkEstablished(link *rns.Link) {
 	if tel != nil {
 		tel.SetIncoming(false)
 		tep.logf("outgoingLinkEstablished: calling OutgoingLinkEstablished, state=%v", tel.State())
-		tel.OutgoingLinkEstablished(func(signal byte) error {
+		tel.OutgoingLinkEstablished(func(signal int) error {
 			tep.sendSignalling(link, signal)
 			return nil
 		})
@@ -475,21 +475,25 @@ func (tep *TelephoneEndpoint) handleSignallingData(data []byte, link *rns.Link, 
 	tel := tep.telephone
 	tep.mu.Unlock()
 
+	signalFunc := func(signal int) error {
+		tep.sendSignalling(link, signal)
+		return nil
+	}
+
 	for _, signalVal := range signals {
-		signalByte := byte(signalVal)
 		switch {
-		case signalVal >= int(telephony.SignallingPreferredProfile):
-			profile := byte(signalVal - int(telephony.SignallingPreferredProfile))
+		case signalVal >= telephony.SignallingPreferredProfile:
+			profile := byte(signalVal - telephony.SignallingPreferredProfile)
 			tep.logf("Received preferred profile: 0x%02x", profile)
 			if tel != nil {
 				if tel.IsEstablished() {
-					tel.SwitchProfile(profile)
+					tel.SwitchProfile(profile, signalFunc)
 				} else {
 					tel.SetProfile(profile)
 				}
 			}
 
-		case signalByte == telephony.SignallingAvailable:
+		case signalVal == telephony.SignallingAvailable:
 			tep.logf("Received SignallingAvailable, identifying to remote")
 			if tep.testIdentifyFunc != nil {
 				_ = tep.testIdentifyFunc(link, identity)
@@ -500,19 +504,19 @@ func (tep *TelephoneEndpoint) handleSignallingData(data []byte, link *rns.Link, 
 			}
 			if tel != nil {
 				tep.logf("Processing SignallingAvailable: tel state=%v", tel.State())
-				tel.SignallingReceived([]byte{signalByte})
+				tel.SignallingReceived([]int{signalVal}, signalFunc)
 				tep.logf("After SignallingAvailable: tel state=%v", tel.State())
 			}
 
-		case signalByte == telephony.SignallingRinging:
+		case signalVal == telephony.SignallingRinging:
 			tep.logf("Received SignallingRinging")
 			if tel != nil {
 				tep.logf("Processing SignallingRinging: tel state=%v", tel.State())
-				tel.SignallingReceived([]byte{signalByte})
+				tel.SignallingReceived([]int{signalVal}, signalFunc)
 				tep.logf("After SignallingRinging: tel state=%v", tel.State())
 			}
 
-		case signalByte == telephony.SignallingConnecting:
+		case signalVal == telephony.SignallingConnecting:
 			tep.logf("Received SignallingConnecting: caller setting up packetizer and link source")
 			if tel != nil {
 				tep.mu.Lock()
@@ -535,15 +539,15 @@ func (tep *TelephoneEndpoint) handleSignallingData(data []byte, link *rns.Link, 
 				}
 
 				tep.logf("Processing SignallingConnecting: tel state=%v, packetizer=%v", tel.State(), tel.Packetizer() != nil)
-				tel.SignallingReceived([]byte{signalByte})
+				tel.SignallingReceived([]int{signalVal}, signalFunc)
 				tep.logf("After SignallingConnecting: tel state=%v", tel.State())
 			}
 
-		case signalByte == telephony.SignallingEstablished:
+		case signalVal == telephony.SignallingEstablished:
 			tep.logf("Received SignallingEstablished: call established, setting up link source")
 			if tel != nil {
 				tep.logf("Processing SignallingEstablished: tel state=%v", tel.State())
-				tel.SignallingReceived([]byte{signalByte})
+				tel.SignallingReceived([]int{signalVal}, signalFunc)
 				tep.logf("After SignallingEstablished: tel state=%v", tel.State())
 
 				tep.mu.Lock()
@@ -572,11 +576,11 @@ func (tep *TelephoneEndpoint) handleSignallingData(data []byte, link *rns.Link, 
 				onEstablished(remote)
 			}
 
-		case signalByte == telephony.SignallingBusy:
+		case signalVal == telephony.SignallingBusy:
 			tep.logf("Received SignallingBusy")
 			if tel != nil {
 				tep.logf("Processing SignallingBusy: tel state=%v", tel.State())
-				tel.SignallingReceived([]byte{signalByte})
+				tel.SignallingReceived([]int{signalVal}, signalFunc)
 				tep.logf("After SignallingBusy: tel state=%v", tel.State())
 			}
 			tep.mu.Lock()
@@ -590,11 +594,11 @@ func (tep *TelephoneEndpoint) handleSignallingData(data []byte, link *rns.Link, 
 				onBusy(remote)
 			}
 
-		case signalByte == telephony.SignallingRejected:
+		case signalVal == telephony.SignallingRejected:
 			tep.logf("Received SignallingRejected")
 			if tel != nil {
 				tep.logf("Processing SignallingRejected: tel state=%v", tel.State())
-				tel.SignallingReceived([]byte{signalByte})
+				tel.SignallingReceived([]int{signalVal}, signalFunc)
 				tep.logf("After SignallingRejected: tel state=%v", tel.State())
 			}
 			tep.mu.Lock()
@@ -608,7 +612,7 @@ func (tep *TelephoneEndpoint) handleSignallingData(data []byte, link *rns.Link, 
 				onRejected(remote)
 			}
 
-		case signalByte == telephony.SignallingCalling:
+		case signalVal == telephony.SignallingCalling:
 			tep.logf("Received SignallingCalling")
 
 		default:
@@ -620,13 +624,18 @@ func (tep *TelephoneEndpoint) handleSignallingData(data []byte, link *rns.Link, 
 // sendSignalling sends a signalling byte through the link as a raw
 // data packet, matching Python's signal() method. The receiver's
 // PacketCallback will receive the packet data.
-func (tep *TelephoneEndpoint) sendSignalling(link *rns.Link, signal byte) {
+func (tep *TelephoneEndpoint) sendSignalling(link *rns.Link, signal int) {
 	tep.mu.Lock()
 	testFn := tep.testSendSignallingFunc
 	tep.mu.Unlock()
 
 	if testFn != nil {
 		testFn(link, signal)
+		return
+	}
+
+	if link == nil {
+		tep.logf("sendSignalling: link is nil, cannot send signal %d", signal)
 		return
 	}
 
@@ -857,7 +866,7 @@ func (tep *TelephoneEndpoint) Answer() bool {
 
 	tep.logf("TelephoneEndpoint.Answer(): tel.Answer() succeeded, incoming=%v", tel.Incoming())
 
-	signalFunc := func(signal byte) error {
+	signalFunc := func(signal int) error {
 		tep.sendSignalling(link, signal)
 		return nil
 	}

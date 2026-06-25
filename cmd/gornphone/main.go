@@ -132,7 +132,7 @@ func main() {
 	tel := telephony.NewTelephone(
 		telephony.RingTime,
 		telephony.WaitTime,
-		true,
+		0,
 		telephony.AllowAll,
 		*gainFlag,
 		0.0,
@@ -165,7 +165,11 @@ func main() {
 
 	fmt.Printf("Audio input:  %v\n", defaultStr(tel.MicDevice(), "default"))
 	fmt.Printf("Audio output: %v\n", defaultStr(tel.SpeakerDevice(), "default"))
-	fmt.Printf("Auto-answer: %v\n", tel.AutoAnswer())
+	if tel.AutoAnswer() > 0 {
+		fmt.Printf("Auto-answer: %v\n", tel.AutoAnswer())
+	} else {
+		fmt.Println("Auto-answer: disabled")
+	}
 	fmt.Println()
 
 	identity, err := loadOrCreateIdentity(*configDir + "/identity")
@@ -295,6 +299,12 @@ func main() {
 	endpoint.SetTelephone(tel)
 	tel.SetProfile(profile)
 	phone.SetEndpoint(endpoint)
+
+	// Wire auto-answer callback so the Telephone can trigger
+	// endpoint.Answer() after the auto-answer delay expires.
+	tel.SetAutoAnswerFunc(func() {
+		endpoint.Answer()
+	})
 
 	// Wire callbacks
 	endpoint.SetOnRinging(func(remoteIdentity *rns.Identity) {

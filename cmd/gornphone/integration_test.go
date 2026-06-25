@@ -40,8 +40,8 @@ func TestIntegration_SignallingFlow(t *testing.T) {
 	_ = receiverID
 
 	// Create caller and receiver telephones
-	callerTel := telephony.NewTelephone(30, 60, false, telephony.AllowAll, 0, 0)
-	receiverTel := telephony.NewTelephone(30, 60, false, telephony.AllowAll, 0, 0)
+	callerTel := telephony.NewTelephone(30, 60, 0, telephony.AllowAll, 0, 0)
+	receiverTel := telephony.NewTelephone(30, 60, 0, telephony.AllowAll, 0, 0)
 
 	// Track state transitions via telephone callbacks
 	var (
@@ -77,13 +77,15 @@ func TestIntegration_SignallingFlow(t *testing.T) {
 	}
 
 	// Simulate outgoing link established
-	callerTel.OutgoingLinkEstablished(func(signal byte) error { return nil })
-	if callerTel.State() != telephony.StateRinging {
-		t.Errorf("caller state after OutgoingLinkEstablished = %v, want Ringing", callerTel.State())
+	callerTel.OutgoingLinkEstablished(func(signal int) error { return nil })
+	// OutgoingLinkEstablished does NOT change state — matching Python.
+	// State stays Calling until signalling messages drive transitions.
+	if callerTel.State() != telephony.StateCalling {
+		t.Errorf("caller state after OutgoingLinkEstablished = %v, want Calling (unchanged)", callerTel.State())
 	}
 
 	// Simulate responder receiving incoming link
-	receiverSignalFunc := func(signal byte) error { return nil }
+	receiverSignalFunc := func(signal int) error { return nil }
 	receiverTeardownFunc := func() {}
 
 	receiverTel.IncomingLinkEstablished(receiverSignalFunc, receiverTeardownFunc)
@@ -106,13 +108,13 @@ func TestIntegration_SignallingFlow(t *testing.T) {
 	}
 
 	// Simulate caller receiving SignallingRinging
-	callerTel.SignallingReceived([]byte{telephony.SignallingRinging})
+	callerTel.SignallingReceived([]int{telephony.SignallingRinging}, nil)
 	if callerTel.State() != telephony.StateRinging {
 		t.Errorf("caller state after SignallingRinging = %v, want Ringing", callerTel.State())
 	}
 
 	// Simulate caller receiving SignallingConnecting
-	callerTel.SignallingReceived([]byte{telephony.SignallingConnecting})
+	callerTel.SignallingReceived([]int{telephony.SignallingConnecting}, nil)
 	if callerTel.State() != telephony.StateConnecting {
 		t.Errorf("caller state after SignallingConnecting = %v, want Connecting", callerTel.State())
 	}
@@ -123,7 +125,7 @@ func TestIntegration_SignallingFlow(t *testing.T) {
 	}
 
 	// Simulate caller receiving SignallingEstablished
-	callerTel.SignallingReceived([]byte{telephony.SignallingEstablished})
+	callerTel.SignallingReceived([]int{telephony.SignallingEstablished}, nil)
 	if callerTel.State() != telephony.StateEstablished {
 		t.Errorf("caller state after SignallingEstablished = %v, want Established", callerTel.State())
 	}
@@ -180,9 +182,9 @@ func TestIntegration_SignallingFlow(t *testing.T) {
 func TestIntegration_BusySignal(t *testing.T) {
 	t.Parallel()
 
-	receiverTel := telephony.NewTelephone(30, 60, false, telephony.AllowAll, 0, 0)
+	receiverTel := telephony.NewTelephone(30, 60, 0, telephony.AllowAll, 0, 0)
 
-	var busySignals []byte
+	var busySignals []int
 	var teardownCalled bool
 
 	// Set the receiver to busy state (already in a call)
@@ -190,7 +192,7 @@ func TestIntegration_BusySignal(t *testing.T) {
 
 	// Try to signal incoming link - should be rejected with BUSY
 	receiverTel.IncomingLinkEstablished(
-		func(signal byte) error {
+		func(signal int) error {
 			busySignals = append(busySignals, signal)
 			return nil
 		},
@@ -220,7 +222,7 @@ func TestIntegration_BusySignal(t *testing.T) {
 func TestIntegration_RejectedSignal(t *testing.T) {
 	t.Parallel()
 
-	callerTel := telephony.NewTelephone(30, 60, false, telephony.AllowAll, 0, 0)
+	callerTel := telephony.NewTelephone(30, 60, 0, telephony.AllowAll, 0, 0)
 
 	var rejectedReceived bool
 
@@ -228,7 +230,7 @@ func TestIntegration_RejectedSignal(t *testing.T) {
 
 	// Set the caller to ringing state (outgoing call)
 	callerTel.Call(telephony.DefaultProfile)
-	callerTel.OutgoingLinkEstablished(func(signal byte) error { return nil })
+	callerTel.OutgoingLinkEstablished(func(signal int) error { return nil })
 	callerTel.SetIncoming(false)
 
 	// Simulate receiving a rejected signal via HangupWithReason

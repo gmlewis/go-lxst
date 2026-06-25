@@ -454,7 +454,7 @@ func TestHandleSignallingData_Available(t *testing.T) {
 		return nil
 	})
 
-	tel := telephony.NewTelephone(30, 60, false, telephony.AllowAll, 0, 0)
+	tel := telephony.NewTelephone(30, 60, 0, telephony.AllowAll, 0, 0)
 	tep.SetTelephone(tel)
 
 	data := packSignalling(t, telephony.SignallingAvailable)
@@ -479,7 +479,7 @@ func TestHandleSignallingData_Ringing(t *testing.T) {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
 
-	tel := telephony.NewTelephone(30, 60, false, telephony.AllowAll, 0, 0)
+	tel := telephony.NewTelephone(30, 60, 0, telephony.AllowAll, 0, 0)
 	tel.SetIncoming(false)
 	tep.SetTelephone(tel)
 
@@ -505,7 +505,7 @@ func TestHandleSignallingData_Connecting(t *testing.T) {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
 
-	tel := telephony.NewTelephone(30, 60, false, telephony.AllowAll, 0, 0)
+	tel := telephony.NewTelephone(30, 60, 0, telephony.AllowAll, 0, 0)
 	tel.SetIncoming(false)
 	tel.SetState(telephony.StateRinging)
 	tep.SetTelephone(tel)
@@ -532,7 +532,7 @@ func TestHandleSignallingData_Established(t *testing.T) {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
 
-	tel := telephony.NewTelephone(30, 60, false, telephony.AllowAll, 0, 0)
+	tel := telephony.NewTelephone(30, 60, 0, telephony.AllowAll, 0, 0)
 	tel.SetIncoming(false)
 	tel.SetState(telephony.StateConnecting)
 	tep.SetTelephone(tel)
@@ -559,7 +559,7 @@ func TestHandleSignallingData_Busy(t *testing.T) {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
 
-	tel := telephony.NewTelephone(30, 60, false, telephony.AllowAll, 0, 0)
+	tel := telephony.NewTelephone(30, 60, 0, telephony.AllowAll, 0, 0)
 	tel.SetIncoming(false)
 	tel.SetState(telephony.StateCalling)
 	tep.SetTelephone(tel)
@@ -586,7 +586,7 @@ func TestHandleSignallingData_Rejected(t *testing.T) {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
 
-	tel := telephony.NewTelephone(30, 60, false, telephony.AllowAll, 0, 0)
+	tel := telephony.NewTelephone(30, 60, 0, telephony.AllowAll, 0, 0)
 	tel.SetIncoming(false)
 	tel.SetState(telephony.StateCalling)
 	tep.SetTelephone(tel)
@@ -613,7 +613,7 @@ func TestHandleSignallingData_PreferredProfile(t *testing.T) {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
 
-	tel := telephony.NewTelephone(30, 60, false, telephony.AllowAll, 0, 0)
+	tel := telephony.NewTelephone(30, 60, 0, telephony.AllowAll, 0, 0)
 	tel.SetIncoming(false)
 	tep.SetTelephone(tel)
 
@@ -641,11 +641,11 @@ func TestCallerDoesNotSendCallingOnLinkEstablished(t *testing.T) {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
 
-	tel := telephony.NewTelephone(30, 60, false, telephony.AllowAll, 0, 0)
+	tel := telephony.NewTelephone(30, 60, 0, telephony.AllowAll, 0, 0)
 	tep.SetTelephone(tel)
 
-	var sentSignals []byte
-	tep.testSetSendSignallingFunc(func(link *rns.Link, signal byte) {
+	var sentSignals []int
+	tep.testSetSendSignallingFunc(func(link *rns.Link, signal int) {
 		sentSignals = append(sentSignals, signal)
 	})
 
@@ -672,11 +672,11 @@ func TestResponderSendsRingingAfterCallerIdentified(t *testing.T) {
 		t.Fatalf("NewTelephoneEndpoint failed: %v", err)
 	}
 
-	tel := telephony.NewTelephone(30, 60, false, telephony.AllowAll, 0, 0)
+	tel := telephony.NewTelephone(30, 60, 0, telephony.AllowAll, 0, 0)
 	tep.SetTelephone(tel)
 
-	var sentSignals []byte
-	tep.testSetSendSignallingFunc(func(link *rns.Link, signal byte) {
+	var sentSignals []int
+	tep.testSetSendSignallingFunc(func(link *rns.Link, signal int) {
 		sentSignals = append(sentSignals, signal)
 	})
 
@@ -693,7 +693,7 @@ func TestResponderSendsRingingAfterCallerIdentified(t *testing.T) {
 	}
 }
 
-func packSignalling(t *testing.T, signal byte) []byte {
+func packSignalling(t *testing.T, signal int) []byte {
 	t.Helper()
 	signallingData := map[byte]any{network.FieldSignalling: []any{signal}}
 	packed, err := network.PackData(signallingData)
@@ -704,13 +704,7 @@ func packSignalling(t *testing.T, signal byte) []byte {
 }
 
 func packSignallingInt(t *testing.T, signal int) []byte {
-	t.Helper()
-	signallingData := map[byte]any{network.FieldSignalling: []any{signal}}
-	packed, err := network.PackData(signallingData)
-	if err != nil {
-		t.Fatalf("PackData failed: %v", err)
-	}
-	return packed
+	return packSignalling(t, signal)
 }
 
 func TestTelephoneEndpoint_AlreadyInCall(t *testing.T) {
@@ -776,7 +770,7 @@ func TestCallLifecycle_FullFlow(t *testing.T) {
 	ts.Remember(responderID.Hash, nil, nil, nil)
 
 	// --- Set up responder telephone with callbacks ---
-	responderTel := telephony.NewTelephone(30, 60, false, telephony.AllowAll, 0, 0)
+	responderTel := telephony.NewTelephone(30, 60, 0, telephony.AllowAll, 0, 0)
 
 	var (
 		responderEvents   []string
@@ -795,9 +789,9 @@ func TestCallLifecycle_FullFlow(t *testing.T) {
 	responderTel.SetRejectedCallback(func() { recordResponder("rejected") })
 
 	// Track signalling sent by responder
-	var responderSignals []byte
+	var responderSignals []int
 	var responderSignalsMu sync.Mutex
-	responderSignalFunc := func(signal byte) error {
+	responderSignalFunc := func(signal int) error {
 		responderSignalsMu.Lock()
 		responderSignals = append(responderSignals, signal)
 		responderSignalsMu.Unlock()
@@ -806,7 +800,7 @@ func TestCallLifecycle_FullFlow(t *testing.T) {
 	responderTeardownFunc := func() {}
 
 	// --- Set up caller telephone with callbacks ---
-	callerTel := telephony.NewTelephone(30, 60, false, telephony.AllowAll, 0, 0)
+	callerTel := telephony.NewTelephone(30, 60, 0, telephony.AllowAll, 0, 0)
 
 	var (
 		callerEvents   []string
@@ -836,9 +830,10 @@ func TestCallLifecycle_FullFlow(t *testing.T) {
 	}
 
 	// --- Step 2: Caller's outgoing link established ---
-	callerTel.OutgoingLinkEstablished(func(signal byte) error { return nil })
-	if callerTel.State() != telephony.StateRinging {
-		t.Fatalf("caller state after OutgoingLinkEstablished = %v, want Ringing", callerTel.State())
+	callerTel.OutgoingLinkEstablished(func(signal int) error { return nil })
+	// OutgoingLinkEstablished does NOT change state (matching Python).
+	if callerTel.State() != telephony.StateCalling {
+		t.Fatalf("caller state after OutgoingLinkEstablished = %v, want Calling (unchanged)", callerTel.State())
 	}
 
 	// --- Step 3: Responder receives incoming link ---
@@ -859,7 +854,7 @@ func TestCallLifecycle_FullFlow(t *testing.T) {
 
 	// Verify responder sent AVAILABLE then RINGING
 	responderSignalsMu.Lock()
-	signals := make([]byte, len(responderSignals))
+	signals := make([]int, len(responderSignals))
 	copy(signals, responderSignals)
 	responderSignalsMu.Unlock()
 	if len(signals) < 2 {
@@ -886,7 +881,7 @@ func TestCallLifecycle_FullFlow(t *testing.T) {
 	}
 
 	// --- Step 5: Caller receives RINGING ---
-	callerTel.SignallingReceived([]byte{telephony.SignallingRinging})
+	callerTel.SignallingReceived([]int{telephony.SignallingRinging}, nil)
 	if callerTel.State() != telephony.StateRinging {
 		t.Fatalf("caller state after SignallingRinging = %v, want Ringing", callerTel.State())
 	}
@@ -923,7 +918,7 @@ func TestCallLifecycle_FullFlow(t *testing.T) {
 	}
 
 	// --- Step 7: Caller receives CONNECTING ---
-	callerTel.SignallingReceived([]byte{telephony.SignallingConnecting})
+	callerTel.SignallingReceived([]int{telephony.SignallingConnecting}, nil)
 	if callerTel.State() != telephony.StateConnecting {
 		t.Fatalf("caller state after SignallingConnecting = %v, want Connecting", callerTel.State())
 	}
@@ -934,7 +929,7 @@ func TestCallLifecycle_FullFlow(t *testing.T) {
 	}
 
 	// --- Step 8: Caller receives ESTABLISHED ---
-	callerTel.SignallingReceived([]byte{telephony.SignallingEstablished})
+	callerTel.SignallingReceived([]int{telephony.SignallingEstablished}, nil)
 	if callerTel.State() != telephony.StateEstablished {
 		t.Fatalf("caller state after SignallingEstablished = %v, want Established", callerTel.State())
 	}
@@ -1016,7 +1011,7 @@ func TestCallLifecycle_BusyRejectFlow(t *testing.T) {
 	}
 	defer callerEP.Teardown()
 
-	callerTel := telephony.NewTelephone(30, 60, false, telephony.AllowAll, 0, 0)
+	callerTel := telephony.NewTelephone(30, 60, 0, telephony.AllowAll, 0, 0)
 	callerEP.SetTelephone(callerTel)
 
 	var (
@@ -1038,7 +1033,7 @@ func TestCallLifecycle_BusyRejectFlow(t *testing.T) {
 
 	// --- Busy signal flow ---
 	callerTel.Call(telephony.DefaultProfile)
-	callerTel.OutgoingLinkEstablished(func(signal byte) error { return nil })
+	callerTel.OutgoingLinkEstablished(func(signal int) error { return nil })
 	callerTel.SetIncoming(false)
 
 	// Caller receives BUSY via handleSignallingData (triggers both tel and ep callbacks)
@@ -1064,7 +1059,7 @@ func TestCallLifecycle_BusyRejectFlow(t *testing.T) {
 	// --- Rejected signal flow ---
 	callerEvents = nil
 	callerTel.Call(telephony.DefaultProfile)
-	callerTel.OutgoingLinkEstablished(func(signal byte) error { return nil })
+	callerTel.OutgoingLinkEstablished(func(signal int) error { return nil })
 	callerTel.SetIncoming(false)
 
 	// Caller receives REJECTED via handleSignallingData
@@ -1105,7 +1100,7 @@ func TestCallLifecycle_ProfileNegotiation(t *testing.T) {
 	}
 	defer tep.Teardown()
 
-	tel := telephony.NewTelephone(30, 60, false, telephony.AllowAll, 0, 0)
+	tel := telephony.NewTelephone(30, 60, 0, telephony.AllowAll, 0, 0)
 	tep.SetTelephone(tel)
 
 	// Test profile change during established call
@@ -1138,9 +1133,9 @@ func TestCallLifecycle_ProfileNegotiation(t *testing.T) {
 func TestCallLifecycle_ResponderBusy(t *testing.T) {
 	t.Parallel()
 
-	responderTel := telephony.NewTelephone(30, 60, false, telephony.AllowAll, 0, 0)
+	responderTel := telephony.NewTelephone(30, 60, 0, telephony.AllowAll, 0, 0)
 
-	var busySignals []byte
+	var busySignals []int
 	var teardownCalled bool
 
 	// Put responder in an active call
@@ -1149,7 +1144,7 @@ func TestCallLifecycle_ResponderBusy(t *testing.T) {
 
 	// Simulate incoming link established on responder
 	responderTel.IncomingLinkEstablished(
-		func(signal byte) error {
+		func(signal int) error {
 			busySignals = append(busySignals, signal)
 			return nil
 		},
@@ -1194,7 +1189,7 @@ func TestCallLifecycle_ResponderRejectedCall(t *testing.T) {
 	}
 	defer callerEP.Teardown()
 
-	callerTel := telephony.NewTelephone(30, 60, false, telephony.AllowAll, 0, 0)
+	callerTel := telephony.NewTelephone(30, 60, 0, telephony.AllowAll, 0, 0)
 	callerEP.SetTelephone(callerTel)
 
 	var rejectedFired bool
@@ -1207,7 +1202,7 @@ func TestCallLifecycle_ResponderRejectedCall(t *testing.T) {
 
 	// Set caller to ringing state
 	callerTel.Call(telephony.DefaultProfile)
-	callerTel.OutgoingLinkEstablished(func(signal byte) error { return nil })
+	callerTel.OutgoingLinkEstablished(func(signal int) error { return nil })
 	callerTel.SetIncoming(false)
 
 	// Caller receives REJECTED signal via handleSignallingData

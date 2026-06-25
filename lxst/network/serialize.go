@@ -8,6 +8,7 @@ package network
 import (
 	"encoding/binary"
 	"errors"
+	"math"
 )
 
 var ErrInvalidData = errors.New("invalid data format")
@@ -46,7 +47,7 @@ func encodeValue(v any) ([]byte, error) {
 			return result, nil
 		}
 		result := make([]byte, 5+len(val))
-		result[0] = 0xc4
+		result[0] = 0xc5
 		binary.BigEndian.PutUint32(result[1:], uint32(len(val)))
 		copy(result[5:], val)
 		return result, nil
@@ -64,15 +65,28 @@ func encodeValue(v any) ([]byte, error) {
 		}
 		return result, nil
 	case byte:
-		return []byte{val}, nil
+		return encodeInt(int(val)), nil
 	case int:
-		if val >= 0 && val <= 127 {
-			return []byte{byte(val)}, nil
+		return encodeInt(val), nil
+	case int8:
+		return encodeInt(int(val)), nil
+	case int16:
+		return encodeInt(int(val)), nil
+	case int32:
+		return encodeInt(int(val)), nil
+	case int64:
+		return encodeInt(int(val)), nil
+	case uint16:
+		return encodeInt(int(val)), nil
+	case uint32:
+		return encodeInt(int(val)), nil
+	case uint64:
+		return encodeInt(int(val)), nil
+	case bool:
+		if val {
+			return []byte{0xc3}, nil
 		}
-		result := make([]byte, 3)
-		result[0] = 0xd1
-		binary.BigEndian.PutUint16(result[1:], uint16(val))
-		return result, nil
+		return []byte{0xc2}, nil
 	case string:
 		b := []byte(val)
 		if len(b) <= 31 {
@@ -84,6 +98,57 @@ func encodeValue(v any) ([]byte, error) {
 	default:
 		return []byte{0xc0}, nil
 	}
+}
+
+// encodeInt encodes an integer using the smallest msgpack representation,
+// matching Python umsgpack's encoding for all integer sizes.
+func encodeInt(val int) []byte {
+	if val >= 0 && val <= 127 {
+		return []byte{byte(val)}
+	}
+	if val >= 0 && val <= 255 {
+		return []byte{0xcc, byte(val)}
+	}
+	if val >= 0 && val <= 65535 {
+		result := make([]byte, 3)
+		result[0] = 0xcd
+		binary.BigEndian.PutUint16(result[1:], uint16(val))
+		return result
+	}
+	if val >= 0 && val <= 4294967295 {
+		result := make([]byte, 5)
+		result[0] = 0xce
+		binary.BigEndian.PutUint32(result[1:], uint32(val))
+		return result
+	}
+	if val >= 0 {
+		result := make([]byte, 9)
+		result[0] = 0xcf
+		binary.BigEndian.PutUint64(result[1:], uint64(val))
+		return result
+	}
+	if val >= -32 && val < 0 {
+		return []byte{byte(val)}
+	}
+	if val >= -128 && val < 0 {
+		return []byte{0xd0, byte(val)}
+	}
+	if val >= -32768 && val < 0 {
+		result := make([]byte, 3)
+		result[0] = 0xd1
+		binary.BigEndian.PutUint16(result[1:], uint16(val))
+		return result
+	}
+	if val >= -2147483648 && val < 0 {
+		result := make([]byte, 5)
+		result[0] = 0xd2
+		binary.BigEndian.PutUint32(result[1:], uint32(val))
+		return result
+	}
+	result := make([]byte, 9)
+	result[0] = 0xd3
+	binary.BigEndian.PutUint64(result[1:], uint64(val))
+	return result
 }
 
 // UnpackData deserializes data packed by PackData.
@@ -130,9 +195,24 @@ func decodeValue(data []byte) (any, int, error) {
 		return nil, 1, nil
 	}
 
+	// false
+	if b == 0xc2 {
+		return false, 1, nil
+	}
+
+	// true
+	if b == 0xc3 {
+		return true, 1, nil
+	}
+
 	// positive fixint
 	if b <= 0x7f {
 		return int(b), 1, nil
+	}
+
+	// negative fixint
+	if b >= 0xe0 {
+		return int(int8(b)), 1, nil
 	}
 
 	// bin8
@@ -149,8 +229,22 @@ func decodeValue(data []byte) (any, int, error) {
 		return result, 2 + length, nil
 	}
 
-	// bin32
+	// bin16
 	if b == 0xc5 {
+		if len(data) < 3 {
+			return nil, 0, ErrInvalidData
+		}
+		length := int(binary.BigEndian.Uint16(data[1:3]))
+		if len(data) < 3+length {
+			return nil, 0, ErrInvalidData
+		}
+		result := make([]byte, length)
+		copy(result, data[3:3+length])
+		return result, 3 + length, nil
+	}
+
+	// bin32
+	if b == 0xc6 {
 		if len(data) < 5 {
 			return nil, 0, ErrInvalidData
 		}
@@ -188,12 +282,68 @@ func decodeValue(data []byte) (any, int, error) {
 		return string(data[1 : 1+strLen]), 1 + strLen, nil
 	}
 
+	// uint8
+	if b == 0xcc {
+		if len(data) < 2 {
+			return nil, 0, ErrInvalidData
+		}
+		return int(data[1]), 2, nil
+	}
+
+	// uint16
+	if b == 0xcd {
+		if len(data) < 3 {
+			return nil, 0, ErrInvalidData
+		}
+		return int(binary.BigEndian.Uint16(data[1:3])), 3, nil
+	}
+
+	// uint32
+	if b == 0xce {
+		if len(data) < 5 {
+			return nil, 0, ErrInvalidData
+		}
+		return int(binary.BigEndian.Uint32(data[1:5])), 5, nil
+	}
+
+	// uint64
+	if b == 0xcf {
+		if len(data) < 9 {
+			return nil, 0, ErrInvalidData
+		}
+		return int(binary.BigEndian.Uint64(data[1:9])), 9, nil
+	}
+
+	// int8
+	if b == 0xd0 {
+		if len(data) < 2 {
+			return nil, 0, ErrInvalidData
+		}
+		return int(int8(data[1])), 2, nil
+	}
+
 	// int16
 	if b == 0xd1 {
 		if len(data) < 3 {
 			return nil, 0, ErrInvalidData
 		}
-		return int(binary.BigEndian.Uint16(data[1:3])), 3, nil
+		return int(int16(binary.BigEndian.Uint16(data[1:3]))), 3, nil
+	}
+
+	// int32
+	if b == 0xd2 {
+		if len(data) < 5 {
+			return nil, 0, ErrInvalidData
+		}
+		return int(int32(binary.BigEndian.Uint32(data[1:5]))), 5, nil
+	}
+
+	// int64
+	if b == 0xd3 {
+		if len(data) < 9 {
+			return nil, 0, ErrInvalidData
+		}
+		return int(int64(binary.BigEndian.Uint64(data[1:9]))), 9, nil
 	}
 
 	// str8
@@ -208,5 +358,31 @@ func decodeValue(data []byte) (any, int, error) {
 		return string(data[2 : 2+strLen]), 2 + strLen, nil
 	}
 
+	// float32
+	if b == 0xca {
+		if len(data) < 5 {
+			return nil, 0, ErrInvalidData
+		}
+		bits := binary.BigEndian.Uint32(data[1:5])
+		return float32FromBits(bits), 5, nil
+	}
+
+	// float64
+	if b == 0xcb {
+		if len(data) < 9 {
+			return nil, 0, ErrInvalidData
+		}
+		bits := binary.BigEndian.Uint64(data[1:9])
+		return float64FromBits(bits), 9, nil
+	}
+
 	return nil, 0, ErrInvalidData
+}
+
+func float32FromBits(bits uint32) float64 {
+	return float64(math.Float32frombits(bits))
+}
+
+func float64FromBits(bits uint64) float64 {
+	return math.Float64frombits(bits)
 }
