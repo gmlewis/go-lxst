@@ -50,17 +50,14 @@ type OtoBackend struct {
 	speakerNames []string
 }
 
-// otoRecorder wraps oto for recording (input)
-// Uses a pipe to capture audio data from oto's input stream
+// otoRecorder is a stub that signals recording is unsupported. Oto is
+// an output-only library — it cannot capture microphone input. GetRecorder
+// returns an error so that NewBackendWithDevice falls back to PortAudio
+// for input. This type exists only to satisfy callers that hold an
+// AudioRecorder reference before attempting to read.
 type otoRecorder struct {
-	sampleRate    int
-	channels      int
-	framesPerRead int
-	closed        bool
-	mu            sync.Mutex
-	pipeReader    *io.PipeReader
-	pipeWriter    *io.PipeWriter
-	readBuf       []byte
+	closed bool
+	mu     sync.Mutex
 }
 
 // otoPlayer wraps oto for playback (output)
@@ -378,30 +375,11 @@ func (ob *OtoBackend) ReleasePlayer() error {
 }
 
 func (ob *OtoBackend) GetRecorder(samplesPerFrame int) (AudioRecorder, error) {
-	if err := ob.waitReady(); err != nil {
-		return nil, err
-	}
-
-	ob.recorderMu.Lock()
-	defer ob.recorderMu.Unlock()
-
-	if ob.recorder != nil {
-		return nil, errors.New("recorder already in use")
-	}
-
-	// Create pipe for recording
-	pr, pw := io.Pipe()
-
-	ob.recorder = &otoRecorder{
-		sampleRate:    ob.sampleRate,
-		channels:      ob.channels,
-		framesPerRead: samplesPerFrame,
-		pipeReader:    pr,
-		pipeWriter:    pw,
-		readBuf:       make([]byte, samplesPerFrame*2*4), // stereo float32
-	}
-
-	return ob.recorder, nil
+	// Oto is an output-only library and cannot capture microphone input.
+	// Returning an error here lets callers (e.g. NewBackendWithDevice)
+	// fall back to a backend that supports recording, such as
+	// PortAudio. The otoRecorder stub is never returned.
+	return nil, errors.New("oto backend does not support recording (output only)")
 }
 
 func (ob *OtoBackend) GetPlayer(samplesPerFrame int, lowLatency bool) (AudioPlayer, error) {
@@ -439,84 +417,19 @@ func (ob *OtoBackend) GetPlayer(samplesPerFrame int, lowLatency bool) (AudioPlay
 	return ob.player, nil
 }
 
-// otoRecorder implementation
+// otoRecorder implementation. Oto is output-only, so recording is
+// unsupported. These methods are stubs that will never be reached in
+// normal operation because GetRecorder returns an error. They exist so
+// that otoRecorder satisfies the AudioRecorder interface.
 
 func (or *otoRecorder) Record(numFrames int) ([][]float32, error) {
-	or.mu.Lock()
-	if or.closed || or.pipeReader == nil {
-		or.mu.Unlock()
-		return nil, errors.New("recorder closed")
-	}
-	// Take a local copy of pipeReader under the lock
-	pipeReader := or.pipeReader
-	or.mu.Unlock()
-
-	// Read audio data from pipe (using local copy to avoid race with Close)
-	bytesPerSample := 4 // float32
-	bytesPerFrame := or.channels * bytesPerSample
-	totalBytes := numFrames * bytesPerFrame
-
-	// Read data with timeout protection
-	n, err := io.ReadFull(pipeReader, or.readBuf[:totalBytes])
-	if err != nil && err != io.EOF && err != io.ErrUnexpectedEOF {
-		// If the pipe was closed, return silence
-		frame := make([][]float32, numFrames)
-		for i := range frame {
-			frame[i] = make([]float32, or.channels)
-		}
-		return frame, nil
-	}
-
-	// If we got no data, return silence
-	if n == 0 {
-		frame := make([][]float32, numFrames)
-		for i := range frame {
-			frame[i] = make([]float32, or.channels)
-		}
-		return frame, nil
-	}
-
-	// Convert bytes to float32 frames
-	frame := make([][]float32, numFrames)
-	frameCount := n / bytesPerFrame
-	for i := 0; i < frameCount; i++ {
-		frame[i] = make([]float32, or.channels)
-		for ch := 0; ch < or.channels; ch++ {
-			offset := i*bytesPerFrame + ch*bytesPerSample
-			if offset+3 < len(or.readBuf) {
-				// Convert little-endian bytes to float32
-				bits := uint32(or.readBuf[offset]) |
-					uint32(or.readBuf[offset+1])<<8 |
-					uint32(or.readBuf[offset+2])<<16 |
-					uint32(or.readBuf[offset+3])<<24
-				frame[i][ch] = float32frombits(bits)
-			}
-		}
-	}
-
-	// Pad remaining frames with silence
-	for i := frameCount; i < numFrames; i++ {
-		frame[i] = make([]float32, or.channels)
-	}
-
-	return frame, nil
+	return nil, errors.New("oto backend does not support recording (output only)")
 }
 
 func (or *otoRecorder) Close() error {
 	or.mu.Lock()
 	defer or.mu.Unlock()
-
 	or.closed = true
-
-	// Close pipe writer first to unblock any pending Read
-	if or.pipeWriter != nil {
-		_ = or.pipeWriter.Close()
-		or.pipeWriter = nil
-	}
-	if or.pipeReader != nil {
-		_ = or.pipeReader.Close()
-		or.pipeReader = nil
-	}
 	return nil
 }
 
@@ -592,9 +505,4 @@ func (op *otoPlayer) EnableLowLatency() error {
 // float32bits converts float32 to its bit representation
 func float32bits(f float32) uint32 {
 	return *(*uint32)(unsafe.Pointer(&f))
-}
-
-// float32frombits converts bit representation to float32
-func float32frombits(b uint32) float32 {
-	return *(*float32)(unsafe.Pointer(&b))
 }

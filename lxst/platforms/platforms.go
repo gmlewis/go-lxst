@@ -4,60 +4,57 @@
 // that can be found in the LICENSE file.
 
 // Package platforms provides platform-specific audio I/O backends for the
-// LXST library. It abstracts audio playback and recording across different
-// platforms using oto (pure-Go, CGO_ENABLED=0 compatible) as the primary
-// backend, with optional malgo support when CGO is available. It includes
-// device enumeration and selection capabilities for microphones and speakers.
+// LXST library. It abstracts audio playback and recording across macOS,
+// Windows, and Linux using PortAudio (loaded via purego — no CGO
+// required) as the primary backend, since PortAudio supports both
+// microphone input and speaker output. A pure-Go Oto backend is kept as
+// a fallback for output-only scenarios, and a NullBackend is used when
+// no audio hardware or library is available. Device enumeration and
+// selection capabilities are provided for microphones and speakers.
 package platforms
 
 import (
+	"log"
 	"runtime"
 	"strings"
-	"time"
 )
 
 // NewBackend creates the appropriate audio backend for the current platform.
-// Uses Oto backend (pure-Go, cross-platform) when available, falls back to
-// null backend. When preferredDevice is non-empty, the backend will attempt
-// to select that device; if unavailable, it falls back to the system default.
+// It tries PortAudio first (full input + output), then Oto (output only),
+// and finally falls back to the NullBackend. When preferredDevice is
+// non-empty, the backend will attempt to select that device; if
+// unavailable, it falls back to the system default.
 func NewBackend(sampleRate, channels, bitDepth int) AudioBackend {
 	return NewBackendWithDevice(sampleRate, channels, bitDepth, "")
 }
 
 // NewBackendWithDevice creates an audio backend with a preferred device name.
 // If preferredDevice is empty or the device is unavailable, the default
-// device is used. Uses the Oto backend on all major platforms, falling back
-// to the null backend if audio is unavailable.
+// device is used. The selection order is:
+//  1. PortAudio (purego, no CGO) — supports both recording and playback.
+//  2. Oto (pure-Go) — output only; used when PortAudio is unavailable.
+//  3. NullBackend — no hardware, returns silence / discards output.
 func NewBackendWithDevice(sampleRate, channels, bitDepth int, preferredDevice string) AudioBackend {
-	// Try Oto backend first (pure-Go, works on all major platforms)
-	backend := NewOtoBackend(sampleRate, channels, bitDepth)
-
-	// Wait briefly to see if Oto initializes successfully
-	time.Sleep(100 * time.Millisecond)
-
-	// Check if backend is usable by trying to get a recorder/player
-	// If Oto fails, fall back to NullBackend
-	_, err := backend.GetRecorder(960)
+	// PortAudio is the preferred backend: it provides real microphone
+	// input on macOS (CoreAudio), Windows (WASAPI), and Linux
+	// (ALSA/PulseAudio/JACK) via purego with no CGO.
+	paBackend, err := NewPortAudioBackend(sampleRate, channels, bitDepth)
+	if err == nil && paBackend != nil {
+		return paBackend
+	}
 	if err != nil {
-		_ = backend.ReleaseRecorder()
-		return NewNullBackend(sampleRate, channels, bitDepth)
-	}
-	_ = backend.ReleaseRecorder()
-
-	_, err = backend.GetPlayer(960, false)
-	if err != nil {
-		_ = backend.ReleasePlayer()
-		return NewNullBackend(sampleRate, channels, bitDepth)
-	}
-	_ = backend.ReleasePlayer()
-
-	// If preferred device requested, verify it exists or log fallback
-	if preferredDevice != "" {
-		_ = deviceInList(preferredDevice, backend.AllMicrophones()) ||
-			deviceInList(preferredDevice, backend.AllSpeakers())
+		log.Printf("platforms: portaudio backend unavailable (%v), falling back to oto", err)
 	}
 
-	return backend
+	// Oto is a pure-Go fallback. It only supports playback (output);
+	// its recorder returns silence, so it is only useful when microphone
+	// input is not needed.
+	otoBackend := NewOtoBackend(sampleRate, channels, bitDepth)
+	if otoBackend != nil {
+		return otoBackend
+	}
+
+	return NewNullBackend(sampleRate, channels, bitDepth)
 }
 
 // deviceInList checks if a device name appears in the list (case-insensitive).
@@ -73,14 +70,8 @@ func deviceInList(name string, devices []string) bool {
 // GetBackend returns the backend type name for the current platform.
 func GetBackend() string {
 	switch runtime.GOOS {
-	case "linux":
-		return "oto"
-	case "darwin":
-		return "oto"
-	case "windows":
-		return "oto"
-	case "android":
-		return "oto"
+	case "linux", "darwin", "windows", "android":
+		return "portaudio"
 	default:
 		return "null"
 	}
