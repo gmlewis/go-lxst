@@ -7,6 +7,7 @@ package sinks
 
 import (
 	"errors"
+	"log"
 	"os"
 	"sync"
 	"time"
@@ -293,7 +294,9 @@ func (fs *OpusFileSink) digestJob() {
 				outputFile := fs.outputFile
 				fs.mu.Unlock()
 				if len(encoded) > 0 && outputFile != nil {
-					_, _ = outputFile.Write(encoded)
+					if _, err := outputFile.Write(encoded); err != nil {
+						log.Printf("OpusFileSink.digestJob: outputFile.Write failed: %v", err)
+					}
 				}
 			}
 

@@ -369,8 +369,12 @@ func loadOrCreateConfig(configDir string) *PhoneConfig {
 	cfg, err := LoadConfigFile(configPath)
 	if err != nil {
 		cfg = DefaultConfig()
-		_ = os.MkdirAll(configDir, 0o755)
-		_ = SaveConfigFile(configPath, cfg)
+		if err := os.MkdirAll(configDir, 0o755); err != nil {
+			log.Fatalf("os.MkdirAll: %v", err)
+		}
+		if err := SaveConfigFile(configPath, cfg); err != nil {
+			log.Fatalf("SaveConfigFile: %v", err)
+		}
 	}
 	return cfg
 }
@@ -402,7 +406,9 @@ func ensureStandaloneRNSConfig(startupMilli int64) string {
 	rnsDir := fmt.Sprintf("%v/gornphone-rns-%v", logTempDir(), startupMilli)
 	configPath := rnsDir + "/config"
 
-	_ = os.MkdirAll(rnsDir, 0o755)
+	if err := os.MkdirAll(rnsDir, 0o755); err != nil {
+		log.Fatalf("os.MkdirAll: %v", err)
+	}
 
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -434,7 +440,9 @@ func ensureStandaloneRNSConfig(startupMilli int64) string {
 
 	content = setRNSConfigDirective(content, "share_instance", "No")
 
-	_ = os.WriteFile(configPath, []byte(content), 0o644)
+	if err := os.WriteFile(configPath, []byte(content), 0o644); err != nil {
+		log.Fatalf("os.WriteFile: %v", err)
+	}
 	return rnsDir
 }
 

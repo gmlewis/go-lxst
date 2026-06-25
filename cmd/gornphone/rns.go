@@ -86,6 +86,12 @@ func (tep *TelephoneEndpoint) logf(format string, args ...any) {
 	}
 }
 
+func (tep *TelephoneEndpoint) logDebugf(format string, args ...any) {
+	if tep.logger != nil {
+		tep.logger.Debug(format, args...)
+	}
+}
+
 // Destination returns the underlying RNS Destination.
 func (tep *TelephoneEndpoint) Destination() *rns.Destination {
 	tep.mu.Lock()
@@ -357,7 +363,7 @@ func (tep *TelephoneEndpoint) incomingLinkEstablished(link *rns.Link) {
 	}
 
 	link.SetPacketCallback(func(data []byte, packet *rns.Packet) {
-		tep.logf("Responder received packet (len=%d)", len(data))
+		tep.logDebugf("Responder received packet (len=%d)", len(data))
 		tep.handleSignallingData(data, link, tep.identity)
 	})
 }
@@ -412,7 +418,7 @@ func (tep *TelephoneEndpoint) outgoingLinkEstablished(link *rns.Link) {
 
 	if link != nil {
 		link.SetPacketCallback(func(data []byte, packet *rns.Packet) {
-			tep.logf("Caller received packet (len=%d)", len(data))
+			tep.logDebugf("Caller received packet (len=%d)", len(data))
 			tep.handleSignallingData(data, link, identity)
 		})
 	}
@@ -494,7 +500,7 @@ func (tep *TelephoneEndpoint) handleSignallingData(data []byte, link *rns.Link, 
 			}
 
 		case signalVal == telephony.SignallingAvailable:
-			tep.logf("Received SignallingAvailable, identifying to remote")
+			tep.logDebugf("Received SignallingAvailable, identifying to remote")
 			if tep.testIdentifyFunc != nil {
 				_ = tep.testIdentifyFunc(link, identity)
 			} else if identity != nil && link != nil {
@@ -503,21 +509,21 @@ func (tep *TelephoneEndpoint) handleSignallingData(data []byte, link *rns.Link, 
 				}
 			}
 			if tel != nil {
-				tep.logf("Processing SignallingAvailable: tel state=%v", tel.State())
+				tep.logDebugf("Processing SignallingAvailable: tel state=%v", tel.State())
 				tel.SignallingReceived([]int{signalVal}, signalFunc)
-				tep.logf("After SignallingAvailable: tel state=%v", tel.State())
+				tep.logDebugf("After SignallingAvailable: tel state=%v", tel.State())
 			}
 
 		case signalVal == telephony.SignallingRinging:
-			tep.logf("Received SignallingRinging")
+			tep.logDebugf("Received SignallingRinging")
 			if tel != nil {
-				tep.logf("Processing SignallingRinging: tel state=%v", tel.State())
+				tep.logDebugf("Processing SignallingRinging: tel state=%v", tel.State())
 				tel.SignallingReceived([]int{signalVal}, signalFunc)
-				tep.logf("After SignallingRinging: tel state=%v", tel.State())
+				tep.logDebugf("After SignallingRinging: tel state=%v", tel.State())
 			}
 
 		case signalVal == telephony.SignallingConnecting:
-			tep.logf("Received SignallingConnecting: caller setting up packetizer and link source")
+			tep.logDebugf("Received SignallingConnecting: caller setting up packetizer and link source")
 			if tel != nil {
 				tep.mu.Lock()
 				link := tep.activeLink
@@ -538,17 +544,17 @@ func (tep *TelephoneEndpoint) handleSignallingData(data []byte, link *rns.Link, 
 					tel.SetPacketizer(pktz)
 				}
 
-				tep.logf("Processing SignallingConnecting: tel state=%v, packetizer=%v", tel.State(), tel.Packetizer() != nil)
+				tep.logDebugf("Processing SignallingConnecting: tel state=%v, packetizer=%v", tel.State(), tel.Packetizer() != nil)
 				tel.SignallingReceived([]int{signalVal}, signalFunc)
-				tep.logf("After SignallingConnecting: tel state=%v", tel.State())
+				tep.logDebugf("After SignallingConnecting: tel state=%v", tel.State())
 			}
 
 		case signalVal == telephony.SignallingEstablished:
 			tep.logf("Received SignallingEstablished: call established, setting up link source")
 			if tel != nil {
-				tep.logf("Processing SignallingEstablished: tel state=%v", tel.State())
+				tep.logDebugf("Processing SignallingEstablished: tel state=%v", tel.State())
 				tel.SignallingReceived([]int{signalVal}, signalFunc)
-				tep.logf("After SignallingEstablished: tel state=%v", tel.State())
+				tep.logDebugf("After SignallingEstablished: tel state=%v", tel.State())
 
 				tep.mu.Lock()
 				link := tep.activeLink
@@ -561,7 +567,7 @@ func (tep *TelephoneEndpoint) handleSignallingData(data []byte, link *rns.Link, 
 						rm.SetSourceMaxFrames(ls, 2)
 
 						link.SetPacketCallback(func(data []byte, packet *rns.Packet) {
-							tep.logf("Caller received packet (len=%d)", len(data))
+							tep.logDebugf("Caller received packet (len=%d)", len(data))
 							ls.ReceivePacket(data)
 							tep.handleSignallingData(data, link, tep.identity)
 						})
@@ -582,11 +588,11 @@ func (tep *TelephoneEndpoint) handleSignallingData(data []byte, link *rns.Link, 
 			}
 
 		case signalVal == telephony.SignallingBusy:
-			tep.logf("Received SignallingBusy")
+			tep.logDebugf("Received SignallingBusy")
 			if tel != nil {
-				tep.logf("Processing SignallingBusy: tel state=%v", tel.State())
+				tep.logDebugf("Processing SignallingBusy: tel state=%v", tel.State())
 				tel.SignallingReceived([]int{signalVal}, signalFunc)
-				tep.logf("After SignallingBusy: tel state=%v", tel.State())
+				tep.logDebugf("After SignallingBusy: tel state=%v", tel.State())
 			}
 			tep.mu.Lock()
 			onBusy := tep.onBusy
@@ -600,11 +606,11 @@ func (tep *TelephoneEndpoint) handleSignallingData(data []byte, link *rns.Link, 
 			}
 
 		case signalVal == telephony.SignallingRejected:
-			tep.logf("Received SignallingRejected")
+			tep.logDebugf("Received SignallingRejected")
 			if tel != nil {
-				tep.logf("Processing SignallingRejected: tel state=%v", tel.State())
+				tep.logDebugf("Processing SignallingRejected: tel state=%v", tel.State())
 				tel.SignallingReceived([]int{signalVal}, signalFunc)
-				tep.logf("After SignallingRejected: tel state=%v", tel.State())
+				tep.logDebugf("After SignallingRejected: tel state=%v", tel.State())
 			}
 			tep.mu.Lock()
 			onRejected := tep.onRejected
@@ -618,10 +624,10 @@ func (tep *TelephoneEndpoint) handleSignallingData(data []byte, link *rns.Link, 
 			}
 
 		case signalVal == telephony.SignallingCalling:
-			tep.logf("Received SignallingCalling")
+			tep.logDebugf("Received SignallingCalling")
 
 		default:
-			tep.logf("Received unknown signalling: %d", signalVal)
+			tep.logDebugf("Received unknown signalling: %d", signalVal)
 		}
 	}
 }
@@ -652,7 +658,7 @@ func (tep *TelephoneEndpoint) sendSignalling(link *rns.Link, signal int) {
 	}
 	p := rns.NewPacket(link, packed)
 	p.CreateReceipt = false
-	tep.logf("sendSignalling: sending signal %d (len=%d)", signal, len(packed))
+	tep.logDebugf("sendSignalling: sending signal %d (len=%d)", signal, len(packed))
 	if err := p.Pack(); err != nil {
 		tep.logf("sendSignalling: pack packet failed: %v", err)
 		return
@@ -914,7 +920,7 @@ func (tep *TelephoneEndpoint) Answer() bool {
 
 	if ls != nil {
 		link.SetPacketCallback(func(data []byte, packet *rns.Packet) {
-			tep.logf("Responder received packet (len=%d)", len(data))
+			tep.logDebugf("Responder received packet (len=%d)", len(data))
 
 			ls.ReceivePacket(data)
 
@@ -922,7 +928,7 @@ func (tep *TelephoneEndpoint) Answer() bool {
 		})
 	} else {
 		link.SetPacketCallback(func(data []byte, packet *rns.Packet) {
-			tep.logf("Responder received packet (len=%d)", len(data))
+			tep.logDebugf("Responder received packet (len=%d)", len(data))
 			tep.handleSignallingData(data, link, identity)
 		})
 	}

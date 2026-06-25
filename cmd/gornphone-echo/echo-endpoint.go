@@ -91,6 +91,12 @@ func (tep *EchoEndpoint) logf(format string, args ...any) {
 	}
 }
 
+func (tep *EchoEndpoint) logDebugf(format string, args ...any) {
+	if tep.logger != nil {
+		tep.logger.Debug(format, args...)
+	}
+}
+
 // DestinationHash returns the hex-encoded destination hash.
 func (tep *EchoEndpoint) DestinationHash() string {
 	tep.mu.Lock()
@@ -281,7 +287,7 @@ func (tep *EchoEndpoint) answer(link *rns.Link) bool {
 
 	// Replace packet callback to feed LinkSource AND handle signalling.
 	link.SetPacketCallback(func(data []byte, packet *rns.Packet) {
-		tep.logf("Echo received packet (len=%d)", len(data))
+		tep.logDebugf("Echo received packet (len=%d)", len(data))
 		linkSrc.ReceivePacket(data)
 		tep.handleSignallingData(data, link, tep.identity)
 	})

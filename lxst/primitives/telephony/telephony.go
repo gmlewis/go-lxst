@@ -1090,9 +1090,13 @@ func (tel *Telephone) prepareDiallingPipelinesLocked() {
 	}
 
 	if tel.receivePipeline == nil {
-		tel.receivePipeline, _ = pipeline.NewPipeline(
+		var err error
+		tel.receivePipeline, err = pipeline.NewPipeline(
 			tel.receiveMixer, codecs.NullCodec{}, tel.audioOutput,
 		)
+		if err != nil {
+			log.Printf("prepareDiallingPipelinesLocked: NewPipeline failed: %v", err)
+		}
 	}
 }
 
@@ -1129,9 +1133,13 @@ func (tel *Telephone) ResetDiallingPipelines() {
 		tel.dialToneFreq, 0.0, true, tel.dialToneEaseMs,
 		tel.targetFrameTimeMs, codecs.NullCodec{}, tel.receiveMixer, 1,
 	)
-	tel.receivePipeline, _ = pipeline.NewPipeline(
+	var err error
+	tel.receivePipeline, err = pipeline.NewPipeline(
 		tel.receiveMixer, codecs.NullCodec{}, tel.audioOutput,
 	)
+	if err != nil {
+		log.Printf("ResetDiallingPipelines: NewPipeline failed: %v", err)
+	}
 }
 
 // Incoming reports whether the current call is an incoming call.
@@ -1198,9 +1206,12 @@ func (tel *Telephone) ActivateRingTone() {
 		}
 		tel.ringerSource = src
 
-		tel.ringerPipeline, _ = pipeline.NewPipeline(
+		tel.ringerPipeline, err = pipeline.NewPipeline(
 			tel.ringerSource, codecs.NullCodec{}, tel.ringerOutput,
 		)
+		if err != nil {
+			log.Printf("ActivateRingTone: NewPipeline failed: %v", err)
+		}
 	}
 
 	go func() {
@@ -1411,9 +1422,13 @@ func (tel *Telephone) ReconfigureTransmitPipeline() {
 	)
 
 	if pktz != nil {
-		tel.transmitPipeline, _ = pipeline.NewPipeline(
+		var err error
+		tel.transmitPipeline, err = pipeline.NewPipeline(
 			tel.transmitMixer, transmitCodec, pktz,
 		)
+		if err != nil {
+			log.Printf("ReconfigureTransmitPipeline: NewPipeline failed: %v", err)
+		}
 	}
 
 	if transmitMuted {
@@ -1481,9 +1496,13 @@ func (tel *Telephone) OpenPipelines() {
 	)
 
 	if pktz != nil {
-		tel.transmitPipeline, _ = pipeline.NewPipeline(
+		var err error
+		tel.transmitPipeline, err = pipeline.NewPipeline(
 			tel.transmitMixer, transmitCodec, pktz,
 		)
+		if err != nil {
+			log.Printf("OpenPipelines: NewPipeline failed: %v", err)
+		}
 	}
 	tel.pipelineLock.Unlock()
 }
