@@ -11,13 +11,26 @@
 // a fallback for output-only scenarios, and a NullBackend is used when
 // no audio hardware or library is available. Device enumeration and
 // selection capabilities are provided for microphones and speakers.
+//
+// To force the NullBackend (e.g. in unit tests or headless CI), set the
+// LXST_NULL_AUDIO environment variable to any non-empty value. This
+// prevents any real audio device from being opened.
 package platforms
 
 import (
 	"log"
+	"os"
 	"runtime"
 	"strings"
 )
+
+// nullAudioForced reports whether the LXST_NULL_AUDIO environment
+// variable is set, forcing all backends to be NullBackend. This is
+// used by tests to avoid opening real audio hardware (which can produce
+// sound or block on microphone input).
+func nullAudioForced() bool {
+	return os.Getenv("LXST_NULL_AUDIO") != ""
+}
 
 // NewBackend creates the appropriate audio backend for the current platform.
 // It tries PortAudio first (full input + output), then Oto (output only),
@@ -34,7 +47,15 @@ func NewBackend(sampleRate, channels, bitDepth int) AudioBackend {
 //  1. PortAudio (purego, no CGO) — supports both recording and playback.
 //  2. Oto (pure-Go) — output only; used when PortAudio is unavailable.
 //  3. NullBackend — no hardware, returns silence / discards output.
+//
+// If the LXST_NULL_AUDIO environment variable is set, the NullBackend is
+// returned immediately without attempting to load any audio library or
+// open any device.
 func NewBackendWithDevice(sampleRate, channels, bitDepth int, preferredDevice string) AudioBackend {
+	if nullAudioForced() {
+		return NewNullBackend(sampleRate, channels, bitDepth)
+	}
+
 	// PortAudio is the preferred backend: it provides real microphone
 	// input on macOS (CoreAudio), Windows (WASAPI), and Linux
 	// (ALSA/PulseAudio/JACK) via purego with no CGO.

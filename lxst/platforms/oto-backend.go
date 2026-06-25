@@ -40,6 +40,7 @@ type OtoBackend struct {
 	mu         sync.Mutex
 	ctx        *oto.Context
 	ready      chan struct{}
+	initOnce   sync.Once
 	recorder   *otoRecorder
 	player     *otoPlayer
 	recorderMu sync.Mutex
@@ -90,10 +91,24 @@ func NewOtoBackend(sampleRate, channels, bitDepth int) AudioBackend {
 		ready:      make(chan struct{}),
 	}
 
-	// Initialize oto context in background
-	go ob.initContext()
+	// Context initialization is deferred until a player is actually
+	// requested (see ensureContext). This prevents opening a real audio
+	// output device — which can emit a static burst on macOS CoreAudio —
+	// merely from constructing the backend in tests or in callers that
+	// never play audio.
 
 	return ob
+}
+
+// ensureContext lazily initializes the oto context exactly once. This
+// defers opening the real audio output device until a player is
+// actually needed, avoiding unwanted sound when a backend is created
+// but never used for playback (e.g. in unit tests, or input-only
+// pipelines backed by PortAudio).
+func (ob *OtoBackend) ensureContext() {
+	ob.initOnce.Do(func() {
+		go ob.initContext()
+	})
 }
 
 func (ob *OtoBackend) initContext() {
@@ -116,9 +131,9 @@ func (ob *OtoBackend) initContext() {
 	// Wait for context to be ready
 	<-readyChan
 
-	// Enumerate actual platform devices before signaling ready
-	ob.micNames = enumerateMicrophones()
-	ob.speakerNames = enumerateSpeakers()
+	// Device names are populated lazily by AllMicrophones/AllSpeakers
+	// so that constructing the backend does not spawn system_profiler
+	// or other subprocesses.
 
 	close(ob.ready)
 }
@@ -298,8 +313,10 @@ func enumerateWindowsAudio(direction string) []string {
 	return result
 }
 
-// waitReady waits for the oto context to be initialized.
+// waitReady triggers lazy context initialization (if not already
+// started) and waits for the oto context to be ready.
 func (ob *OtoBackend) waitReady() error {
+	ob.ensureContext()
 	select {
 	case <-ob.ready:
 		ob.mu.Lock()
@@ -319,30 +336,46 @@ func (ob *OtoBackend) BitDepth() int   { return ob.bitDepth }
 
 func (ob *OtoBackend) AllMicrophones() []string {
 	ob.mu.Lock()
-	defer ob.mu.Unlock()
-	return ob.micNames
+	names := ob.micNames
+	ob.mu.Unlock()
+	if len(names) > 0 {
+		return names
+	}
+	// Enumerate without requiring the oto context — device enumeration
+	// uses platform tools (system_profiler, arecord, etc.), not oto.
+	names = enumerateMicrophones()
+	ob.mu.Lock()
+	ob.micNames = names
+	ob.mu.Unlock()
+	return names
 }
 
 func (ob *OtoBackend) DefaultMicrophone() string {
-	ob.mu.Lock()
-	defer ob.mu.Unlock()
-	if len(ob.micNames) > 0 {
-		return ob.micNames[0]
+	mics := ob.AllMicrophones()
+	if len(mics) > 0 {
+		return mics[0]
 	}
 	return "default"
 }
 
 func (ob *OtoBackend) AllSpeakers() []string {
 	ob.mu.Lock()
-	defer ob.mu.Unlock()
-	return ob.speakerNames
+	names := ob.speakerNames
+	ob.mu.Unlock()
+	if len(names) > 0 {
+		return names
+	}
+	names = enumerateSpeakers()
+	ob.mu.Lock()
+	ob.speakerNames = names
+	ob.mu.Unlock()
+	return names
 }
 
 func (ob *OtoBackend) DefaultSpeaker() string {
-	ob.mu.Lock()
-	defer ob.mu.Unlock()
-	if len(ob.speakerNames) > 0 {
-		return ob.speakerNames[0]
+	speakers := ob.AllSpeakers()
+	if len(speakers) > 0 {
+		return speakers[0]
 	}
 	return "default"
 }

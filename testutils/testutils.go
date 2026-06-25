@@ -105,6 +105,15 @@ func SkipShortIntegration(t *testing.T) {
 	}
 }
 
+// ForceNullAudio sets the LXST_NULL_AUDIO environment variable so that
+// the platforms package returns a NullBackend instead of opening real
+// audio hardware. This should be called from TestMain in packages whose
+// tests create LineSink/LineSource/Telephone instances, to prevent
+// tests from producing sound or blocking on microphone input.
+func ForceNullAudio() {
+	_ = os.Setenv("LXST_NULL_AUDIO", "1")
+}
+
 // Global TCP port counter for integration tests.
 var testTCPPortCounter atomic.Uint32
 
