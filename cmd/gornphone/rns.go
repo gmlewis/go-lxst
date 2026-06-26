@@ -773,6 +773,20 @@ func (tep *TelephoneEndpoint) Call(identityHash string, timeout time.Duration) e
 	tep.activeLink = link
 	tep.mu.Unlock()
 
+	// Set packet callback BEFORE Establish so it's registered
+	// when packets start arriving.
+	link.SetPacketCallback(func(data []byte, packet *rns.Packet) {
+		log.Printf("Caller pre-establish packet callback fired (len=%d)", len(data))
+		ls := tep.getLinkSource()
+		if ls == nil {
+			ls = tep.getOrCreateCallerLinkSource()
+		}
+		if ls != nil {
+			ls.ReceivePacket(data)
+		}
+		tep.handleSignallingData(data, link, tep.identity)
+	})
+
 	link.SetLinkEstablishedCallback(func(l *rns.Link) {
 		tep.outgoingLinkEstablished(l)
 	})
