@@ -892,8 +892,13 @@ func (tep *TelephoneEndpoint) getOrCreateCallerLinkSource() *network.LinkSource 
 	}
 
 	ls := network.NewLinkSource(nil, rm)
-	tep.callerLinkSource = ls
-	return ls
+		if tel != nil {
+			if codec := tel.TransmitCodec(); codec != nil {
+				ls.SetCodec(codec)
+			}
+		}
+		tep.callerLinkSource = ls
+		return ls
 }
 
 // Hangup terminates the current active call and stops all audio pipelines.

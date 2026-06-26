@@ -1087,7 +1087,13 @@ func (tel *Telephone) prepareDiallingPipelinesLocked() {
 	}
 
 	if tel.receiveMixer == nil {
-		tel.receiveMixer = mixer.NewMixer(tel.targetFrameTimeMs, 0, nil, nil, tel.receiveGain)
+		recvSampleRate := 0
+		if sr, ok := tel.transmitCodec.(interface{ PreferredSampleRate() int }); ok {
+			if r := sr.PreferredSampleRate(); r > 0 {
+				recvSampleRate = r
+			}
+		}
+		tel.receiveMixer = mixer.NewMixer(tel.targetFrameTimeMs, recvSampleRate, nil, nil, tel.receiveGain)
 	}
 
 	if tel.dialTone == nil {
@@ -1150,7 +1156,7 @@ func (tel *Telephone) ResetDiallingPipelines() {
 		}
 	}
 	tel.audioOutput = sinks.NewLineSink(tel.speakerDevice, true, false, sampleRate)
-	tel.receiveMixer = mixer.NewMixer(tel.targetFrameTimeMs, 0, nil, nil, tel.receiveGain)
+	tel.receiveMixer = mixer.NewMixer(tel.targetFrameTimeMs, sampleRate, nil, nil, tel.receiveGain)
 	tel.dialTone = generators.NewToneSource(
 		tel.dialToneFreq, 0.0, true, tel.dialToneEaseMs,
 		tel.targetFrameTimeMs, codecs.NullCodec{}, tel.receiveMixer, 1,
