@@ -37,6 +37,19 @@ type codecTypeError struct{}
 
 func (e *codecTypeError) Error() string { return "unknown codec type" }
 
+// isNullOrUnsetType reports whether a codec is nil or a NullCodec,
+// indicating that no real codec has been configured.
+func isNullOrUnsetType(c codecs.Codec) bool {
+	if c == nil {
+		return true
+	}
+	switch c.(type) {
+	case codecs.NullCodec:
+		return true
+	}
+	return false
+}
+
 // CodecHeaderByte returns the single-byte codec identifier for a given codec.
 func CodecHeaderByte(codec codecs.Codec) (byte, error) {
 	switch codec.(type) {
@@ -375,33 +388,39 @@ func (ls *LinkSource) ReceivePacket(data []byte) {
 		headerByte := frameData[0]
 		payload := frameData[1:]
 
-		newCodec, err := CodecTypeFromHeader(headerByte)
-		if err != nil {
-			log.Printf("LinkSource.ReceivePacket: unknown codec header 0x%02x", headerByte)
-			return
-		}
-
+		// Use the pre-configured codec if available (matches the
+		// negotiated profile from signalling). Fall back to creating
+		// a new codec from the header byte only when no codec is set.
 		ls.mu.Lock()
-		ls.codec = newCodec
-		ls.mu.Unlock()
-
-		ls.mu.Lock()
+		activeCodec := ls.codec
 		sink := ls.sink
 		channels := ls.channels
 		ls.mu.Unlock()
 
+		if isNullOrUnsetType(activeCodec) {
+			newCodec, err := CodecTypeFromHeader(headerByte)
+			if err != nil {
+				log.Printf("LinkSource.ReceivePacket: unknown codec header 0x%02x", headerByte)
+				return
+			}
+			activeCodec = newCodec
+			ls.mu.Lock()
+			ls.codec = newCodec
+			ls.mu.Unlock()
+		}
+
 		if sink == nil {
-			log.Printf("LinkSource.ReceivePacket: sink is nil, dropping audio frame (codec=%T, payloadLen=%d)", newCodec, len(payload))
+			log.Printf("LinkSource.ReceivePacket: sink is nil, dropping audio frame (codec=%T, payloadLen=%d)", activeCodec, len(payload))
 			return
 		}
 		if !sink.CanReceive(ls) {
-			log.Printf("LinkSource.ReceivePacket: sink cannot receive, dropping audio frame (codec=%T)", newCodec)
+			log.Printf("LinkSource.ReceivePacket: sink cannot receive, dropping audio frame (codec=%T)", activeCodec)
 			return
 		}
 
-		decoded := newCodec.Decode(payload, channels)
+		decoded := activeCodec.Decode(payload, channels)
 		if len(decoded) == 0 {
-			log.Printf("LinkSource.ReceivePacket: decode returned empty frame (codec=%T, payloadLen=%d, channels=%d)", newCodec, len(payload), channels)
+			log.Printf("LinkSource.ReceivePacket: decode returned empty frame (codec=%T, payloadLen=%d, channels=%d)", activeCodec, len(payload), channels)
 		}
 		if err := sink.HandleFrame(decoded, ls); err != nil {
 			log.Printf("LinkSource.ReceivePacket: sink.HandleFrame failed: %v", err)

@@ -104,6 +104,7 @@ func (ap *AudioPipeline) SetupReceive(signallingRcvr *network.SignallingReceiver
 	ap.receiveMixer = mixer.NewMixer(ap.targetFrameMs, ap.samplerate, nil, nil, ap.receiveGain)
 
 	ap.linkSource = network.NewLinkSource(signallingRcvr, ap.receiveMixer)
+	ap.linkSource.SetCodec(ap.receiveCodec)
 
 	return nil
 }

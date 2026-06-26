@@ -568,6 +568,9 @@ func (tep *TelephoneEndpoint) handleSignallingData(data []byte, link *rns.Link, 
 					rm := tel.ReceiveMixer()
 					if rm != nil {
 						ls := network.NewLinkSource(nil, rm)
+						if ap := tep.audioPipeline; ap != nil {
+							ls.SetCodec(ap.ReceiveCodec())
+						}
 						rm.SetSourceMaxFrames(ls, 2)
 
 						link.SetPacketCallback(func(data []byte, packet *rns.Packet) {
@@ -915,6 +918,9 @@ func (tep *TelephoneEndpoint) Answer() bool {
 	rm := tel.ReceiveMixer()
 	if rm != nil {
 		ls = network.NewLinkSource(nil, rm)
+		if ap := tep.audioPipeline; ap != nil {
+			ls.SetCodec(ap.ReceiveCodec())
+		}
 		rm.SetSourceMaxFrames(ls, 2)
 	} else {
 		tep.logf("TelephoneEndpoint.Answer(): receive mixer is nil, audio receive disabled")

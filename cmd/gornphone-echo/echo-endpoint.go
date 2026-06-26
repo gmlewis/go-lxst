@@ -271,6 +271,7 @@ func (tep *EchoEndpoint) answer(link *rns.Link) bool {
 
 	// Create LinkSource to receive audio from the remote.
 	linkSrc := network.NewLinkSource(nil, echoSrc)
+	linkSrc.SetCodec(codec)
 	echoSrc.SetLinkSource(linkSrc)
 
 	tep.mu.Lock()
