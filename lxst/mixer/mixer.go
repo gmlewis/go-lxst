@@ -15,6 +15,7 @@ import (
 	"math"
 	"sync"
 	"time"
+	"unsafe"
 
 	"github.com/gmlewis/go-lxst/lxst/codecs"
 	"github.com/gmlewis/go-lxst/lxst/sources"
@@ -78,6 +79,7 @@ type Mixer struct {
 	mu              sync.Mutex
 	insertLock      sync.Mutex
 	mixerLock       sync.Mutex
+	id              uintptr
 	targetFrameMs   float64
 	frameTime       float64
 	shouldRun       bool
@@ -118,6 +120,7 @@ func NewMixer(targetFrameMs float64, samplerate int, codec codecs.Codec, sink so
 		sink:           sink,
 		codec:          codec,
 	}
+	m.id = uintptr(unsafe.Pointer(m))
 
 	if samplerate > 0 {
 		m.samplerate = samplerate
@@ -287,7 +290,7 @@ func (m *Mixer) HandleFrame(frame [][]float32, fromSource sources.Source) error 
 	m.insertLock.Lock()
 
 	if _, ok := m.incomingFrames[fromSource]; !ok {
-		log.Printf("Mixer.HandleFrame: registering new source %T (channels=%d, samples=%d)", fromSource, func() int {
+		log.Printf("Mixer.HandleFrame: registering new source %T (channels=%d, samples=%d, mixer=%x)", fromSource, func() int {
 			if len(frame) > 0 {
 				return len(frame[0])
 			}
@@ -360,8 +363,8 @@ func (m *Mixer) mixerJobWithThread(thread *mixerThreadInfo) {
 	codec := m.codec
 	m.mu.Unlock()
 
-	log.Printf("Mixer.mixerJob: starting (samplerate=%d, samplesPerFrame=%d, frameTime=%.4f, sink=%v, codec=%T)",
-		samplerate, samplesPerFrame, frameTime, !sinkNil, codec)
+	log.Printf("Mixer.mixerJob: starting (samplerate=%d, samplesPerFrame=%d, frameTime=%.4f, sink=%v, codec=%T, mixer=%x)",
+		samplerate, samplesPerFrame, frameTime, !sinkNil, codec, m.id)
 
 	for {
 		select {
@@ -387,7 +390,7 @@ func (m *Mixer) mixerJobWithThread(thread *mixerThreadInfo) {
 			sourceCount := 0
 			var mixedFrame [][]float32
 
-			for _, q := range m.incomingFrames {
+			for src, q := range m.incomingFrames {
 				if len(q.frames) > 0 {
 					nextFrame := q.frames[0]
 					q.frames = q.frames[1:]
@@ -395,6 +398,13 @@ func (m *Mixer) mixerJobWithThread(thread *mixerThreadInfo) {
 					if len(nextFrame) == 0 {
 						continue
 					}
+
+					log.Printf("Mixer.digestJob: source=%T frame samples=%d channels=%d mixer=%x", src, len(nextFrame), func() int {
+						if len(nextFrame) > 0 {
+							return len(nextFrame[0])
+						}
+						return 0
+					}())
 
 					g := m.mixingGain()
 
