@@ -422,7 +422,7 @@ func (tep *TelephoneEndpoint) outgoingLinkEstablished(link *rns.Link) {
 
 	if link != nil {
 		link.SetPacketCallback(func(data []byte, packet *rns.Packet) {
-			tep.logDebugf("Caller received packet (len=%d)", len(data))
+			log.Printf("Caller packet callback fired (len=%d)", len(data))
 			// Try the AudioPipeline's link source first; fall back to
 			// creating a caller-specific one wired to the Telephone's
 			// receive mixer.
@@ -432,6 +432,8 @@ func (tep *TelephoneEndpoint) outgoingLinkEstablished(link *rns.Link) {
 			}
 			if ls != nil {
 				ls.ReceivePacket(data)
+			} else {
+				log.Printf("Caller packet callback: no link source available")
 			}
 			tep.handleSignallingData(data, link, identity)
 		})
