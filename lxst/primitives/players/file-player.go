@@ -48,7 +48,7 @@ func NewFilePlayer(path string, device string, loop bool) (*FilePlayer, error) {
 		filePath:       path,
 		playbackDevice: device,
 		loop:           loop,
-		sink:           sinks.NewLineSink(device, true, false),
+		sink:           sinks.NewLineSink(device, true, false, 0),
 		loopback:       sources.NewLoopback(codecs.NullCodec{}, nil),
 		raw:            codecs.NullCodec{},
 	}
@@ -132,7 +132,7 @@ func (fp *FilePlayer) Start() error {
 	}
 
 	if fp.outputPipeline == nil {
-		fp.sink = sinks.NewLineSink(fp.playbackDevice, true, false)
+		fp.sink = sinks.NewLineSink(fp.playbackDevice, true, false, 0)
 		var err error
 		fp.outputPipeline, err = pipeline.NewPipeline(fp.loopback, codecs.NullCodec{}, fp.sink)
 		if err != nil {

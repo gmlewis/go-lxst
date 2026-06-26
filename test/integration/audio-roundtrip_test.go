@@ -277,7 +277,7 @@ func TestIntegration_LineSourceToLineSink(t *testing.T) {
 	codec := codecs.NullCodec{}
 
 	// Create a line sink that will receive frames (autodigest=true so it starts automatically)
-	lineSink := sinks.NewLineSink("", true, false)
+	lineSink := sinks.NewLineSink("", true, false, 0)
 
 	// Create a line source with the codec and sink
 	lineSrc := sources.NewLineSource("", 20.0, codec, lineSink, nil, 0, 0, 0)

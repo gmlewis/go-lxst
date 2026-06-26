@@ -1077,7 +1077,13 @@ func (tel *Telephone) prepareDiallingPipelinesLocked() {
 	tel.selectCallProfile(tel.currentProfile)
 
 	if tel.audioOutput == nil {
-		tel.audioOutput = sinks.NewLineSink(tel.speakerDevice, true, false)
+		sampleRate := 48000
+		if codec, ok := tel.transmitCodec.(interface{ PreferredSampleRate() int }); ok {
+			if sr := codec.PreferredSampleRate(); sr > 0 {
+				sampleRate = sr
+			}
+		}
+		tel.audioOutput = sinks.NewLineSink(tel.speakerDevice, true, false, sampleRate)
 	}
 
 	if tel.receiveMixer == nil {
@@ -1137,7 +1143,13 @@ func (tel *Telephone) ResetDiallingPipelines() {
 
 	tel.selectCallProfile(tel.currentProfile)
 
-	tel.audioOutput = sinks.NewLineSink(tel.speakerDevice, true, false)
+	sampleRate := 48000
+	if codec, ok := tel.transmitCodec.(interface{ PreferredSampleRate() int }); ok {
+		if sr := codec.PreferredSampleRate(); sr > 0 {
+			sampleRate = sr
+		}
+	}
+	tel.audioOutput = sinks.NewLineSink(tel.speakerDevice, true, false, sampleRate)
 	tel.receiveMixer = mixer.NewMixer(tel.targetFrameTimeMs, 0, nil, nil, tel.receiveGain)
 	tel.dialTone = generators.NewToneSource(
 		tel.dialToneFreq, 0.0, true, tel.dialToneEaseMs,
@@ -1207,7 +1219,7 @@ func (tel *Telephone) ActivateRingTone() {
 
 	if tel.ringerPipeline == nil {
 		if tel.ringerOutput == nil {
-			tel.ringerOutput = sinks.NewLineSink(ringerDevice, true, false)
+			tel.ringerOutput = sinks.NewLineSink(ringerDevice, true, false, 0)
 		}
 
 		src, err := sources.NewOpusFileSource(ringtonePath, 60.0, true, nil, nil, false)

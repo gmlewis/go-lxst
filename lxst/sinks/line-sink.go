@@ -51,9 +51,12 @@ type digestThreadInfo struct {
 	wg   sync.WaitGroup
 }
 
-func NewLineSink(preferredDevice string, autodigest bool, lowLatency bool) *LineSink {
-	backend := platforms.NewBackendWithDevice(48000, 2, 32, preferredDevice)
-	log.Printf("LineSink.NewLineSink: preferredDevice=%v, autodigest=%v, backend=%T (%p)", preferredDevice, autodigest, backend, backend)
+func NewLineSink(preferredDevice string, autodigest bool, lowLatency bool, sampleRate int) *LineSink {
+	if sampleRate <= 0 {
+		sampleRate = 48000
+	}
+	backend := platforms.NewBackendWithDevice(sampleRate, 2, 32, preferredDevice)
+	log.Printf("LineSink.NewLineSink: preferredDevice=%v, autodigest=%v, sampleRate=%d, backend=%T (%p)", preferredDevice, autodigest, sampleRate, backend, backend)
 
 	ls := &LineSink{
 		preferredDevice:     preferredDevice,
@@ -64,7 +67,7 @@ func NewLineSink(preferredDevice string, autodigest bool, lowLatency bool) *Line
 		autostartMin:        LineSinkAutostartMin,
 		bufferMaxHeight:     LineSinkMaxFrames - 3,
 		lowLatency:          lowLatency,
-		preferredSamplerate: 48000,
+		preferredSamplerate: sampleRate,
 		backend:             backend,
 		channels:            2,
 	}

@@ -63,7 +63,7 @@ func main() {
 		fmt.Printf("  Codec:     NullCodec (raw PCM)\n")
 	}
 
-	sink := sinks.NewLineSink("", true, false)
+	sink := sinks.NewLineSink("", true, false, 0)
 	defer func() {
 		if err := sink.Stop(); err != nil {
 			log.Printf("Error stopping sink: %v", err)
@@ -112,7 +112,7 @@ func main() {
 
 func listAudioDevices() {
 	fmt.Println("Listing audio devices:")
-	backend := sinks.NewLineSink("", true, false)
+	backend := sinks.NewLineSink("", true, false, 0)
 	speakers := backend.AvailableSpeakers()
 	fmt.Printf("  Speakers (%d):\n", len(speakers))
 	for _, s := range speakers {

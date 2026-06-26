@@ -99,7 +99,13 @@ func (ap *AudioPipeline) SetupReceive(signallingRcvr *network.SignallingReceiver
 
 	ap.signallingRcvr = signallingRcvr
 
-	ap.audioOutput = sinks.NewLineSink(ap.speakerDevice, true, false)
+	sampleRate := 48000
+	if codec, ok := ap.receiveCodec.(interface{ PreferredSampleRate() int }); ok {
+		if sr := codec.PreferredSampleRate(); sr > 0 {
+			sampleRate = sr
+		}
+	}
+	ap.audioOutput = sinks.NewLineSink(ap.speakerDevice, true, false, sampleRate)
 
 	ap.receiveMixer = mixer.NewMixer(ap.targetFrameMs, ap.samplerate, nil, nil, ap.receiveGain)
 

@@ -41,7 +41,7 @@ func TestRemoteSink_CanReceive(t *testing.T) {
 func TestLineSink_New(t *testing.T) {
 	t.Parallel()
 
-	ls := NewLineSink("", true, false)
+	ls := NewLineSink("", true, false, 0)
 	if ls == nil {
 		t.Fatal("NewLineSink returned nil")
 	}
@@ -56,7 +56,7 @@ func TestLineSink_New(t *testing.T) {
 func TestLineSink_CanReceive(t *testing.T) {
 	t.Parallel()
 
-	ls := NewLineSink("", false, false)
+	ls := NewLineSink("", false, false, 0)
 
 	for i := 0; i < ls.bufferMaxHeight; i++ {
 		if !ls.CanReceive(nil) {
@@ -73,7 +73,7 @@ func TestLineSink_CanReceive(t *testing.T) {
 func TestLineSink_HandleFrame(t *testing.T) {
 	t.Parallel()
 
-	ls := NewLineSink("", false, false)
+	ls := NewLineSink("", false, false, 0)
 
 	frame := [][]float32{
 		{0.5, -0.3},
@@ -99,7 +99,7 @@ func TestLineSink_HandleFrame(t *testing.T) {
 func TestLineSink_HandleFrame_SetsSamplesPerFrame(t *testing.T) {
 	t.Parallel()
 
-	ls := NewLineSink("", false, false)
+	ls := NewLineSink("", false, false, 0)
 	if ls.SamplesPerFrame() != 0 {
 		t.Errorf("Expected initial samples_per_frame=0, got %d", ls.SamplesPerFrame())
 	}
@@ -124,7 +124,7 @@ func TestLineSink_HandleFrame_SetsSamplesPerFrame(t *testing.T) {
 func TestLineSink_Autostart(t *testing.T) {
 	t.Parallel()
 
-	ls := NewLineSink("", true, false)
+	ls := NewLineSink("", true, false, 0)
 
 	frame := make([][]float32, 2)
 	for i := range frame {
@@ -150,7 +150,7 @@ func TestLineSink_Autostart(t *testing.T) {
 func TestLineSink_EnableLowLatency(t *testing.T) {
 	t.Parallel()
 
-	ls := NewLineSink("", false, false)
+	ls := NewLineSink("", false, false, 0)
 	ls.EnableLowLatency()
 
 	ls.mu.Lock()
@@ -165,7 +165,7 @@ func TestLineSink_EnableLowLatency(t *testing.T) {
 func TestLineSink_ChannelReduction(t *testing.T) {
 	t.Parallel()
 
-	ls := NewLineSink("", false, false)
+	ls := NewLineSink("", false, false, 0)
 	ls.channels = 2
 
 	if ls.Channels() != 2 {
@@ -182,12 +182,12 @@ func (t *testSource) Running() bool { return true }
 func TestLineSink_PreferredDevice(t *testing.T) {
 	t.Parallel()
 
-	ls := NewLineSink("my-speaker", true, false)
+	ls := NewLineSink("my-speaker", true, false, 0)
 	if ls.PreferredDevice() != "my-speaker" {
 		t.Errorf("Expected preferred device 'my-speaker', got %q", ls.PreferredDevice())
 	}
 
-	ls2 := NewLineSink("", true, false)
+	ls2 := NewLineSink("", true, false, 0)
 	if ls2.PreferredDevice() != "" {
 		t.Errorf("Expected empty preferred device, got %q", ls2.PreferredDevice())
 	}
@@ -196,7 +196,7 @@ func TestLineSink_PreferredDevice(t *testing.T) {
 func TestLineSink_AvailableSpeakers(t *testing.T) {
 	t.Parallel()
 
-	ls := NewLineSink("", true, false)
+	ls := NewLineSink("", true, false, 0)
 	speakers := ls.AvailableSpeakers()
 	// With null backend, should at least have "null-speaker"
 	if len(speakers) == 0 {
