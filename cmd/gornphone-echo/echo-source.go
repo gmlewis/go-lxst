@@ -213,7 +213,7 @@ func (es *EchoSource) generateLoop() {
 		toneFrame := es.generateToneFrame(samplesPerFrame)
 
 		// Get any echo frames that are ready to emit.
-		echoFrames := es.getReadyEchoFrames()
+		echoFrames := es.getReadyEchoFrames(samplesPerFrame)
 
 		// Mix tone and echo together, then send to the transmit mixer.
 		var mixed [][]float32
@@ -266,9 +266,11 @@ func (es *EchoSource) generateToneFrame(samplesPerFrame int) [][]float32 {
 	return frame
 }
 
-// getReadyEchoFrames returns all buffered frames whose emit time has
-// passed, removing them from the buffer.
-func (es *EchoSource) getReadyEchoFrames() [][]float32 {
+// getReadyEchoFrames returns echo frames whose emit time has passed.
+// It flattens them into a single frame capped at maxSamples to match
+// the tone frame size, preventing oversized frames from reaching the
+// Opus encoder.
+func (es *EchoSource) getReadyEchoFrames(maxSamples int) [][]float32 {
 	now := time.Now()
 	var result [][]float32
 
@@ -283,6 +285,12 @@ func (es *EchoSource) getReadyEchoFrames() [][]float32 {
 	}
 	es.echoBuffer = remaining
 	es.echoBufferMu.Unlock()
+
+	// Cap to maxSamples to prevent oversized frames from exceeding
+	// the Opus encoder's expected frame duration.
+	if len(result) > maxSamples {
+		result = result[:maxSamples]
+	}
 
 	return result
 }

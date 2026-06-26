@@ -97,6 +97,8 @@ func (ls *LineSink) HandleFrame(frame [][]float32, fromSource sources.Source) er
 		if ls.samplerate > 0 {
 			ls.frameTime = float64(ls.samplesPerFrame) / float64(ls.samplerate)
 		}
+		log.Printf("LineSink.HandleFrame: first frame detected: samples=%d, channels=%d, backendRate=%d, frameTime=%.4f",
+			ls.samplesPerFrame, len(frame[0]), ls.samplerate, ls.frameTime)
 	}
 	dequeLen := len(ls.frameDeque)
 	ls.insertLock.Unlock()

@@ -574,7 +574,7 @@ func (tep *TelephoneEndpoint) handleSignallingData(data []byte, link *rns.Link, 
 						rm.SetSourceMaxFrames(ls, 2)
 
 						link.SetPacketCallback(func(data []byte, packet *rns.Packet) {
-							tep.logDebugf("Caller received packet (len=%d)", len(data))
+							log.Printf("Caller received packet (len=%d)", len(data))
 							ls.ReceivePacket(data)
 							tep.handleSignallingData(data, link, tep.identity)
 						})
