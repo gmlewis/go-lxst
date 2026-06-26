@@ -181,3 +181,4 @@ func (r *Raw) PreferredSampleRate() int { return 0 }
 func (r *Raw) FrameQuantumMs() float64  { return 0 }
 func (r *Raw) FrameMaxMs() float64      { return 0 }
 func (r *Raw) ValidFrameMs() []float64  { return nil }
+func (r *Raw) Channels() int            { return r.channels }

@@ -160,3 +160,5 @@ func (c *Codec2) FrameMaxMs() float64 {
 func (c *Codec2) ValidFrameMs() []float64 {
 	return []float64{FRAME_QUANTA_MS} // Only 40ms frames
 }
+
+func (c *Codec2) Channels() int { return c.channels }

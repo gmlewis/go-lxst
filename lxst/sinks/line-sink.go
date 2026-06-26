@@ -289,11 +289,7 @@ func (ls *LineSink) digestJobWithThread(thread *digestThreadInfo) {
 			ls.insertLock.Unlock()
 
 			if len(frame) > 0 {
-				if len(frame[0]) > channels {
-					for i := range frame {
-						frame[i] = frame[i][:channels]
-					}
-				}
+				frame = adaptChannels(frame, channels)
 				if err := player.Play(frame); err != nil {
 					log.Printf("LineSink.digestJob: player.Play failed: %v", err)
 				}
@@ -368,4 +364,38 @@ func (ls *LineSink) AvailableSpeakers() []string {
 		return nil
 	}
 	return backend.AllSpeakers()
+}
+
+// adaptChannels ensures a frame's per-sample channel count matches the
+// target channel count expected by the audio player. If the frame has
+// more channels than the target, extra channels are trimmed. If it has
+// fewer channels (e.g. mono audio feeding a stereo output), the
+// available channels are duplicated to fill the remaining ones —
+// matching the upmix behaviour of Python's soundcard player.play().
+func adaptChannels(frame [][]float32, targetChannels int) [][]float32 {
+	if len(frame) == 0 || targetChannels <= 0 {
+		return frame
+	}
+
+	srcChannels := len(frame[0])
+	if srcChannels == targetChannels {
+		return frame
+	}
+
+	if srcChannels > targetChannels {
+		for i := range frame {
+			frame[i] = frame[i][:targetChannels]
+		}
+		return frame
+	}
+
+	// Upmix: duplicate the available channels to fill the target.
+	for i := range frame {
+		expanded := make([]float32, targetChannels)
+		for c := 0; c < targetChannels; c++ {
+			expanded[c] = frame[i][c%srcChannels]
+		}
+		frame[i] = expanded
+	}
+	return frame
 }

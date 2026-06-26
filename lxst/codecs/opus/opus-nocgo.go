@@ -84,6 +84,7 @@ func (o *Opus) PreferredSampleRate() int { return o.sourceSampleRate }
 func (o *Opus) FrameQuantumMs() float64  { return o.frameQuantumMs }
 func (o *Opus) FrameMaxMs() float64      { return o.frameMaxMs }
 func (o *Opus) ValidFrameMs() []float64  { return o.validFrameMs }
+func (o *Opus) Channels() int            { return o.channels }
 
 func (o *Opus) SetSourceSampleRate(rate int) { o.sourceSampleRate = rate }
 func (o *Opus) SetSinkSampleRate(rate int)   { o.sinkSampleRate = rate }

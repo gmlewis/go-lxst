@@ -354,6 +354,14 @@ func (ls *LinkSource) SetCodec(codec codecs.Codec) {
 	ls.mu.Lock()
 	defer ls.mu.Unlock()
 	ls.codec = codec
+	// Derive the channel count from the codec's profile, matching
+	// the Python Network.py behaviour where self.channels is set
+	// from self.codec.channels when the codec is established.
+	if codec != nil {
+		if ch := codec.Channels(); ch > 0 {
+			ls.channels = ch
+		}
+	}
 }
 
 func (ls *LinkSource) GetCodec() codecs.Codec {
@@ -406,6 +414,10 @@ func (ls *LinkSource) ReceivePacket(data []byte) {
 			activeCodec = newCodec
 			ls.mu.Lock()
 			ls.codec = newCodec
+			if ch := newCodec.Channels(); ch > 0 {
+				ls.channels = ch
+			}
+			channels = ls.channels
 			ls.mu.Unlock()
 		}
 

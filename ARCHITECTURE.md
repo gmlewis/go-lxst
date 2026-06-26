@@ -66,6 +66,7 @@ type Codec interface {
     FrameQuantumMs() float64
     FrameMaxMs() float64
     ValidFrameMs() []float64
+    Channels() int
 }
 ```
 

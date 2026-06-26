@@ -96,7 +96,7 @@ import (
 )
 
 func main() {
-    sink := sinks.NewLineSink("", true, false)
+    sink := sinks.NewLineSink("", true, false, 48000)
     tone := generators.NewToneSource(440.0, 0.1, true, 20.0, 20.0, nil, sink, 1)
     tone.Start()
     time.Sleep(2 * time.Second)

@@ -59,6 +59,34 @@ func TestOpus_InvalidProfile(t *testing.T) {
 	}
 }
 
+func TestOpus_Channels(t *testing.T) {
+	t.Parallel()
+
+	// The exported Channels() method must return the profile's channel
+	// count, matching the Python Opus.channels attribute. This is used
+	// by LinkSource.SetCodec to derive the channel count.
+	testCases := []struct {
+		profile  int
+		expected int
+	}{
+		{PROFILE_VOICE_LOW, 1},
+		{PROFILE_VOICE_MEDIUM, 1},
+		{PROFILE_VOICE_HIGH, 1},
+		{PROFILE_VOICE_MAX, 2},
+		{PROFILE_AUDIO_MEDIUM, 2},
+		{PROFILE_AUDIO_MAX, 2},
+	}
+	for _, tc := range testCases {
+		o, err := NewOpus(tc.profile)
+		if err != nil {
+			t.Fatalf("NewOpus(%v) failed: %v", tc.profile, err)
+		}
+		if got := o.Channels(); got != tc.expected {
+			t.Errorf("Channels() for profile %v: got %v, want %v", tc.profile, got, tc.expected)
+		}
+	}
+}
+
 func TestOpus_FrameQuantization(t *testing.T) {
 	t.Parallel()
 

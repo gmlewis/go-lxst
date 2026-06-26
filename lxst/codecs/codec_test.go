@@ -130,3 +130,16 @@ func TestIsNullCodec(t *testing.T) {
 		})
 	}
 }
+
+func TestNullCodec_Channels(t *testing.T) {
+	t.Parallel()
+
+	// NullCodec.Channels() returns 0 to indicate "unknown", matching
+	// the Python Null codec which has no channels attribute.
+	if got := (NullCodec{}).Channels(); got != 0 {
+		t.Errorf("NullCodec.Channels() = %v, want 0", got)
+	}
+	if got := (&NullCodecBuffered{}).Channels(); got != 0 {
+		t.Errorf("NullCodecBuffered.Channels() = %v, want 0", got)
+	}
+}

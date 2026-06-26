@@ -441,6 +441,74 @@ func TestLinkSource_SetCodec(t *testing.T) {
 	}
 }
 
+func TestLinkSource_SetCodec_DerivesChannels(t *testing.T) {
+	t.Parallel()
+
+	// The secondary bug: LinkSource.channels was never set from the
+	// codec's profile, so it defaulted to 0. SetCodec must derive
+	// channels from the codec, matching Python Network.py:125.
+	ls := NewLinkSource(nil, nil)
+	if ls.Channels() != 0 {
+		t.Fatalf("Expected initial channels=0, got %v", ls.Channels())
+	}
+
+	codec, err := opus.NewOpus(opus.PROFILE_VOICE_MEDIUM)
+	if err != nil {
+		t.Fatalf("NewOpus failed: %v", err)
+	}
+	ls.SetCodec(codec)
+
+	if ls.Channels() != 1 {
+		t.Errorf("Expected channels=1 for PROFILE_VOICE_MEDIUM, got %v", ls.Channels())
+	}
+}
+
+func TestLinkSource_SetCodec_StereoProfile(t *testing.T) {
+	t.Parallel()
+
+	ls := NewLinkSource(nil, nil)
+
+	codec, err := opus.NewOpus(opus.PROFILE_VOICE_MAX)
+	if err != nil {
+		t.Fatalf("NewOpus failed: %v", err)
+	}
+	ls.SetCodec(codec)
+
+	if ls.Channels() != 2 {
+		t.Errorf("Expected channels=2 for PROFILE_VOICE_MAX, got %v", ls.Channels())
+	}
+}
+
+func TestLinkSource_SetCodec_Codec2(t *testing.T) {
+	t.Parallel()
+
+	ls := NewLinkSource(nil, nil)
+
+	codec, err := codec2.NewCodec2(codec2.MODE_700C)
+	if err != nil {
+		t.Fatalf("NewCodec2 failed: %v", err)
+	}
+	ls.SetCodec(codec)
+
+	if ls.Channels() != 1 {
+		t.Errorf("Expected channels=1 for Codec2, got %v", ls.Channels())
+	}
+}
+
+func TestLinkSource_SetCodec_NullDoesNotOverride(t *testing.T) {
+	t.Parallel()
+
+	// NullCodec.Channels() returns 0, so setting a NullCodec must
+	// not override a previously-set channel count.
+	ls := NewLinkSource(nil, nil)
+	ls.SetChannels(2)
+
+	ls.SetCodec(codecs.NullCodec{})
+	if ls.Channels() != 2 {
+		t.Errorf("Expected channels=2 preserved, got %v", ls.Channels())
+	}
+}
+
 func TestLinkSource_ReceivePacket_Frames(t *testing.T) {
 	t.Parallel()
 

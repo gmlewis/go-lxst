@@ -27,6 +27,12 @@ type Codec interface {
 	FrameQuantumMs() float64
 	FrameMaxMs() float64
 	ValidFrameMs() []float64
+	// Channels returns the number of audio channels for this codec's
+	// current profile, matching the Python codec.channels attribute.
+	// Returns 0 when the channel count is unknown or unset (e.g.
+	// NullCodec), signalling the caller to infer channels from
+	// other sources.
+	Channels() int
 }
 
 // IsNullCodec reports whether the codec is a NullCodec or
@@ -86,6 +92,7 @@ func (NullCodec) PreferredSampleRate() int { return 0 }
 func (NullCodec) FrameQuantumMs() float64  { return 0 }
 func (NullCodec) FrameMaxMs() float64      { return 0 }
 func (NullCodec) ValidFrameMs() []float64  { return nil }
+func (NullCodec) Channels() int            { return 0 }
 
 // NullCodecBuffered implements a passthrough codec for raw PCM with
 // buffer reuse for reduced allocations in Decode.
@@ -146,6 +153,7 @@ func (n *NullCodecBuffered) PreferredSampleRate() int { return 0 }
 func (n *NullCodecBuffered) FrameQuantumMs() float64  { return 0 }
 func (n *NullCodecBuffered) FrameMaxMs() float64      { return 0 }
 func (n *NullCodecBuffered) ValidFrameMs() []float64  { return nil }
+func (n *NullCodecBuffered) Channels() int            { return 0 }
 
 // Uses pydub internally in Python; Go port uses gonum or simple linear interpolation.
 func ResampleBytes(sampleBytes []byte, bitdepth, channels, inputRate, outputRate int, normalize bool) []byte {
