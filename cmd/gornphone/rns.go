@@ -43,6 +43,7 @@ type TelephoneEndpoint struct {
 	onRejected       func(remoteIdentity *rns.Identity)
 	activeLink       *rns.Link
 	audioPipeline    *AudioPipeline
+	callerLinkSource *network.LinkSource
 	shouldRun        bool
 	remoteIdentified bool
 
@@ -422,9 +423,14 @@ func (tep *TelephoneEndpoint) outgoingLinkEstablished(link *rns.Link) {
 	if link != nil {
 		link.SetPacketCallback(func(data []byte, packet *rns.Packet) {
 			tep.logDebugf("Caller received packet (len=%d)", len(data))
-			// Process audio frames through the link source immediately,
-			// regardless of signalling state.
-			if ls := tep.getLinkSource(); ls != nil {
+			// Try the AudioPipeline's link source first; fall back to
+			// creating a caller-specific one wired to the Telephone's
+			// receive mixer.
+			ls := tep.getLinkSource()
+			if ls == nil {
+				ls = tep.getOrCreateCallerLinkSource()
+			}
+			if ls != nil {
 				ls.ReceivePacket(data)
 			}
 			tep.handleSignallingData(data, link, identity)
@@ -841,6 +847,39 @@ func (tep *TelephoneEndpoint) getLinkSource() *network.LinkSource {
 	return nil
 }
 
+// getOrCreateCallerLinkSource returns a LinkSource wired to the
+// Telephone's receive mixer, creating one lazily if needed. This is
+// used by the caller when no AudioPipeline is set up.
+func (tep *TelephoneEndpoint) getOrCreateCallerLinkSource() *network.LinkSource {
+	tep.mu.Lock()
+	if tep.callerLinkSource != nil {
+		tep.mu.Unlock()
+		return tep.callerLinkSource
+	}
+	tel := tep.telephone
+	tep.mu.Unlock()
+
+	if tel == nil {
+		return nil
+	}
+	rm := tel.ReceiveMixer()
+	if rm == nil {
+		return nil
+	}
+
+	tep.mu.Lock()
+	defer tep.mu.Unlock()
+
+	// Double-check after acquiring lock.
+	if tep.callerLinkSource != nil {
+		return tep.callerLinkSource
+	}
+
+	ls := network.NewLinkSource(nil, rm)
+	tep.callerLinkSource = ls
+	return ls
+}
+
 // Hangup terminates the current active call and stops all audio pipelines.
 func (tep *TelephoneEndpoint) Hangup() {
 	tep.mu.Lock()
@@ -849,6 +888,7 @@ func (tep *TelephoneEndpoint) Hangup() {
 	ap := tep.audioPipeline
 	tep.activeLink = nil
 	tep.audioPipeline = nil
+	tep.callerLinkSource = nil
 	tep.remoteIdentified = false
 	tep.mu.Unlock()
 
