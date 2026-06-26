@@ -106,7 +106,13 @@ func (ls *LineSource) Start() error {
 	}
 
 	// Get platform backend with preferred device
-	ls.backend = platforms.NewBackendWithDevice(48000, 2, 32, ls.preferredDevice)
+	backendRate := 48000
+	if ls.codec != nil {
+		if pref := ls.codec.PreferredSampleRate(); pref > 0 {
+			backendRate = pref
+		}
+	}
+	ls.backend = platforms.NewBackendWithDevice(backendRate, 2, 32, ls.preferredDevice)
 	if ls.backend == nil {
 		return ErrNoBackend
 	}

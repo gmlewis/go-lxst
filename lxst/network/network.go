@@ -416,7 +416,11 @@ func (ls *LinkSource) ReceivePacket(data []byte) {
 
 		decoded := activeCodec.Decode(payload, channels)
 		if len(decoded) > 0 {
-			log.Printf("LinkSource.ReceivePacket: decoded %v samples, channels=%v, codec=%T", len(decoded), channels, activeCodec)
+			sr := 0
+			if s, ok := activeCodec.(interface{ PreferredSampleRate() int }); ok {
+				sr = s.PreferredSampleRate()
+			}
+			log.Printf("LinkSource.ReceivePacket: decoded %v samples, channels=%v, codec=%T, sampleRate=%v", len(decoded), channels, activeCodec, sr)
 		} else {
 			log.Printf("LinkSource.ReceivePacket: decode returned empty frame (codec=%T, payloadLen=%v, channels=%v)", activeCodec, len(payload), channels)
 			return
