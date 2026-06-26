@@ -422,6 +422,11 @@ func (tep *TelephoneEndpoint) outgoingLinkEstablished(link *rns.Link) {
 	if link != nil {
 		link.SetPacketCallback(func(data []byte, packet *rns.Packet) {
 			tep.logDebugf("Caller received packet (len=%d)", len(data))
+			// Process audio frames through the link source immediately,
+			// regardless of signalling state.
+			if ls := tep.getLinkSource(); ls != nil {
+				ls.ReceivePacket(data)
+			}
 			tep.handleSignallingData(data, link, identity)
 		})
 	}
