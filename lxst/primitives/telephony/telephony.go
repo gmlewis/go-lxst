@@ -1044,6 +1044,7 @@ func (tel *Telephone) selectCallCodecs(profile byte) {
 	tel.receiveCodec = codecs.NullCodec{}
 	teleCodec, err := GetCodec(profile)
 	if err != nil {
+		log.Printf("selectCallCodecs: GetCodec(0x%02x) failed: %v — audio will be silent", profile, err)
 		teleCodec = codecs.NullCodec{}
 	}
 	tel.transmitCodec = teleCodec

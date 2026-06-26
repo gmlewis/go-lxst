@@ -868,10 +868,6 @@ func (tep *TelephoneEndpoint) getLinkSource() *network.LinkSource {
 // used by the caller when no AudioPipeline is set up.
 func (tep *TelephoneEndpoint) getOrCreateCallerLinkSource() *network.LinkSource {
 	tep.mu.Lock()
-	if tep.callerLinkSource != nil {
-		tep.mu.Unlock()
-		return tep.callerLinkSource
-	}
 	tel := tep.telephone
 	tep.mu.Unlock()
 
@@ -884,20 +880,22 @@ func (tep *TelephoneEndpoint) getOrCreateCallerLinkSource() *network.LinkSource 
 	}
 
 	tep.mu.Lock()
-	defer tep.mu.Unlock()
-
-	// Double-check after acquiring lock.
+	// If the receive mixer changed (e.g. after ResetDiallingPipelines),
+	// invalidate the cached LinkSource so it reconnects to the new mixer.
+	if tep.callerLinkSource != nil && tep.callerLinkSource.Sink() != rm {
+		tep.callerLinkSource = nil
+	}
 	if tep.callerLinkSource != nil {
+		tep.mu.Unlock()
 		return tep.callerLinkSource
 	}
 
 	ls := network.NewLinkSource(nil, rm)
-	if tel != nil {
-		if codec := tel.TransmitCodec(); codec != nil {
-			ls.SetCodec(codec)
-		}
+	if codec := tel.TransmitCodec(); codec != nil {
+		ls.SetCodec(codec)
 	}
 	tep.callerLinkSource = ls
+	tep.mu.Unlock()
 	return ls
 }
 
