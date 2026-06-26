@@ -215,7 +215,9 @@ func (tep *EchoEndpoint) answer(link *rns.Link) bool {
 	}
 
 	// Send CONNECTING.
-	_ = signalFunc(telephony.SignallingConnecting)
+	if err := signalFunc(telephony.SignallingConnecting); err != nil {
+		tep.logf("answer: signalFunc Connecting failed: %v", err)
+	}
 
 	tep.mu.Lock()
 	codec := tep.codec
@@ -328,7 +330,9 @@ func (tep *EchoEndpoint) handleSignallingData(data []byte, link *rns.Link, ident
 				tep.packetizer.SetCodec(tep.codec)
 			}
 			if tep.transmitMixer != nil {
-				_ = tep.transmitMixer.SetCodec(tep.codec)
+				if err := tep.transmitMixer.SetCodec(tep.codec); err != nil {
+					tep.logf("handleSignallingData: transmitMixer.SetCodec failed: %v", err)
+				}
 			}
 			tep.mu.Unlock()
 
@@ -369,9 +373,12 @@ func (tep *EchoEndpoint) sendSignalling(link *rns.Link, signal int) {
 	p := rns.NewPacket(link, packed)
 	p.CreateReceipt = false
 	if err := p.Pack(); err != nil {
+		tep.logf("sendSignalling: Pack failed: %v", err)
 		return
 	}
-	_ = link.SendPacket(p)
+	if err := link.SendPacket(p); err != nil {
+		tep.logf("sendSignalling: SendPacket failed: %v", err)
+	}
 }
 
 func (tep *EchoEndpoint) hangup() {
@@ -439,7 +446,10 @@ func toInt(v any) int {
 func getCodecForProfile(profile byte) codecs.Codec {
 	c, err := telephony.GetCodec(profile)
 	if err != nil {
-		c, _ = telephony.GetCodec(telephony.DefaultProfile)
+		c, err := telephony.GetCodec(telephony.DefaultProfile)
+		if err != nil {
+			log.Printf("getCodecForProfile: default codec failed: %v", err)
+		}
 		return c
 	}
 	return c

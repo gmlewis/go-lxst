@@ -546,7 +546,6 @@ func TestPhonebookLookupByAlias(t *testing.T) {
 
 func tempDir(t *testing.T) string {
 	t.Helper()
-	dir, cleanup := testutils.TempDir(t, "gornphone-test-")
-	t.Cleanup(cleanup)
+	dir := testutils.TempDir(t, "gornphone-test-")
 	return dir
 }

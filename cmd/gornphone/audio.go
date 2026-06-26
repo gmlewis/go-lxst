@@ -7,6 +7,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"sync"
 
 	"github.com/gmlewis/go-lxst/lxst/codecs"
@@ -150,16 +151,24 @@ func (ap *AudioPipeline) Stop() {
 	}
 
 	if ap.receiveMixer != nil {
-		_ = ap.receiveMixer.Stop()
+		if err := ap.receiveMixer.Stop(); err != nil {
+			log.Printf("AudioPipeline.Stop: receiveMixer.Stop failed: %v", err)
+		}
 	}
 	if ap.transmitMixer != nil {
-		_ = ap.transmitMixer.Stop()
+		if err := ap.transmitMixer.Stop(); err != nil {
+			log.Printf("AudioPipeline.Stop: transmitMixer.Stop failed: %v", err)
+		}
 	}
 	if ap.audioInput != nil {
-		_ = ap.audioInput.Stop()
+		if err := ap.audioInput.Stop(); err != nil {
+			log.Printf("AudioPipeline.Stop: audioInput.Stop failed: %v", err)
+		}
 	}
 	if ap.linkSource != nil {
-		_ = ap.linkSource.Stop()
+		if err := ap.linkSource.Stop(); err != nil {
+			log.Printf("AudioPipeline.Stop: linkSource.Stop failed: %v", err)
+		}
 	}
 	ap.started = false
 }

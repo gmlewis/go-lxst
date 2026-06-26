@@ -70,8 +70,7 @@ func (z *zeroReader) Read(p []byte) (int, error) {
 
 func tempDir(t *testing.T) string {
 	t.Helper()
-	dir, cleanup := testutils.TempDir(t, "go-lxst-vorbis-test-")
-	t.Cleanup(cleanup)
+	dir := testutils.TempDir(t, "go-lxst-vorbis-test-")
 	return dir
 }
 

@@ -20,8 +20,7 @@ import (
 func TestRNSConfigFlagAccepted(t *testing.T) {
 	t.Parallel()
 
-	tmpDir, cleanup := testutils.TempDir(t, "gornphone-test-")
-	defer cleanup()
+	tmpDir := testutils.TempDir(t, "gornphone-test-")
 	configDir := filepath.Join(tmpDir, "rnsconfig")
 
 	if err := os.MkdirAll(configDir, 0o755); err != nil {

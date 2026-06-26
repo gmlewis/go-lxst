@@ -40,25 +40,10 @@ func tempBaseDir() string {
 	return ""
 }
 
-// TempDir creates a temporary directory for a test and returns a cleanup
-// function that removes it.
-func TempDir(t *testing.T, prefix string) (string, func()) {
-	return tempDir(t, prefix)
-}
-
-// TempDirBench creates a temporary directory for a benchmark and returns a
-// cleanup function that removes it.
-func TempDirBench(b *testing.B, prefix string) (string, func()) {
-	return tempDir(b, prefix)
-}
-
-// TempDirMain creates a temporary directory for a TestMain suite and returns a
-// cleanup function that removes it.
-func TempDirMain(prefix string) (string, func()) {
-	return tempDir(testMainTB{}, prefix)
-}
-
-func tempDir(t tempDirTB, prefix string) (string, func()) {
+// TempDir creates a temporary directory for a test. Cleanup is registered
+// via t.Cleanup so it runs after other cleanup functions (e.g. router.Close)
+// that may have been registered later during the test.
+func TempDir(t *testing.T, prefix string) string {
 	t.Helper()
 
 	dir, err := os.MkdirTemp(tempBaseDir(), prefix)
@@ -66,9 +51,46 @@ func tempDir(t tempDirTB, prefix string) (string, func()) {
 		t.Fatalf("TempDir error: %v", err)
 	}
 
-	cleanup := func() {
+	t.Cleanup(func() {
 		if err := removeAllWithRetry(dir); err != nil {
 			t.Fatalf("os.RemoveAll: %v", err)
+		}
+	})
+
+	return dir
+}
+
+// TempDirBench creates a temporary directory for a benchmark. Cleanup is
+// registered via b.Cleanup so it runs after other cleanup functions.
+func TempDirBench(b *testing.B, prefix string) string {
+	b.Helper()
+
+	dir, err := os.MkdirTemp(tempBaseDir(), prefix)
+	if err != nil {
+		b.Fatalf("TempDir error: %v", err)
+	}
+
+	b.Cleanup(func() {
+		if err := removeAllWithRetry(dir); err != nil {
+			b.Fatalf("os.RemoveAll: %v", err)
+		}
+	})
+
+	return dir
+}
+
+// TempDirMain creates a temporary directory for a TestMain suite and returns
+// a cleanup function that removes it. Unlike TempDir, this does not use
+// t.Cleanup since TestMain has no testing.T.
+func TempDirMain(prefix string) (string, func()) {
+	dir, err := os.MkdirTemp(tempBaseDir(), prefix)
+	if err != nil {
+		log.Fatalf("TempDir error: %v", err)
+	}
+
+	cleanup := func() {
+		if err := removeAllWithRetry(dir); err != nil {
+			log.Fatalf("os.RemoveAll: %v", err)
 		}
 	}
 

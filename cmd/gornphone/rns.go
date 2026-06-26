@@ -160,7 +160,9 @@ func (tep *TelephoneEndpoint) jobsLoop() {
 		}
 
 		if tep.NeedsAnnounce() {
-			_ = tep.Announce()
+			if err := tep.Announce(); err != nil {
+				tep.logf("outgoingLinkEstablished: Announce failed: %v", err)
+			}
 		}
 
 		time.Sleep(tep.JobInterval())
@@ -502,7 +504,9 @@ func (tep *TelephoneEndpoint) handleSignallingData(data []byte, link *rns.Link, 
 		case signalVal == telephony.SignallingAvailable:
 			tep.logDebugf("Received SignallingAvailable, identifying to remote")
 			if tep.testIdentifyFunc != nil {
-				_ = tep.testIdentifyFunc(link, identity)
+				if err := tep.testIdentifyFunc(link, identity); err != nil {
+					tep.logf("SignallingAvailable: testIdentifyFunc failed: %v", err)
+				}
 			} else if identity != nil && link != nil {
 				if err := link.Identify(identity); err != nil {
 					tep.logf("identify failed: %v", err)
@@ -884,7 +888,9 @@ func (tep *TelephoneEndpoint) Answer() bool {
 
 	if tel.Incoming() {
 		tep.logf("TelephoneEndpoint.Answer(): incoming call, sending CONNECTING signal")
-		_ = signalFunc(telephony.SignallingConnecting)
+		if err := signalFunc(telephony.SignallingConnecting); err != nil {
+			tep.logf("Answer: signalFunc Connecting failed: %v", err)
+		}
 	}
 
 	pktz := network.NewPacketizer(func(data []byte) error {
@@ -914,7 +920,9 @@ func (tep *TelephoneEndpoint) Answer() bool {
 	}
 
 	tep.logf("TelephoneEndpoint.Answer(): sending ESTABLISHED signal")
-	_ = signalFunc(telephony.SignallingEstablished)
+	if err := signalFunc(telephony.SignallingEstablished); err != nil {
+		tep.logf("Answer: signalFunc Established failed: %v", err)
+	}
 
 	tel.StartPipelines()
 

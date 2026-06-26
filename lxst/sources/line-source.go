@@ -173,10 +173,14 @@ func (ls *LineSource) Stop() error {
 	// Close recorder to unblock any pending Record() calls in ingestJob,
 	// so the goroutine can check the done channel and exit.
 	if recorder != nil {
-		_ = recorder.Close()
+		if err := recorder.Close(); err != nil {
+			log.Printf("LineSource.Stop: recorder.Close failed: %v", err)
+		}
 	}
 	if backend != nil {
-		_ = backend.ReleaseRecorder()
+		if err := backend.ReleaseRecorder(); err != nil {
+			log.Printf("LineSource.Stop: backend.ReleaseRecorder failed: %v", err)
+		}
 	}
 
 	if thread != nil {
@@ -323,10 +327,14 @@ func (ls *LineSource) ingestJobWithThread(thread *threadInfo) {
 		if codec != nil && !codecs.IsNullCodec(codec) && sink != nil {
 			encoded := codec.Encode(frame)
 			if len(encoded) > 0 && sink.CanReceive(ls) {
-				_ = sink.HandleEncodedFrame(encoded, ls)
+				if err := sink.HandleEncodedFrame(encoded, ls); err != nil {
+					log.Printf("LineSource.ingestJob: HandleEncodedFrame failed: %v", err)
+				}
 			}
 		} else if sink != nil {
-			_ = sink.HandleFrame(frame, ls)
+			if err := sink.HandleFrame(frame, ls); err != nil {
+				log.Printf("LineSource.ingestJob: HandleFrame failed: %v", err)
+			}
 		}
 	}
 }

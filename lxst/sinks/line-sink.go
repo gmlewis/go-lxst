@@ -53,6 +53,7 @@ type digestThreadInfo struct {
 
 func NewLineSink(preferredDevice string, autodigest bool, lowLatency bool) *LineSink {
 	backend := platforms.NewBackendWithDevice(48000, 2, 32, preferredDevice)
+	log.Printf("LineSink.NewLineSink: preferredDevice=%v, autodigest=%v, backend=%T (%p)", preferredDevice, autodigest, backend, backend)
 
 	ls := &LineSink{
 		preferredDevice:     preferredDevice,
@@ -88,9 +89,11 @@ func (ls *LineSink) HandleFrame(frame [][]float32, fromSource sources.Source) er
 	ls.insertLock.Lock()
 	ls.frameDeque = append(ls.frameDeque, frame)
 
-	if ls.samplesPerFrame == 0 && len(frame) > 0 && len(frame[0]) > 0 {
+	if ls.samplesPerFrame == 0 && len(frame) > 0 {
 		ls.samplesPerFrame = len(frame[0])
-		ls.frameTime = float64(ls.samplesPerFrame) / float64(ls.samplerate)
+		if ls.samplerate > 0 {
+			ls.frameTime = float64(ls.samplesPerFrame) / float64(ls.samplerate)
+		}
 	}
 	dequeLen := len(ls.frameDeque)
 	ls.insertLock.Unlock()
@@ -100,7 +103,9 @@ func (ls *LineSink) HandleFrame(frame [][]float32, fromSource sources.Source) er
 	ls.mu.Unlock()
 
 	if shouldStart {
-		_ = ls.Start()
+		if err := ls.Start(); err != nil {
+			log.Printf("LineSink.HandleFrame: Start failed: %v", err)
+		}
 	}
 
 	return nil
@@ -147,8 +152,12 @@ func (ls *LineSink) Stop() error {
 	// Close the player to unblock any pending Play() calls in digestJob,
 	// so the goroutine can check the done channel and exit.
 	if player != nil {
-		_ = player.Close()
-		_ = ls.backend.ReleasePlayer()
+		if err := player.Close(); err != nil {
+			log.Printf("LineSink.Stop: player.Close failed: %v", err)
+		}
+		if err := ls.backend.ReleasePlayer(); err != nil {
+			log.Printf("LineSink.Stop: backend.ReleasePlayer failed: %v", err)
+		}
 	}
 
 	if thread != nil {
@@ -215,12 +224,29 @@ func (ls *LineSink) digestJobWithThread(thread *digestThreadInfo) {
 
 	player, err := ls.backend.GetPlayer(backendSPF, lowLatency)
 	if err != nil {
-		log.Printf("LineSink.digestJob: GetPlayer failed (spf=%d, lowLatency=%v): %v", backendSPF, lowLatency, err)
+		log.Printf("LineSink.digestJob: GetPlayer failed (spf=%d, lowLatency=%v, backend=%T (%p)): %v", backendSPF, lowLatency, ls.backend, ls.backend, err)
 		return
 	}
+	log.Printf("LineSink.digestJob: GetPlayer succeeded (spf=%d, backend=%T (%p))", backendSPF, ls.backend, ls.backend)
 	ls.mu.Lock()
 	ls.player = player
 	ls.mu.Unlock()
+
+	// Ensure the player is closed and released when the digestJob exits,
+	// whether due to normal shutdown, underrun timeout, or thread.done.
+	// Without this, a subsequent autodigest restart would fail with
+	// "player already in use" because the old player was never released.
+	defer func() {
+		ls.mu.Lock()
+		ls.player = nil
+		ls.mu.Unlock()
+		if err := player.Close(); err != nil {
+			log.Printf("LineSink.digestJob: player.Close on exit failed: %v", err)
+		}
+		if err := ls.backend.ReleasePlayer(); err != nil {
+			log.Printf("LineSink.digestJob: backend.ReleasePlayer on exit failed: %v", err)
+		}
+	}()
 
 	for {
 		select {
@@ -263,7 +289,9 @@ func (ls *LineSink) digestJobWithThread(thread *digestThreadInfo) {
 						frame[i] = frame[i][:channels]
 					}
 				}
-				_ = player.Play(frame)
+				if err := player.Play(frame); err != nil {
+					log.Printf("LineSink.digestJob: player.Play failed: %v", err)
+				}
 			}
 
 			ls.insertLock.Lock()
@@ -300,7 +328,9 @@ func (ls *LineSink) digestJobWithThread(thread *digestThreadInfo) {
 		ls.mu.Unlock()
 
 		if wantsLowLatency {
-			_ = player.EnableLowLatency()
+			if err := player.EnableLowLatency(); err != nil {
+				log.Printf("LineSink.digestJob: EnableLowLatency failed: %v", err)
+			}
 		}
 	}
 }

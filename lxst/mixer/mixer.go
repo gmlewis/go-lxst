@@ -11,6 +11,7 @@
 package mixer
 
 import (
+	"log"
 	"math"
 	"sync"
 	"time"
@@ -277,6 +278,12 @@ func (m *Mixer) HandleFrame(frame [][]float32, fromSource sources.Source) error 
 	m.insertLock.Lock()
 
 	if _, ok := m.incomingFrames[fromSource]; !ok {
+		log.Printf("Mixer.HandleFrame: registering new source %T (channels=%d, samples=%d)", fromSource, func() int {
+			if len(frame) > 0 {
+				return len(frame[0])
+			}
+			return 0
+		}(), len(frame))
 		maxFrames := MixerMaxFrames
 		m.incomingFrames[fromSource] = &sourceQueue{
 			frames:    make([][][]float32, 0),
@@ -336,6 +343,17 @@ func (m *Mixer) mixerJobWithThread(thread *mixerThreadInfo) {
 	m.mixerLock.Lock()
 	defer m.mixerLock.Unlock()
 
+	m.mu.Lock()
+	samplerate := m.samplerate
+	samplesPerFrame := m.samplesPerFrame
+	frameTime := m.frameTime
+	sinkNil := m.sink == nil
+	codec := m.codec
+	m.mu.Unlock()
+
+	log.Printf("Mixer.mixerJob: starting (samplerate=%d, samplesPerFrame=%d, frameTime=%.4f, sink=%v, codec=%T)",
+		samplerate, samplesPerFrame, frameTime, !sinkNil, codec)
+
 	for {
 		select {
 		case <-thread.done:
@@ -360,7 +378,7 @@ func (m *Mixer) mixerJobWithThread(thread *mixerThreadInfo) {
 			sourceCount := 0
 			var mixedFrame [][]float32
 
-			for src, q := range m.incomingFrames {
+			for _, q := range m.incomingFrames {
 				if len(q.frames) > 0 {
 					nextFrame := q.frames[0]
 					q.frames = q.frames[1:]
@@ -391,11 +409,11 @@ func (m *Mixer) mixerJobWithThread(thread *mixerThreadInfo) {
 					}
 					sourceCount++
 				}
-				_ = src
 			}
 			m.insertLock.Unlock()
 
 			if sourceCount > 0 {
+				log.Printf("Mixer.digestJob: processing %d source(s), mixedFrame samples=%d", sourceCount, len(mixedFrame))
 				for i := range mixedFrame {
 					for j := range mixedFrame[i] {
 						if mixedFrame[i][j] > 1.0 {
@@ -415,10 +433,16 @@ func (m *Mixer) mixerJobWithThread(thread *mixerThreadInfo) {
 					encoded := codec.Encode(mixedFrame)
 					putFrame(mixedFrame)
 					if len(encoded) > 0 && sink != nil && sink.CanReceive(m) {
-						_ = sink.HandleEncodedFrame(encoded, m)
+						if err := sink.HandleEncodedFrame(encoded, m); err != nil {
+							log.Printf("Mixer.digestJob: HandleEncodedFrame failed: %v", err)
+						}
+					} else if len(encoded) == 0 {
+						log.Printf("Mixer.digestJob: codec.Encode returned empty (codec=%T, samples=%d)", codec, len(mixedFrame))
 					}
 				} else if sink != nil && sink.CanReceive(m) {
-					_ = sink.HandleFrame(mixedFrame, m)
+					if err := sink.HandleFrame(mixedFrame, m); err != nil {
+						log.Printf("Mixer.digestJob: HandleFrame failed: %v", err)
+					}
 				} else {
 					putFrame(mixedFrame)
 				}

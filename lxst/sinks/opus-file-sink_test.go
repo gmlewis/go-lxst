@@ -18,8 +18,7 @@ import (
 func TestOpusFileSink_New(t *testing.T) {
 	t.Parallel()
 
-	tmpDir, cleanup := testutils.TempDir(t, "go-lxst-sink-test-")
-	defer cleanup()
+	tmpDir := testutils.TempDir(t, "go-lxst-sink-test-")
 	path := filepath.Join(tmpDir, "test.opus")
 
 	fs, err := NewOpusFileSink(path, false, opusPkg.PROFILE_VOICE_LOW)
@@ -35,8 +34,7 @@ func TestOpusFileSink_New(t *testing.T) {
 func TestOpusFileSink_CanReceive(t *testing.T) {
 	t.Parallel()
 
-	tmpDir, cleanup := testutils.TempDir(t, "go-lxst-sink-test-")
-	defer cleanup()
+	tmpDir := testutils.TempDir(t, "go-lxst-sink-test-")
 	path := filepath.Join(tmpDir, "test.opus")
 
 	fs, err := NewOpusFileSink(path, false, opusPkg.PROFILE_VOICE_LOW)
@@ -60,8 +58,7 @@ func TestOpusFileSink_CanReceive(t *testing.T) {
 func TestOpusFileSink_CanReceive_Stopped(t *testing.T) {
 	t.Parallel()
 
-	tmpDir, cleanup := testutils.TempDir(t, "go-lxst-sink-test-")
-	defer cleanup()
+	tmpDir := testutils.TempDir(t, "go-lxst-sink-test-")
 	path := filepath.Join(tmpDir, "test.opus")
 
 	fs, err := NewOpusFileSink(path, false, opusPkg.PROFILE_VOICE_LOW)
@@ -78,8 +75,7 @@ func TestOpusFileSink_CanReceive_Stopped(t *testing.T) {
 func TestOpusFileSink_HandleFrame_SetsSamplesPerFrame(t *testing.T) {
 	t.Parallel()
 
-	tmpDir, cleanup := testutils.TempDir(t, "go-lxst-sink-test-")
-	defer cleanup()
+	tmpDir := testutils.TempDir(t, "go-lxst-sink-test-")
 	path := filepath.Join(tmpDir, "test.opus")
 
 	fs, err := NewOpusFileSink(path, false, opusPkg.PROFILE_VOICE_LOW)
@@ -110,8 +106,7 @@ func TestOpusFileSink_HandleFrame_SetsSamplesPerFrame(t *testing.T) {
 func TestOpusFileSink_FramesWaiting(t *testing.T) {
 	t.Parallel()
 
-	tmpDir, cleanup := testutils.TempDir(t, "go-lxst-sink-test-")
-	defer cleanup()
+	tmpDir := testutils.TempDir(t, "go-lxst-sink-test-")
 	path := filepath.Join(tmpDir, "test.opus")
 
 	fs, err := NewOpusFileSink(path, false, opusPkg.PROFILE_VOICE_LOW)
@@ -138,8 +133,7 @@ func TestOpusFileSink_FramesWaiting(t *testing.T) {
 func TestOpusFileSink_Profile(t *testing.T) {
 	t.Parallel()
 
-	tmpDir, cleanup := testutils.TempDir(t, "go-lxst-sink-test-")
-	defer cleanup()
+	tmpDir := testutils.TempDir(t, "go-lxst-sink-test-")
 	path := filepath.Join(tmpDir, "test.opus")
 
 	fs, err := NewOpusFileSink(path, false, opusPkg.PROFILE_VOICE_LOW)
@@ -155,8 +149,7 @@ func TestOpusFileSink_Profile(t *testing.T) {
 func TestOpusFileSink_OutputSamplerate(t *testing.T) {
 	t.Parallel()
 
-	tmpDir, cleanup := testutils.TempDir(t, "go-lxst-sink-test-")
-	defer cleanup()
+	tmpDir := testutils.TempDir(t, "go-lxst-sink-test-")
 	path := filepath.Join(tmpDir, "test.opus")
 
 	fs, err := NewOpusFileSink(path, false, opusPkg.PROFILE_VOICE_LOW)
@@ -172,8 +165,7 @@ func TestOpusFileSink_OutputSamplerate(t *testing.T) {
 func TestOpusFileSink_ChannelAdjustment(t *testing.T) {
 	t.Parallel()
 
-	tmpDir, cleanup := testutils.TempDir(t, "go-lxst-sink-test-")
-	defer cleanup()
+	tmpDir := testutils.TempDir(t, "go-lxst-sink-test-")
 	path := filepath.Join(tmpDir, "test.opus")
 
 	fs, err := NewOpusFileSink(path, false, opusPkg.PROFILE_VOICE_LOW)
@@ -190,8 +182,7 @@ func TestOpusFileSink_ChannelAdjustment(t *testing.T) {
 func TestOpusFileSink_Stop(t *testing.T) {
 	t.Parallel()
 
-	tmpDir, cleanup := testutils.TempDir(t, "go-lxst-sink-test-")
-	defer cleanup()
+	tmpDir := testutils.TempDir(t, "go-lxst-sink-test-")
 	path := filepath.Join(tmpDir, "test.opus")
 
 	fs, err := NewOpusFileSink(path, false, opusPkg.PROFILE_VOICE_LOW)
@@ -209,8 +200,7 @@ func TestOpusFileSink_Stop(t *testing.T) {
 func TestOpusFileSink_FileCreation(t *testing.T) {
 	t.Parallel()
 
-	tmpDir, cleanup := testutils.TempDir(t, "go-lxst-sink-test-")
-	defer cleanup()
+	tmpDir := testutils.TempDir(t, "go-lxst-sink-test-")
 	path := filepath.Join(tmpDir, "test.opus")
 
 	_, err := NewOpusFileSink(path, false, opusPkg.PROFILE_VOICE_LOW)

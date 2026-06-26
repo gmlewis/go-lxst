@@ -91,7 +91,9 @@ func (sr *SignallingReceiver) Signal(signal any, sendFunc func(data []byte) erro
 	}
 
 	if immediate && sendFunc != nil {
-		_ = sendFunc(packed)
+		if err := sendFunc(packed); err != nil {
+			log.Printf("SignallingReceiver.sendSignal: sendFunc failed: %v", err)
+		}
 	} else {
 		sr.outgoingSignals = append(sr.outgoingSignals, signal)
 	}
@@ -182,6 +184,9 @@ func (p *Packetizer) HandleFrame(frame [][]float32, fromSource sources.Source) e
 func (p *Packetizer) HandleEncodedFrame(data []byte, fromSource sources.Source) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
+
+	log.Printf("Packetizer.HandleEncodedFrame: called (dataLen=%d, sendFunc=%v, transmitFailure=%v, codec=%T)",
+		len(data), p.sendFunc != nil, p.transmitFailure, p.codec)
 
 	if p.sendFunc == nil {
 		log.Printf("Packetizer.HandleEncodedFrame: sendFunc is nil, dropping frame")
@@ -395,7 +400,12 @@ func (ls *LinkSource) ReceivePacket(data []byte) {
 		}
 
 		decoded := newCodec.Decode(payload, channels)
-		_ = sink.HandleFrame(decoded, ls)
+		if len(decoded) == 0 {
+			log.Printf("LinkSource.ReceivePacket: decode returned empty frame (codec=%T, payloadLen=%d, channels=%d)", newCodec, len(payload), channels)
+		}
+		if err := sink.HandleFrame(decoded, ls); err != nil {
+			log.Printf("LinkSource.ReceivePacket: sink.HandleFrame failed: %v", err)
+		}
 	} else {
 		log.Printf("LinkSource.ReceivePacket: no FieldFrames in packet, signalling-only (fields=%v)", func() []byte {
 			keys := make([]byte, 0)
@@ -408,7 +418,9 @@ func (ls *LinkSource) ReceivePacket(data []byte) {
 
 	if _, exists := m[FieldSignalling]; exists {
 		if ls.signallingReceiver != nil {
-			_ = ls.signallingReceiver.HandlePacket(data, nil)
+			if err := ls.signallingReceiver.HandlePacket(data, nil); err != nil {
+				log.Printf("LinkSource.ReceivePacket: signallingReceiver.HandlePacket failed: %v", err)
+			}
 		}
 	}
 }

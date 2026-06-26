@@ -748,7 +748,9 @@ func (tel *Telephone) Signal(signal int, sendFunc func(data []byte) error, immed
 		if err != nil {
 			return
 		}
-		_ = sendFunc(packed)
+		if err := sendFunc(packed); err != nil {
+			log.Printf("sendSignal: sendFunc failed: %v", err)
+		}
 	}
 }
 
@@ -1108,16 +1110,24 @@ func (tel *Telephone) ResetDiallingPipelines() {
 	defer tel.pipelineLock.Unlock()
 
 	if tel.audioOutput != nil {
-		_ = tel.audioOutput.Stop()
+		if err := tel.audioOutput.Stop(); err != nil {
+			log.Printf("ResetDiallingPipelines: audioOutput.Stop failed: %v", err)
+		}
 	}
 	if tel.dialTone != nil {
-		_ = tel.dialTone.Stop()
+		if err := tel.dialTone.Stop(); err != nil {
+			log.Printf("ResetDiallingPipelines: dialTone.Stop failed: %v", err)
+		}
 	}
 	if tel.receivePipeline != nil {
-		_ = tel.receivePipeline.Stop()
+		if err := tel.receivePipeline.Stop(); err != nil {
+			log.Printf("ResetDiallingPipelines: receivePipeline.Stop failed: %v", err)
+		}
 	}
 	if tel.receiveMixer != nil {
-		_ = tel.receiveMixer.Stop()
+		if err := tel.receiveMixer.Stop(); err != nil {
+			log.Printf("ResetDiallingPipelines: receiveMixer.Stop failed: %v", err)
+		}
 	}
 
 	tel.audioOutput = nil
@@ -1228,12 +1238,16 @@ func (tel *Telephone) ActivateRingTone() {
 			}
 
 			if tel.ringerPipeline != nil && !tel.ringerPipeline.Running() {
-				_ = tel.ringerPipeline.Start()
+				if err := tel.ringerPipeline.Start(); err != nil {
+					log.Printf("ringerPipeline.Start failed: %v", err)
+				}
 			}
 		}
 
 		if tel.ringerSource != nil {
-			_ = tel.ringerSource.Stop()
+			if err := tel.ringerSource.Stop(); err != nil {
+				log.Printf("ringerSource.Stop failed: %v", err)
+			}
 		}
 	}()
 }
@@ -1244,10 +1258,14 @@ func (tel *Telephone) StopRingTone() {
 	defer tel.ringerLock.Unlock()
 
 	if tel.ringerSource != nil {
-		_ = tel.ringerSource.Stop()
+		if err := tel.ringerSource.Stop(); err != nil {
+			log.Printf("ringerSource.Stop failed: %v", err)
+		}
 	}
 	if tel.ringerPipeline != nil {
-		_ = tel.ringerPipeline.Stop()
+		if err := tel.ringerPipeline.Stop(); err != nil {
+			log.Printf("ringerPipeline.Stop failed: %v", err)
+		}
 	}
 }
 
@@ -1260,13 +1278,17 @@ func (tel *Telephone) EnableDialTone() {
 	tel.pipelineLock.Unlock()
 
 	if receiveMixer != nil && !receiveMixer.Running() {
-		_ = receiveMixer.Start()
+		if err := receiveMixer.Start(); err != nil {
+			log.Printf("receiveMixer.Start failed: %v", err)
+		}
 	}
 
 	if dialTone != nil {
 		dialTone.SetGain(0.04)
 		if !dialTone.Running() {
-			_ = dialTone.Start()
+			if err := dialTone.Start(); err != nil {
+				log.Printf("dialTone.Start failed: %v", err)
+			}
 		}
 	}
 }
@@ -1280,7 +1302,9 @@ func (tel *Telephone) MuteDialTone() {
 	tel.pipelineLock.Unlock()
 
 	if receiveMixer != nil && !receiveMixer.Running() {
-		_ = receiveMixer.Start()
+		if err := receiveMixer.Start(); err != nil {
+			log.Printf("receiveMixer.Start failed: %v", err)
+		}
 	}
 
 	if dialTone != nil && dialTone.Running() && dialTone.Gain() != 0 {
@@ -1288,7 +1312,9 @@ func (tel *Telephone) MuteDialTone() {
 	}
 
 	if dialTone != nil && !dialTone.Running() {
-		_ = dialTone.Start()
+		if err := dialTone.Start(); err != nil {
+			log.Printf("dialTone.Start failed: %v", err)
+		}
 	}
 }
 
@@ -1300,7 +1326,9 @@ func (tel *Telephone) DisableDialTone() {
 	tel.pipelineLock.Unlock()
 
 	if dialTone != nil && dialTone.Running() {
-		_ = dialTone.Stop()
+		if err := dialTone.Stop(); err != nil {
+			log.Printf("dialTone.Stop failed: %v", err)
+		}
 	}
 }
 
@@ -1402,13 +1430,19 @@ func (tel *Telephone) ReconfigureTransmitPipeline() {
 
 	tel.pipelineLock.Lock()
 	if tel.audioInput != nil {
-		_ = tel.audioInput.Stop()
+		if err := tel.audioInput.Stop(); err != nil {
+			log.Printf("audioInput.Stop failed: %v", err)
+		}
 	}
 	if tel.transmitMixer != nil {
-		_ = tel.transmitMixer.Stop()
+		if err := tel.transmitMixer.Stop(); err != nil {
+			log.Printf("transmitMixer.Stop failed: %v", err)
+		}
 	}
 	if tel.transmitPipeline != nil {
-		_ = tel.transmitPipeline.Stop()
+		if err := tel.transmitPipeline.Stop(); err != nil {
+			log.Printf("transmitPipeline.Stop failed: %v", err)
+		}
 	}
 
 	tel.transmitMixer = mixer.NewMixer(targetFrameMs, 0, nil, nil, transmitGain)
@@ -1434,10 +1468,16 @@ func (tel *Telephone) ReconfigureTransmitPipeline() {
 	if transmitMuted {
 		tel.transmitMixer.Mute()
 	}
-	_ = tel.transmitMixer.Start()
-	_ = tel.audioInput.Start()
+	if err := tel.transmitMixer.Start(); err != nil {
+		log.Printf("transmitMixer.Start failed: %v", err)
+	}
+	if err := tel.audioInput.Start(); err != nil {
+		log.Printf("audioInput.Start failed: %v", err)
+	}
 	if tel.transmitPipeline != nil {
-		_ = tel.transmitPipeline.Start()
+		if err := tel.transmitPipeline.Start(); err != nil {
+			log.Printf("transmitPipeline.Start failed: %v", err)
+		}
 	}
 	tel.pipelineLock.Unlock()
 }
@@ -1519,10 +1559,14 @@ func (tel *Telephone) StartPipelines() {
 		tel.packetizer != nil)
 
 	if tel.receiveMixer != nil {
-		_ = tel.receiveMixer.Start()
+		if err := tel.receiveMixer.Start(); err != nil {
+			log.Printf("receiveMixer.Start failed: %v", err)
+		}
 	}
 	if tel.transmitMixer != nil {
-		_ = tel.transmitMixer.Start()
+		if err := tel.transmitMixer.Start(); err != nil {
+			log.Printf("transmitMixer.Start failed: %v", err)
+		}
 	}
 	if tel.audioInput != nil {
 		if err := tel.audioInput.Start(); err != nil {
@@ -1530,7 +1574,9 @@ func (tel *Telephone) StartPipelines() {
 		}
 	}
 	if tel.transmitPipeline != nil {
-		_ = tel.transmitPipeline.Start()
+		if err := tel.transmitPipeline.Start(); err != nil {
+			log.Printf("transmitPipeline.Start failed: %v", err)
+		}
 	}
 }
 
@@ -1541,19 +1587,29 @@ func (tel *Telephone) StopPipelines() {
 	defer tel.pipelineLock.Unlock()
 
 	if tel.receiveMixer != nil {
-		_ = tel.receiveMixer.Stop()
+		if err := tel.receiveMixer.Stop(); err != nil {
+			log.Printf("receiveMixer.Stop failed: %v", err)
+		}
 	}
 	if tel.transmitMixer != nil {
-		_ = tel.transmitMixer.Stop()
+		if err := tel.transmitMixer.Stop(); err != nil {
+			log.Printf("transmitMixer.Stop failed: %v", err)
+		}
 	}
 	if tel.audioInput != nil {
-		_ = tel.audioInput.Stop()
+		if err := tel.audioInput.Stop(); err != nil {
+			log.Printf("audioInput.Stop failed: %v", err)
+		}
 	}
 	if tel.receivePipeline != nil {
-		_ = tel.receivePipeline.Stop()
+		if err := tel.receivePipeline.Stop(); err != nil {
+			log.Printf("receivePipeline.Stop failed: %v", err)
+		}
 	}
 	if tel.transmitPipeline != nil {
-		_ = tel.transmitPipeline.Stop()
+		if err := tel.transmitPipeline.Stop(); err != nil {
+			log.Printf("transmitPipeline.Stop failed: %v", err)
+		}
 	}
 }
 
@@ -1644,7 +1700,9 @@ func (tel *Telephone) SignallingReceived(signals []int, signalFunc func(int) err
 			if isOutgoing {
 				tel.ActivateDialTone()
 				if signalFunc != nil {
-					_ = signalFunc(SignallingPreferredProfile + int(profile))
+					if err := signalFunc(SignallingPreferredProfile + int(profile)); err != nil {
+						log.Printf("signalFunc failed: %v", err)
+					}
 				}
 			}
 			if cb != nil {
@@ -1717,7 +1775,9 @@ func (tel *Telephone) SwitchProfile(profile byte, signalFunc func(int) error) {
 	tel.mu.Unlock()
 
 	if signalFunc != nil {
-		_ = signalFunc(SignallingPreferredProfile + int(profile))
+		if err := signalFunc(SignallingPreferredProfile + int(profile)); err != nil {
+			log.Printf("signalFunc failed: %v", err)
+		}
 	}
 
 	tel.pipelineLock.Lock()
@@ -1820,7 +1880,9 @@ func (tel *Telephone) IncomingLinkEstablished(signalFunc func(int) error, teardo
 	tel.mu.Lock()
 	if tel.state != StateIdle || tel.externalBusy {
 		tel.mu.Unlock()
-		_ = signalFunc(SignallingBusy)
+		if err := signalFunc(SignallingBusy); err != nil {
+			log.Printf("signalFunc failed: %v", err)
+		}
 		if teardownFunc != nil {
 			teardownFunc()
 		}
@@ -1830,7 +1892,9 @@ func (tel *Telephone) IncomingLinkEstablished(signalFunc func(int) error, teardo
 	tel.incoming = true
 	tel.mu.Unlock()
 
-	_ = signalFunc(SignallingAvailable)
+	if err := signalFunc(SignallingAvailable); err != nil {
+		log.Printf("signalFunc failed: %v", err)
+	}
 }
 
 // CallerIdentified handles a caller whose identity has been verified.
@@ -1843,7 +1907,9 @@ func (tel *Telephone) CallerIdentified(identityHash string, signalFunc func(int)
 	tel.mu.Lock()
 	if tel.state != StateIdle || tel.externalBusy {
 		tel.mu.Unlock()
-		_ = signalFunc(SignallingBusy)
+		if err := signalFunc(SignallingBusy); err != nil {
+			log.Printf("signalFunc failed: %v", err)
+		}
 		if teardownFunc != nil {
 			teardownFunc()
 		}
@@ -1852,7 +1918,9 @@ func (tel *Telephone) CallerIdentified(identityHash string, signalFunc func(int)
 
 	if !tel.isCallerAllowedLocked(identityHash) {
 		tel.mu.Unlock()
-		_ = signalFunc(SignallingBusy)
+		if err := signalFunc(SignallingBusy); err != nil {
+			log.Printf("signalFunc failed: %v", err)
+		}
 		if teardownFunc != nil {
 			teardownFunc()
 		}
@@ -1867,7 +1935,9 @@ func (tel *Telephone) CallerIdentified(identityHash string, signalFunc func(int)
 	tel.mu.Unlock()
 
 	tel.ResetDiallingPipelines()
-	_ = signalFunc(SignallingRinging)
+	if err := signalFunc(SignallingRinging); err != nil {
+		log.Printf("signalFunc failed: %v", err)
+	}
 	tel.ActivateRingTone()
 
 	if cb != nil {

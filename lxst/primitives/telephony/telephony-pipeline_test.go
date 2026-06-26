@@ -24,8 +24,7 @@ import (
 
 func tempDir(t *testing.T) string {
 	t.Helper()
-	dir, cleanup := testutils.TempDir(t, "go-lxst-telephony-test-")
-	t.Cleanup(cleanup)
+	dir := testutils.TempDir(t, "go-lxst-telephony-test-")
 	return dir
 }
 

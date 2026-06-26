@@ -18,8 +18,7 @@ import (
 func createTestWavForPlayer(t *testing.T, sampleRate, numChannels, sampleCount int, frequency float64) string {
 	t.Helper()
 
-	tmpDir, cleanup := testutils.TempDir(t, "go-lxst-player-test-")
-	t.Cleanup(cleanup)
+	tmpDir := testutils.TempDir(t, "go-lxst-player-test-")
 	path := filepath.Join(tmpDir, "test.wav")
 
 	f, err := os.Create(path)

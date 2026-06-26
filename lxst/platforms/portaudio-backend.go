@@ -8,6 +8,7 @@ package platforms
 import (
 	"errors"
 	"fmt"
+	"log"
 	"runtime"
 	"strings"
 	"sync"
@@ -83,16 +84,16 @@ var portaudioLib struct {
 
 // paDeviceInfo mirrors the C PaDeviceInfo struct.
 type paDeviceInfo struct {
-	StructVersion          int32
-	Name                   *byte
-	HostApi                int32
-	MaxInputChannels      int32
-	MaxOutputChannels     int32
-	DefaultLowInputLatency  float64
-	DefaultLowOutputLatency float64
-	DefaultHighInputLatency float64
+	StructVersion            int32
+	Name                     *byte
+	HostApi                  int32
+	MaxInputChannels         int32
+	MaxOutputChannels        int32
+	DefaultLowInputLatency   float64
+	DefaultLowOutputLatency  float64
+	DefaultHighInputLatency  float64
 	DefaultHighOutputLatency float64
-	DefaultSampleRate      float64
+	DefaultSampleRate        float64
 }
 
 // paStreamParameters mirrors the C PaStreamParameters struct.
@@ -251,9 +252,9 @@ type portAudioRecorder struct {
 
 // portAudioPlayer wraps a PortAudio output stream for blocking writes.
 type portAudioPlayer struct {
-	stream   uintptr
-	closed   bool
-	mu       sync.Mutex
+	stream uintptr
+	closed bool
+	mu     sync.Mutex
 }
 
 // NewPortAudioBackend creates a new PortAudio-based audio backend.
@@ -383,7 +384,9 @@ func (pa *PortAudioBackend) ReleaseRecorder() error {
 	pa.recorderMu.Lock()
 	defer pa.recorderMu.Unlock()
 	if pa.recorder != nil {
-		_ = pa.recorder.Close()
+		if err := pa.recorder.Close(); err != nil {
+			log.Printf("PortAudioBackend.ReleaseRecorder: recorder.Close failed: %v", err)
+		}
 		pa.recorder = nil
 	}
 	return nil
@@ -393,7 +396,9 @@ func (pa *PortAudioBackend) ReleasePlayer() error {
 	pa.playerMu.Lock()
 	defer pa.playerMu.Unlock()
 	if pa.player != nil {
-		_ = pa.player.Close()
+		if err := pa.player.Close(); err != nil {
+			log.Printf("PortAudioBackend.ReleasePlayer: player.Close failed: %v", err)
+		}
 		pa.player = nil
 	}
 	return nil
@@ -533,6 +538,7 @@ func (pa *PortAudioBackend) GetPlayer(samplesPerFrame int, lowLatency bool) (Aud
 	defer pa.playerMu.Unlock()
 
 	if pa.player != nil {
+		log.Printf("PortAudioBackend.GetPlayer: player already in use (spf=%d, lowLatency=%v, backend=%p)", samplesPerFrame, lowLatency, pa)
 		return nil, ErrPortAudioPlayerInUse
 	}
 

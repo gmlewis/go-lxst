@@ -87,7 +87,9 @@ func TestIntegration_ToneSource_Generation(t *testing.T) {
 	}
 
 	time.Sleep(300 * time.Millisecond)
-	ts2.Stop()
+	if err := ts2.Stop(); err != nil {
+		t.Errorf("ToneSource.Stop failed: %v", err)
+	}
 
 	frames := sink.collected()
 	if len(frames) < 2 {
@@ -130,7 +132,9 @@ func TestIntegration_ToneSource_WithEasing(t *testing.T) {
 	}
 
 	time.Sleep(200 * time.Millisecond)
-	ts.Stop()
+	if err := ts.Stop(); err != nil {
+		t.Errorf("ToneSource.Stop failed: %v", err)
+	}
 
 	frames := sink.collected()
 	if len(frames) < 2 {
@@ -180,9 +184,15 @@ func TestIntegration_Mixer_TwoSources(t *testing.T) {
 	}
 
 	time.Sleep(300 * time.Millisecond)
-	src1.Stop()
-	src2.Stop()
-	m.Stop()
+	if err := src1.Stop(); err != nil {
+		t.Errorf("Source1.Stop failed: %v", err)
+	}
+	if err := src2.Stop(); err != nil {
+		t.Errorf("Source2.Stop failed: %v", err)
+	}
+	if err := m.Stop(); err != nil {
+		t.Errorf("Mixer.Stop failed: %v", err)
+	}
 
 	frames := sink.collected()
 	if len(frames) == 0 {

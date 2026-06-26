@@ -6,6 +6,7 @@
 package main
 
 import (
+	"log"
 	"math"
 	"sync"
 	"time"
@@ -182,6 +183,8 @@ func (es *EchoSource) HandleEncodedFrame(data []byte, fromSource sources.Source)
 // generateLoop runs in a background goroutine, generating tone frames
 // and emitting delayed echo frames at the target frame rate.
 func (es *EchoSource) generateLoop() {
+	log.Printf("EchoSource.generateLoop: starting (freq=%.1f, gain=%.2f, frameMs=%.1f, sampleRate=%.0f, channels=%d, sink=%v)",
+		es.frequency, es.gain, es.frameMs, es.sampleRate, es.channels, es.sink != nil)
 
 	frameDuration := time.Duration(es.frameMs * float64(time.Millisecond))
 	if frameDuration <= 0 {
@@ -222,7 +225,9 @@ func (es *EchoSource) generateLoop() {
 
 		// Send to the sink (transmit mixer).
 		if es.sink != nil {
-			_ = es.sink.HandleFrame(mixed, es)
+			if err := es.sink.HandleFrame(mixed, es); err != nil {
+				log.Printf("EchoSource.generateLoop: sink.HandleFrame failed: %v", err)
+			}
 		}
 	}
 }

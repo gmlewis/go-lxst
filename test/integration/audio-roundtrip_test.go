@@ -28,8 +28,7 @@ import (
 func createTestWav(t *testing.T, sampleRate, numChannels, sampleCount int, frequency float64) string {
 	t.Helper()
 
-	tmpDir, cleanup := testutils.TempDir(t, "go-lxst-roundtrip-test-")
-	t.Cleanup(cleanup)
+	tmpDir := testutils.TempDir(t, "go-lxst-roundtrip-test-")
 	path := filepath.Join(tmpDir, "test.wav")
 
 	f, err := os.Create(path)
@@ -333,8 +332,7 @@ func TestIntegration_OpusFileRoundtrip(t *testing.T) {
 	}
 
 	// Create OpusFileSink with temp output file
-	tmpDir, cleanup := testutils.TempDir(t, "go-lxst-roundtrip-test-")
-	t.Cleanup(cleanup)
+	tmpDir := testutils.TempDir(t, "go-lxst-roundtrip-test-")
 	outputPath := filepath.Join(tmpDir, "output.opus")
 
 	sink, err := sinks.NewOpusFileSink(outputPath, false, opusPkg.PROFILE_VOICE_LOW)

@@ -23,8 +23,7 @@ import (
 // pair and returns the config directory path.
 func rnsCallTestConfig(t *testing.T, instanceName string, listenPort, forwardPort int) string {
 	t.Helper()
-	dir, cleanup := testutils.TempDir(t, "gornphone-call-test-")
-	t.Cleanup(cleanup)
+	dir := testutils.TempDir(t, "gornphone-call-test-")
 
 	configText := fmt.Sprintf(`[reticulum]
 enable_transport = Yes
