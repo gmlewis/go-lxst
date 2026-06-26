@@ -104,9 +104,10 @@ func TestLineSink_HandleFrame_SetsSamplesPerFrame(t *testing.T) {
 		t.Errorf("Expected initial samples_per_frame=0, got %d", ls.SamplesPerFrame())
 	}
 
-	frame := make([][]float32, 2)
+	// Frame format is [samples][channels]: 160 samples, 1 channel.
+	frame := make([][]float32, 160)
 	for i := range frame {
-		frame[i] = make([]float32, 160)
+		frame[i] = make([]float32, 1)
 		frame[i][0] = 0.5
 	}
 

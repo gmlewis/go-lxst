@@ -90,7 +90,7 @@ func (ls *LineSink) HandleFrame(frame [][]float32, fromSource sources.Source) er
 	ls.frameDeque = append(ls.frameDeque, frame)
 
 	if ls.samplesPerFrame == 0 && len(frame) > 0 {
-		ls.samplesPerFrame = len(frame[0])
+		ls.samplesPerFrame = len(frame)
 		if ls.samplerate > 0 {
 			ls.frameTime = float64(ls.samplesPerFrame) / float64(ls.samplerate)
 		}

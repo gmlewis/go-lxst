@@ -215,7 +215,16 @@ func (m *Mixer) Stop() error {
 	m.mu.Unlock()
 
 	if thread != nil {
-		thread.wg.Wait()
+		done := make(chan struct{})
+		go func() {
+			thread.wg.Wait()
+			close(done)
+		}()
+		select {
+		case <-done:
+		case <-time.After(2 * time.Second):
+			log.Printf("Mixer.Stop: timed out waiting for mixer goroutine to exit")
+		}
 	}
 	return nil
 }
