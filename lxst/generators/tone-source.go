@@ -344,6 +344,18 @@ func (ts *ToneSource) SampleRate() int {
 	return ts.samplerate
 }
 
+// SetSampleRate sets the audio sample rate for the tone generator.
+// This must be called before Start() to ensure the correct frame size.
+func (ts *ToneSource) SetSampleRate(rate int) {
+	ts.mu.Lock()
+	defer ts.mu.Unlock()
+	ts.samplerate = rate
+	ts.samplesPerFrame = int(math.Ceil((ts.targetFrameMs / 1000.0) * float64(ts.samplerate)))
+	ts.frameTime = float64(ts.samplesPerFrame) / float64(ts.samplerate)
+	ts.easeStep = 1.0 / (float64(ts.samplerate) * (ts.easeTimeMs / 1000.0))
+	ts.gainStep = 0.02 / (float64(ts.samplerate) * (ts.easeTimeMs / 1000.0))
+}
+
 func (ts *ToneSource) Channels() int {
 	ts.mu.Lock()
 	defer ts.mu.Unlock()

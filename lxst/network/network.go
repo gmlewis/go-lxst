@@ -413,14 +413,18 @@ func (ls *LinkSource) ReceivePacket(data []byte) {
 			log.Printf("LinkSource.ReceivePacket: sink is nil, dropping audio frame (codec=%T, payloadLen=%d)", activeCodec, len(payload))
 			return
 		}
-		if !sink.CanReceive(ls) {
-			log.Printf("LinkSource.ReceivePacket: sink cannot receive, dropping audio frame (codec=%T)", activeCodec)
+
+		decoded := activeCodec.Decode(payload, channels)
+		if len(decoded) > 0 {
+			log.Printf("LinkSource.ReceivePacket: decoded %d samples, channels=%d, codec=%T", len(decoded), channels, activeCodec)
+		} else {
+			log.Printf("LinkSource.ReceivePacket: decode returned empty frame (codec=%T, payloadLen=%d, channels=%d)", activeCodec, len(payload), channels)
 			return
 		}
 
-		decoded := activeCodec.Decode(payload, channels)
-		if len(decoded) == 0 {
-			log.Printf("LinkSource.ReceivePacket: decode returned empty frame (codec=%T, payloadLen=%d, channels=%d)", activeCodec, len(payload), channels)
+		if !sink.CanReceive(ls) {
+			log.Printf("LinkSource.ReceivePacket: sink cannot receive, dropping %d-sample frame (codec=%T)", len(decoded), activeCodec)
+			return
 		}
 		if err := sink.HandleFrame(decoded, ls); err != nil {
 			log.Printf("LinkSource.ReceivePacket: sink.HandleFrame failed: %v", err)

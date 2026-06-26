@@ -1101,6 +1101,11 @@ func (tel *Telephone) prepareDiallingPipelinesLocked() {
 			tel.dialToneFreq, 0.0, true, tel.dialToneEaseMs,
 			tel.targetFrameTimeMs, codecs.NullCodec{}, tel.receiveMixer, 1,
 		)
+		if sr, ok := tel.transmitCodec.(interface{ PreferredSampleRate() int }); ok {
+			if r := sr.PreferredSampleRate(); r > 0 {
+				tel.dialTone.SetSampleRate(r)
+			}
+		}
 	}
 
 	if tel.receivePipeline == nil {
@@ -1161,6 +1166,9 @@ func (tel *Telephone) ResetDiallingPipelines() {
 		tel.dialToneFreq, 0.0, true, tel.dialToneEaseMs,
 		tel.targetFrameTimeMs, codecs.NullCodec{}, tel.receiveMixer, 1,
 	)
+	if sampleRate > 0 {
+		tel.dialTone.SetSampleRate(sampleRate)
+	}
 	var err error
 	tel.receivePipeline, err = pipeline.NewPipeline(
 		tel.receiveMixer, codecs.NullCodec{}, tel.audioOutput,
