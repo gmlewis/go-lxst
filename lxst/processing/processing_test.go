@@ -243,14 +243,14 @@ func TestConvertChannels_MonoToStereo(t *testing.T) {
 
 	result := ConvertChannels(frame, 2)
 	if len(result) != 3 {
-		t.Fatalf("Expected 3 frames, got %d", len(result))
+		t.Fatalf("Expected 3 frames, got %v", len(result))
 	}
 	for i := range result {
 		if len(result[i]) != 2 {
-			t.Errorf("Frame %d: expected 2 channels, got %d", i, len(result[i]))
+			t.Errorf("Frame %v: expected 2 channels, got %v", i, len(result[i]))
 		}
 		if result[i][0] != frame[i][0] || result[i][1] != frame[i][0] {
-			t.Errorf("Frame %d: expected [%f,%f], got [%f,%f]",
+			t.Errorf("Frame %v: expected [%f,%f], got [%f,%f]",
 				i, frame[i][0], frame[i][0], result[i][0], result[i][1])
 		}
 	}
@@ -265,15 +265,15 @@ func TestConvertChannels_StereoToMono(t *testing.T) {
 
 	result := ConvertChannels(frame, 1)
 	if len(result) != 2 {
-		t.Fatalf("Expected 2 frames, got %d", len(result))
+		t.Fatalf("Expected 2 frames, got %v", len(result))
 	}
 	for i := range result {
 		if len(result[i]) != 1 {
-			t.Errorf("Frame %d: expected 1 channel, got %d", i, len(result[i]))
+			t.Errorf("Frame %v: expected 1 channel, got %v", i, len(result[i]))
 		}
 		expected := (frame[i][0] + frame[i][1]) / 2.0
 		if math.Abs(float64(result[i][0]-float32(expected))) > 0.001 {
-			t.Errorf("Frame %d: expected %f, got %f", i, expected, result[i][0])
+			t.Errorf("Frame %v: expected %f, got %f", i, expected, result[i][0])
 		}
 	}
 }
@@ -287,14 +287,14 @@ func TestConvertChannels_SameChannels(t *testing.T) {
 
 	result := ConvertChannels(frame, 2)
 	if len(result) != 2 {
-		t.Fatalf("Expected 2 frames, got %d", len(result))
+		t.Fatalf("Expected 2 frames, got %v", len(result))
 	}
 	for i := range result {
 		if len(result[i]) != 2 {
-			t.Errorf("Frame %d: expected 2 channels, got %d", i, len(result[i]))
+			t.Errorf("Frame %v: expected 2 channels, got %v", i, len(result[i]))
 		}
 		if result[i][0] != frame[i][0] || result[i][1] != frame[i][1] {
-			t.Errorf("Frame %d: same-channel conversion changed values", i)
+			t.Errorf("Frame %v: same-channel conversion changed values", i)
 		}
 	}
 }
@@ -308,11 +308,11 @@ func TestConvertChannels_Truncate(t *testing.T) {
 
 	result := ConvertChannels(frame, 2)
 	if len(result) != 2 {
-		t.Fatalf("Expected 2 frames, got %d", len(result))
+		t.Fatalf("Expected 2 frames, got %v", len(result))
 	}
 	for i := range result {
 		if len(result[i]) != 2 {
-			t.Errorf("Frame %d: expected 2 channels, got %d", i, len(result[i]))
+			t.Errorf("Frame %v: expected 2 channels, got %v", i, len(result[i]))
 		}
 	}
 }
@@ -328,7 +328,7 @@ func TestResample_Up(t *testing.T) {
 
 	result := Resample(frame, 8000, 16000)
 	if len(result) != 8 {
-		t.Errorf("Expected 8 frames after 2x upsampling, got %d", len(result))
+		t.Errorf("Expected 8 frames after 2x upsampling, got %v", len(result))
 	}
 }
 
@@ -343,7 +343,7 @@ func TestResample_Down(t *testing.T) {
 
 	result := Resample(frame, 16000, 8000)
 	if len(result) != 4 {
-		t.Errorf("Expected 4 frames after 0.5x downsampling, got %d", len(result))
+		t.Errorf("Expected 4 frames after 0.5x downsampling, got %v", len(result))
 	}
 }
 
@@ -357,7 +357,7 @@ func TestResample_SameRate(t *testing.T) {
 
 	result := Resample(frame, 48000, 48000)
 	if len(result) != len(frame) {
-		t.Errorf("Same-rate resample should return same length: got %d, want %d",
+		t.Errorf("Same-rate resample should return same length: got %v, want %v",
 			len(result), len(frame))
 	}
 }
@@ -429,7 +429,7 @@ func TestClipDetection(t *testing.T) {
 			t.Parallel()
 			clips := ClipCount(tc.frame)
 			if clips != tc.wantClips {
-				t.Errorf("ClipCount = %d, want %d", clips, tc.wantClips)
+				t.Errorf("ClipCount = %v, want %v", clips, tc.wantClips)
 			}
 		})
 	}

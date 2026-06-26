@@ -48,7 +48,7 @@ func TestPortAudioBackend_GetRecorderPlayer(t *testing.T) {
 		t.Fatalf("Record failed: %v", err)
 	}
 	if len(frame) != 480 {
-		t.Errorf("Expected 480 frames, got %d", len(frame))
+		t.Errorf("Expected 480 frames, got %v", len(frame))
 	}
 }
 

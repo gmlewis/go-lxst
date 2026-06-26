@@ -23,13 +23,13 @@ func TestMalgoBackend_Creation(t *testing.T) {
 	}
 
 	if backend.SampleRate() != 48000 {
-		t.Errorf("Expected sample rate 48000, got %d", backend.SampleRate())
+		t.Errorf("Expected sample rate 48000, got %v", backend.SampleRate())
 	}
 	if backend.Channels() != 2 {
-		t.Errorf("Expected 2 channels, got %d", backend.Channels())
+		t.Errorf("Expected 2 channels, got %v", backend.Channels())
 	}
 	if backend.BitDepth() != 32 {
-		t.Errorf("Expected bit depth 32, got %d", backend.BitDepth())
+		t.Errorf("Expected bit depth 32, got %v", backend.BitDepth())
 	}
 }
 
@@ -91,10 +91,10 @@ func TestMalgoBackend_GetRecorder(t *testing.T) {
 	}
 
 	if len(frames) != 960 {
-		t.Errorf("Expected 960 frames, got %d", len(frames))
+		t.Errorf("Expected 960 frames, got %v", len(frames))
 	}
 	if len(frames) > 0 && len(frames[0]) != 2 {
-		t.Errorf("Expected 2 channels, got %d", len(frames[0]))
+		t.Errorf("Expected 2 channels, got %v", len(frames[0]))
 	}
 }
 
@@ -177,9 +177,9 @@ func TestMalgoBackend_Defaults(t *testing.T) {
 		t.Fatalf("NewMalgoBackend with zero values returned error: %v", err)
 	}
 	if backend.SampleRate() != 48000 {
-		t.Errorf("Expected default sample rate 48000, got %d", backend.SampleRate())
+		t.Errorf("Expected default sample rate 48000, got %v", backend.SampleRate())
 	}
 	if backend.Channels() != 2 {
-		t.Errorf("Expected default 2 channels, got %d", backend.Channels())
+		t.Errorf("Expected default 2 channels, got %v", backend.Channels())
 	}
 }

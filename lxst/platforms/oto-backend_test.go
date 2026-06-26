@@ -19,13 +19,13 @@ func TestOtoBackend_Creation(t *testing.T) {
 	}
 
 	if backend.SampleRate() != 48000 {
-		t.Errorf("Expected sample rate 48000, got %d", backend.SampleRate())
+		t.Errorf("Expected sample rate 48000, got %v", backend.SampleRate())
 	}
 	if backend.Channels() != 2 {
-		t.Errorf("Expected 2 channels, got %d", backend.Channels())
+		t.Errorf("Expected 2 channels, got %v", backend.Channels())
 	}
 	if backend.BitDepth() != 32 {
-		t.Errorf("Expected bit depth 32, got %d", backend.BitDepth())
+		t.Errorf("Expected bit depth 32, got %v", backend.BitDepth())
 	}
 }
 
@@ -98,10 +98,10 @@ func TestOtoBackend_GetRecorder(t *testing.T) {
 			return
 		}
 		if len(frames) != 960 {
-			t.Errorf("Expected 960 frames, got %d", len(frames))
+			t.Errorf("Expected 960 frames, got %v", len(frames))
 		}
 		if len(frames) > 0 && len(frames[0]) != 2 {
-			t.Errorf("Expected 2 channels, got %d", len(frames[0]))
+			t.Errorf("Expected 2 channels, got %v", len(frames[0]))
 		}
 	case <-time.After(2 * time.Second):
 		// Close recorder to unblock the goroutine
@@ -132,13 +132,13 @@ func TestOtoBackend_FormatConversion(t *testing.T) {
 	for _, sr := range []int{8000, 16000, 44100, 48000} {
 		backend := NewOtoBackend(sr, 1, 16)
 		if backend == nil {
-			t.Fatalf("NewOtoBackend failed for sample rate %d", sr)
+			t.Fatalf("NewOtoBackend failed for sample rate %v", sr)
 		}
 		if backend.SampleRate() != sr {
-			t.Errorf("Sample rate mismatch for %d: got %d", sr, backend.SampleRate())
+			t.Errorf("Sample rate mismatch for %v: got %v", sr, backend.SampleRate())
 		}
 		if backend.Channels() != 1 {
-			t.Errorf("Expected 1 channel for %d Hz, got %d", sr, backend.Channels())
+			t.Errorf("Expected 1 channel for %v Hz, got %v", sr, backend.Channels())
 		}
 	}
 
@@ -148,7 +148,7 @@ func TestOtoBackend_FormatConversion(t *testing.T) {
 		t.Fatal("NewOtoBackend failed for stereo")
 	}
 	if backend.Channels() != 2 {
-		t.Errorf("Expected 2 channels, got %d", backend.Channels())
+		t.Errorf("Expected 2 channels, got %v", backend.Channels())
 	}
 }
 
@@ -162,7 +162,7 @@ func TestNewBackendWithDevice(t *testing.T) {
 
 	// With empty preferred device, should work normally
 	if backend.SampleRate() != 48000 {
-		t.Errorf("Expected sample rate 48000, got %d", backend.SampleRate())
+		t.Errorf("Expected sample rate 48000, got %v", backend.SampleRate())
 	}
 }
 

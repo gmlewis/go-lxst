@@ -38,7 +38,7 @@ type Opus struct {
 // but returns ErrNoCGO for encode/decode operations.
 func NewOpus(profile int) (*Opus, error) {
 	if !isValidProfile(profile) {
-		return nil, fmt.Errorf("%w: %d", ErrUnsupportedProfile, profile)
+		return nil, fmt.Errorf("%w: %v", ErrUnsupportedProfile, profile)
 	}
 
 	cfg := profileConfigs[profile]
@@ -62,7 +62,7 @@ func NewOpus(profile int) (*Opus, error) {
 
 func (o *Opus) SetProfile(profile int) error {
 	if !isValidProfile(profile) {
-		return fmt.Errorf("%w: %d", ErrUnsupportedProfile, profile)
+		return fmt.Errorf("%w: %v", ErrUnsupportedProfile, profile)
 	}
 	o.profile = profile
 	cfg := profileConfigs[profile]

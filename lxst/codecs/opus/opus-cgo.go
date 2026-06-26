@@ -44,7 +44,7 @@ type Opus struct {
 // NewOpus creates a new Opus codec with the given profile.
 func NewOpus(profile int) (*Opus, error) {
 	if !isValidProfile(profile) {
-		return nil, fmt.Errorf("%w: %d", ErrUnsupportedProfile, profile)
+		return nil, fmt.Errorf("%w: %v", ErrUnsupportedProfile, profile)
 	}
 
 	cfg := profileConfigs[profile]
@@ -123,7 +123,7 @@ func (o *Opus) profileBitrateCeiling(profile int) int {
 
 func (o *Opus) SetProfile(profile int) error {
 	if !isValidProfile(profile) {
-		return fmt.Errorf("%w: %d", ErrUnsupportedProfile, profile)
+		return fmt.Errorf("%w: %v", ErrUnsupportedProfile, profile)
 	}
 	o.profile = profile
 	cfg := profileConfigs[profile]

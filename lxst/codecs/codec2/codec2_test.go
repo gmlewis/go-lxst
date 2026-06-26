@@ -16,19 +16,19 @@ func TestCodec2_Modes(t *testing.T) {
 			t.Parallel()
 			c, err := NewCodec2(mode)
 			if err != nil {
-				t.Fatalf("NewCodec2 failed for mode %d: %v", mode, err)
+				t.Fatalf("NewCodec2 failed for mode %v: %v", mode, err)
 			}
 			if c.mode != mode {
-				t.Errorf("Mode: got %d, want %d", c.mode, mode)
+				t.Errorf("Mode: got %v, want %v", c.mode, mode)
 			}
 			if c.frameQuantumMs != FRAME_QUANTA_MS {
 				t.Errorf("Frame quanta: got %f, want %f", c.frameQuantumMs, FRAME_QUANTA_MS)
 			}
 			if c.channels != 1 {
-				t.Errorf("Channels: got %d, want 1", c.channels)
+				t.Errorf("Channels: got %v, want 1", c.channels)
 			}
 			if c.PreferredSampleRate() != INPUT_RATE {
-				t.Errorf("PreferredSampleRate: got %d, want %d", c.PreferredSampleRate(), INPUT_RATE)
+				t.Errorf("PreferredSampleRate: got %v, want %v", c.PreferredSampleRate(), INPUT_RATE)
 			}
 		})
 	}
@@ -99,7 +99,7 @@ func TestCodec2_SetMode(t *testing.T) {
 		t.Fatalf("SetMode failed: %v", err)
 	}
 	if c.mode != MODE_3200 {
-		t.Errorf("Mode not changed: got %d, want %d", c.mode, MODE_3200)
+		t.Errorf("Mode not changed: got %v, want %v", c.mode, MODE_3200)
 	}
 	if c.modeHeader != 0x06 {
 		t.Errorf("Mode header not updated: got 0x%02x, want 0x06", c.modeHeader)
@@ -115,7 +115,7 @@ func TestCodec2_Encode_ReturnsModeHeader(t *testing.T) {
 
 	// Should return just the mode header (stub implementation)
 	if len(encoded) != 1 {
-		t.Errorf("Expected 1 byte (mode header), got %d", len(encoded))
+		t.Errorf("Expected 1 byte (mode header), got %v", len(encoded))
 	}
 	if encoded[0] != 0x05 { // 2400 mode header
 		t.Errorf("Header byte: got 0x%02x, want 0x05", encoded[0])
@@ -132,7 +132,7 @@ func TestCodec2_Decode_HeaderSwitch(t *testing.T) {
 
 	// Should have switched mode
 	if c.mode != MODE_3200 {
-		t.Errorf("Mode not switched: got %d, want %d", c.mode, MODE_3200)
+		t.Errorf("Mode not switched: got %v, want %v", c.mode, MODE_3200)
 	}
 }
 

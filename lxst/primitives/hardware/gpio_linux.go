@@ -40,10 +40,10 @@ func (g *LinuxGPIO) Setup(pin int, mode GPIOMode) error {
 	defer g.mu.Unlock()
 
 	if err := g.ensureExported(pin); err != nil {
-		return fmt.Errorf("exporting pin %d: %w", pin, err)
+		return fmt.Errorf("exporting pin %v: %w", pin, err)
 	}
 
-	pinPath := filepath.Join(gpioBasePath, fmt.Sprintf("gpio%d", pin))
+	pinPath := filepath.Join(gpioBasePath, fmt.Sprintf("gpio%v", pin))
 	directionPath := filepath.Join(pinPath, "direction")
 
 	var direction string
@@ -53,11 +53,11 @@ func (g *LinuxGPIO) Setup(pin int, mode GPIOMode) error {
 	case GPIOModeOutput:
 		direction = "out"
 	default:
-		return fmt.Errorf("invalid GPIO mode: %d", mode)
+		return fmt.Errorf("invalid GPIO mode: %v", mode)
 	}
 
 	if err := os.WriteFile(directionPath, []byte(direction), 0o644); err != nil {
-		return fmt.Errorf("setting direction for pin %d: %w", pin, err)
+		return fmt.Errorf("setting direction for pin %v: %w", pin, err)
 	}
 
 	return nil
@@ -67,7 +67,7 @@ func (g *LinuxGPIO) SetOutput(pin int, high bool) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	pinPath := filepath.Join(gpioBasePath, fmt.Sprintf("gpio%d", pin))
+	pinPath := filepath.Join(gpioBasePath, fmt.Sprintf("gpio%v", pin))
 	valuePath := filepath.Join(pinPath, "value")
 
 	var value string
@@ -78,7 +78,7 @@ func (g *LinuxGPIO) SetOutput(pin int, high bool) error {
 	}
 
 	if err := os.WriteFile(valuePath, []byte(value), 0o644); err != nil {
-		return fmt.Errorf("setting value for pin %d: %w", pin, err)
+		return fmt.Errorf("setting value for pin %v: %w", pin, err)
 	}
 
 	return nil
@@ -88,12 +88,12 @@ func (g *LinuxGPIO) ReadInput(pin int) (bool, error) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	pinPath := filepath.Join(gpioBasePath, fmt.Sprintf("gpio%d", pin))
+	pinPath := filepath.Join(gpioBasePath, fmt.Sprintf("gpio%v", pin))
 	valuePath := filepath.Join(pinPath, "value")
 
 	data, err := os.ReadFile(valuePath)
 	if err != nil {
-		return false, fmt.Errorf("reading pin %d: %w", pin, err)
+		return false, fmt.Errorf("reading pin %v: %w", pin, err)
 	}
 
 	value := strings.TrimSpace(string(data))
@@ -101,7 +101,7 @@ func (g *LinuxGPIO) ReadInput(pin int) (bool, error) {
 }
 
 func (g *LinuxGPIO) SetPullUpDown(pin int, pull PullUpDown) error {
-	pullPath := filepath.Join(gpioBasePath, fmt.Sprintf("gpio%d", pin), "pull")
+	pullPath := filepath.Join(gpioBasePath, fmt.Sprintf("gpio%v", pin), "pull")
 
 	var pullStr string
 	switch pull {
@@ -112,11 +112,11 @@ func (g *LinuxGPIO) SetPullUpDown(pin int, pull PullUpDown) error {
 	case PullDown:
 		pullStr = "down"
 	default:
-		return fmt.Errorf("invalid pull mode: %d", pull)
+		return fmt.Errorf("invalid pull mode: %v", pull)
 	}
 
 	if err := os.WriteFile(pullPath, []byte(pullStr), 0o644); err != nil {
-		return fmt.Errorf("setting pull for pin %d: %w", pin, err)
+		return fmt.Errorf("setting pull for pin %v: %w", pin, err)
 	}
 
 	return nil

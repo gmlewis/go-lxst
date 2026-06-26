@@ -144,7 +144,7 @@ func (p *Phone) Redial() {
 // Dial initiates a call to the given identity hash.
 func (p *Phone) Dial(hash string) {
 	if !p.IsAvailable() {
-		p.logf("Phone.Dial: not available (state=%d), ignoring dial", p.state)
+		p.logf("Phone.Dial: not available (state=%v), ignoring dial", p.state)
 		return
 	}
 	p.lastDialledIdentityHash = hash
@@ -206,7 +206,7 @@ func (p *Phone) Ringing(hash string) {
 // Answer accepts an incoming call.
 func (p *Phone) Answer() bool {
 	if !p.IsRinging() {
-		p.logf("Phone.Answer: not ringing (state=%d), cannot answer", p.state)
+		p.logf("Phone.Answer: not ringing (state=%v), cannot answer", p.state)
 		return false
 	}
 	p.logf("Phone.Answer: answering call from %v, state=Connecting", formatHash(p.callerHash))
@@ -294,7 +294,7 @@ func (p *Phone) PrintPhonebook() {
 	n := 0
 	for name, entry := range p.config.Phonebook {
 		n++
-		alias := fmt.Sprintf("%d", n)
+		alias := fmt.Sprintf("%v", n)
 		if entry.Alias != "" {
 			alias = entry.Alias
 		}

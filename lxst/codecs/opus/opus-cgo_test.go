@@ -40,6 +40,6 @@ func TestOpus_EncodeDecode_Roundtrip(t *testing.T) {
 	}
 
 	if len(decoded) < samplesPerFrame/2 {
-		t.Errorf("Decoded too few frames: got %d, expected ~%d", len(decoded), samplesPerFrame)
+		t.Errorf("Decoded too few frames: got %v, expected ~%v", len(decoded), samplesPerFrame)
 	}
 }

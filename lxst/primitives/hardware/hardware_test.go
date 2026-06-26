@@ -16,7 +16,7 @@ func TestKeypad4x4_DefaultMap(t *testing.T) {
 	t.Parallel()
 	k := NewKeypad4x4(nil, nil, nil, nil)
 	if k.Rows() != 4 || k.Cols() != 4 {
-		t.Fatalf("expected 4x4, got %dx%d", k.Rows(), k.Cols())
+		t.Fatalf("expected 4x4, got %vx%v", k.Rows(), k.Cols())
 	}
 	expected := [][]string{
 		{"1", "2", "3", "A"},
@@ -33,7 +33,7 @@ func TestKeypad5x5_DefaultMap(t *testing.T) {
 	t.Parallel()
 	k := NewKeypad5x5(nil, nil, nil, nil)
 	if k.Rows() != 5 || k.Cols() != 5 {
-		t.Fatalf("expected 5x5, got %dx%d", k.Rows(), k.Cols())
+		t.Fatalf("expected 5x5, got %vx%v", k.Rows(), k.Cols())
 	}
 	expected := [][]string{
 		{"P", "R", "M", "-", "+"},
@@ -55,7 +55,7 @@ func TestKeypad_CustomKeyMap(t *testing.T) {
 	}
 	k := NewKeypad4x4Custom(2, 3, custom, []int{1, 2}, []int{3, 4, 5}, nil)
 	if k.Rows() != 2 || k.Cols() != 3 {
-		t.Fatalf("expected 2x3, got %dx%d", k.Rows(), k.Cols())
+		t.Fatalf("expected 2x3, got %vx%v", k.Rows(), k.Cols())
 	}
 	if !equalKeyMaps(k.KeyMap(), custom) {
 		t.Errorf("custom key map not applied")
@@ -113,7 +113,7 @@ func TestKeypad_Callback(t *testing.T) {
 	time.Sleep(20 * time.Millisecond)
 
 	if len(events) != 2 {
-		t.Fatalf("expected 2 events (down, up), got %d: %v", len(events), events)
+		t.Fatalf("expected 2 events (down, up), got %v: %v", len(events), events)
 	}
 	if events[0].Key != "5" || events[0].Type != EventDown {
 		t.Errorf("first event: got %+v, want key=5 type=Down", events[0])
@@ -127,7 +127,7 @@ func TestLCD_Basic(t *testing.T) {
 	t.Parallel()
 	lcd := NewLCD(nil)
 	if lcd.Cols() != 16 || lcd.Rows() != 2 {
-		t.Fatalf("expected 16x2, got %dx%d", lcd.Cols(), lcd.Rows())
+		t.Fatalf("expected 16x2, got %vx%v", lcd.Cols(), lcd.Rows())
 	}
 	if lcd.IsSleeping() {
 		t.Error("LCD should not be sleeping initially")

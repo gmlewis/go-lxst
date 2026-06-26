@@ -24,19 +24,19 @@ func NewDarwinGPIO() *DarwinGPIO {
 }
 
 func (g *DarwinGPIO) Setup(pin int, mode GPIOMode) error {
-	return fmt.Errorf("%w: pin=%d mode=%v", ErrNoGPIOOnDarwin, pin, mode)
+	return fmt.Errorf("%w: pin=%v mode=%v", ErrNoGPIOOnDarwin, pin, mode)
 }
 
 func (g *DarwinGPIO) SetOutput(pin int, high bool) error {
-	return fmt.Errorf("%w: pin=%d high=%v", ErrNoGPIOOnDarwin, pin, high)
+	return fmt.Errorf("%w: pin=%v high=%v", ErrNoGPIOOnDarwin, pin, high)
 }
 
 func (g *DarwinGPIO) ReadInput(pin int) (bool, error) {
-	return false, fmt.Errorf("%w: pin=%d", ErrNoGPIOOnDarwin, pin)
+	return false, fmt.Errorf("%w: pin=%v", ErrNoGPIOOnDarwin, pin)
 }
 
 func (g *DarwinGPIO) SetPullUpDown(pin int, pull PullUpDown) error {
-	return fmt.Errorf("%w: pin=%d pull=%v", ErrNoGPIOOnDarwin, pin, pull)
+	return fmt.Errorf("%w: pin=%v pull=%v", ErrNoGPIOOnDarwin, pin, pull)
 }
 
 func (g *DarwinGPIO) Close() error {

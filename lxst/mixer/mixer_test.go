@@ -125,7 +125,7 @@ func TestMixer_SampleRate(t *testing.T) {
 
 	m := NewMixer(40.0, 48000, nil, nil, 0.0)
 	if m.SampleRate() != 48000 {
-		t.Errorf("Expected sample rate 48000, got %d", m.SampleRate())
+		t.Errorf("Expected sample rate 48000, got %v", m.SampleRate())
 	}
 }
 

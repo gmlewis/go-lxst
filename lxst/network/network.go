@@ -178,7 +178,7 @@ func (p *Packetizer) HandleFrame(frame [][]float32, fromSource sources.Source) e
 	p.mu.Unlock()
 
 	if codec == nil {
-		log.Printf("Packetizer.HandleFrame: codec is nil, dropping frame (len=%d)", len(frame))
+		log.Printf("Packetizer.HandleFrame: codec is nil, dropping frame (len=%v)", len(frame))
 		return nil
 	}
 
@@ -214,7 +214,7 @@ func (p *Packetizer) HandleEncodedFrame(data []byte, fromSource sources.Source) 
 		return nil
 	}
 
-	log.Printf("Packetizer.HandleEncodedFrame: called (dataLen=%d, sendFunc=%v, transmitFailure=%v, codec=%T)",
+	log.Printf("Packetizer.HandleEncodedFrame: called (dataLen=%v, sendFunc=%v, transmitFailure=%v, codec=%T)",
 		len(data), p.sendFunc != nil, p.transmitFailure, p.codec)
 
 	var header byte
@@ -381,7 +381,7 @@ func (ls *LinkSource) ReceivePacket(data []byte) {
 	if framesData, exists := m[FieldFrames]; exists {
 		frameData, ok := framesData.([]byte)
 		if !ok || len(frameData) < 1 {
-			log.Printf("LinkSource.ReceivePacket: FieldFrames present but invalid: type=%T len=%d", framesData, len(frameData))
+			log.Printf("LinkSource.ReceivePacket: FieldFrames present but invalid: type=%T len=%v", framesData, len(frameData))
 			return
 		}
 
@@ -410,20 +410,20 @@ func (ls *LinkSource) ReceivePacket(data []byte) {
 		}
 
 		if sink == nil {
-			log.Printf("LinkSource.ReceivePacket: sink is nil, dropping audio frame (codec=%T, payloadLen=%d)", activeCodec, len(payload))
+			log.Printf("LinkSource.ReceivePacket: sink is nil, dropping audio frame (codec=%T, payloadLen=%v)", activeCodec, len(payload))
 			return
 		}
 
 		decoded := activeCodec.Decode(payload, channels)
 		if len(decoded) > 0 {
-			log.Printf("LinkSource.ReceivePacket: decoded %d samples, channels=%d, codec=%T", len(decoded), channels, activeCodec)
+			log.Printf("LinkSource.ReceivePacket: decoded %v samples, channels=%v, codec=%T", len(decoded), channels, activeCodec)
 		} else {
-			log.Printf("LinkSource.ReceivePacket: decode returned empty frame (codec=%T, payloadLen=%d, channels=%d)", activeCodec, len(payload), channels)
+			log.Printf("LinkSource.ReceivePacket: decode returned empty frame (codec=%T, payloadLen=%v, channels=%v)", activeCodec, len(payload), channels)
 			return
 		}
 
 		if !sink.CanReceive(ls) {
-			log.Printf("LinkSource.ReceivePacket: sink cannot receive, dropping %d-sample frame (codec=%T)", len(decoded), activeCodec)
+			log.Printf("LinkSource.ReceivePacket: sink cannot receive, dropping %v-sample frame (codec=%T)", len(decoded), activeCodec)
 			return
 		}
 		if err := sink.HandleFrame(decoded, ls); err != nil {

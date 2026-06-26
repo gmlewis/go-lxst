@@ -66,6 +66,7 @@ type threadInfo struct {
 }
 
 func NewLineSource(preferredDevice string, targetFrameMs float64, codec codecs.Codec, sink LocalSource, filterChain []filters.Filter, gain, easeIn, skip float64) *LineSource {
+	log.Printf("LineSource.NewLineSink: preferredDevice=%v, targetFrameMs=%.1f, codec=%T, sink=%T", preferredDevice, targetFrameMs, codec, sink)
 	if targetFrameMs <= 0 {
 		targetFrameMs = LineSourceDefaultFrameMs
 	}

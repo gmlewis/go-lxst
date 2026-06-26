@@ -43,19 +43,19 @@ func TestVerbosityIncreasesWithString(t *testing.T) {
 		t.Fatalf("Set failed: %v", err)
 	}
 	if v != 1 {
-		t.Errorf("expected verbosity 1 after one Set call, got %d", v)
+		t.Errorf("expected verbosity 1 after one Set call, got %v", v)
 	}
 	if err := v.Set(""); err != nil {
 		t.Fatalf("Set failed: %v", err)
 	}
 	if v != 2 {
-		t.Errorf("expected verbosity 2 after two Set calls, got %d", v)
+		t.Errorf("expected verbosity 2 after two Set calls, got %v", v)
 	}
 	if err := v.Set(""); err != nil {
 		t.Fatalf("Set failed: %v", err)
 	}
 	if v != 3 {
-		t.Errorf("expected verbosity 3 after three Set calls, got %d", v)
+		t.Errorf("expected verbosity 3 after three Set calls, got %v", v)
 	}
 }
 
@@ -119,7 +119,7 @@ func TestFlagSetDefaults(t *testing.T) {
 		t.Error("--systemd should default to false")
 	}
 	if *p != 0x40 {
-		t.Errorf("--profile should default to 0x40, got %d", *p)
+		t.Errorf("--profile should default to 0x40, got %v", *p)
 	}
 	if *g != 0.0 {
 		t.Errorf("--gain should default to 0.0, got %v", *g)
@@ -186,11 +186,11 @@ func TestExpandVerboseArgs(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := expandVerboseArgs(tt.in)
 			if len(got) != len(tt.want) {
-				t.Fatalf("got %d args, want %d: got=%v want=%v", len(got), len(tt.want), got, tt.want)
+				t.Fatalf("got %v args, want %v: got=%v want=%v", len(got), len(tt.want), got, tt.want)
 			}
 			for i := range got {
 				if got[i] != tt.want[i] {
-					t.Errorf("arg[%d]: got %q, want %q", i, got[i], tt.want[i])
+					t.Errorf("arg[%v]: got %q, want %q", i, got[i], tt.want[i])
 				}
 			}
 		})
@@ -223,7 +223,7 @@ func TestVerbosityWithFlagParse(t *testing.T) {
 				t.Fatalf("parse failed: %v", err)
 			}
 			if int(v) != tt.want {
-				t.Errorf("verbosity = %d, want %d", v, tt.want)
+				t.Errorf("verbosity = %v, want %v", v, tt.want)
 			}
 		})
 	}

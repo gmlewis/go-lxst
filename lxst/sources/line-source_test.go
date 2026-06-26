@@ -127,7 +127,7 @@ func TestLineSource_Filters(t *testing.T) {
 	ls := NewLineSource("", 20.0, codecs.NullCodec{}, nil, []filters.Filter{hp, lp}, 0.0, 0.0, 0.0)
 
 	if len(ls.filterChain) != 2 {
-		t.Errorf("Expected 2 filters, got %d", len(ls.filterChain))
+		t.Errorf("Expected 2 filters, got %v", len(ls.filterChain))
 	}
 }
 

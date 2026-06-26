@@ -255,7 +255,7 @@ func TestPackData_BothFields(t *testing.T) {
 	}
 
 	if len(m) != 2 {
-		t.Errorf("Expected 2 fields, got %d", len(m))
+		t.Errorf("Expected 2 fields, got %v", len(m))
 	}
 }
 
@@ -287,7 +287,7 @@ func TestSignallingReceiver_HandlePacket(t *testing.T) {
 	}
 
 	if len(receivedSignals) != 1 {
-		t.Errorf("Expected 1 signal, got %d", len(receivedSignals))
+		t.Errorf("Expected 1 signal, got %v", len(receivedSignals))
 	}
 }
 
@@ -304,7 +304,7 @@ func TestSignallingReceiver_Proxy(t *testing.T) {
 	sr.SignallingReceived([]any{"test"}, nil)
 
 	if len(proxiedSignals) != 1 {
-		t.Errorf("Expected 1 proxied signal, got %d", len(proxiedSignals))
+		t.Errorf("Expected 1 proxied signal, got %v", len(proxiedSignals))
 	}
 }
 
@@ -533,7 +533,7 @@ func TestPipelineTransmitReceiveRoundtrip(t *testing.T) {
 	pktMu.Unlock()
 
 	if len(pkts) != 1 {
-		t.Fatalf("Expected 1 packet sent, got %d", len(pkts))
+		t.Fatalf("Expected 1 packet sent, got %v", len(pkts))
 	}
 
 	sink := &frameCaptureSink{}
@@ -608,7 +608,7 @@ func TestFullCallPipelineRoundtrip(t *testing.T) {
 	pkts := receivedPackets
 	pktMu.Unlock()
 	if len(pkts) != 1 {
-		t.Fatalf("Expected 1 packet, got %d", len(pkts))
+		t.Fatalf("Expected 1 packet, got %v", len(pkts))
 	}
 
 	linkSrc.ReceivePacket(pkts[0])
@@ -618,6 +618,6 @@ func TestFullCallPipelineRoundtrip(t *testing.T) {
 	}
 
 	if len(receiveSink.lastFrame) != len(testFrame) {
-		t.Errorf("Decoded frame has %d samples, want %d", len(receiveSink.lastFrame), len(testFrame))
+		t.Errorf("Decoded frame has %v samples, want %v", len(receiveSink.lastFrame), len(testFrame))
 	}
 }

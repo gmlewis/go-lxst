@@ -22,10 +22,10 @@ func TestMixer_FramePool_Basic(t *testing.T) {
 		t.Fatal("FramePool.Get() returned nil")
 	}
 	if len(frame) != 1920 {
-		t.Errorf("Expected frame length 1920, got %d", len(frame))
+		t.Errorf("Expected frame length 1920, got %v", len(frame))
 	}
 	if len(frame[0]) != 2 {
-		t.Errorf("Expected channel count 2, got %d", len(frame[0]))
+		t.Errorf("Expected channel count 2, got %v", len(frame[0]))
 	}
 
 	pool.Put(frame)

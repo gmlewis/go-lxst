@@ -49,13 +49,13 @@ func TestPortAudioBackend_Creation(t *testing.T) {
 	}
 
 	if backend.SampleRate() != 48000 {
-		t.Errorf("Expected sample rate 48000, got %d", backend.SampleRate())
+		t.Errorf("Expected sample rate 48000, got %v", backend.SampleRate())
 	}
 	if backend.Channels() != 2 {
-		t.Errorf("Expected 2 channels, got %d", backend.Channels())
+		t.Errorf("Expected 2 channels, got %v", backend.Channels())
 	}
 	if backend.BitDepth() != 32 {
-		t.Errorf("Expected bit depth 32, got %d", backend.BitDepth())
+		t.Errorf("Expected bit depth 32, got %v", backend.BitDepth())
 	}
 }
 

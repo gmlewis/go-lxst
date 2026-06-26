@@ -103,13 +103,13 @@ func TestVorbisFileSource_ValidFile(t *testing.T) {
 	}
 
 	if src.SampleRate() != 44100 {
-		t.Errorf("Expected sample rate 44100, got %d", src.SampleRate())
+		t.Errorf("Expected sample rate 44100, got %v", src.SampleRate())
 	}
 	if src.Channels() <= 0 {
-		t.Errorf("Expected positive channels, got %d", src.Channels())
+		t.Errorf("Expected positive channels, got %v", src.Channels())
 	}
 	if src.SampleCount() <= 0 {
-		t.Errorf("Expected positive sample count, got %d", src.SampleCount())
+		t.Errorf("Expected positive sample count, got %v", src.SampleCount())
 	}
 	if src.LengthMs() <= 0 {
 		t.Errorf("Expected positive length, got %f ms", src.LengthMs())
@@ -155,7 +155,7 @@ func TestVorbisFileSource_Samples(t *testing.T) {
 	for i, s := range samples {
 		for ch, v := range s {
 			if v > 1.0 || v < -1.0 {
-				t.Errorf("Sample [%d][%d] out of range: %f", i, ch, v)
+				t.Errorf("Sample [%v][%v] out of range: %f", i, ch, v)
 			}
 		}
 	}

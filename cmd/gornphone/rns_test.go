@@ -77,7 +77,7 @@ func TestTelephoneEndpoint_Destination(t *testing.T) {
 		t.Fatal("Destination() returned nil")
 	}
 	if dest.Type != rns.DestinationSingle {
-		t.Errorf("Destination.Type = %d, want %d", dest.Type, rns.DestinationSingle)
+		t.Errorf("Destination.Type = %v, want %v", dest.Type, rns.DestinationSingle)
 	}
 }
 
@@ -858,13 +858,13 @@ func TestCallLifecycle_FullFlow(t *testing.T) {
 	copy(signals, responderSignals)
 	responderSignalsMu.Unlock()
 	if len(signals) < 2 {
-		t.Fatalf("responder should have sent at least 2 signals, got %d", len(signals))
+		t.Fatalf("responder should have sent at least 2 signals, got %v", len(signals))
 	}
 	if signals[0] != telephony.SignallingAvailable {
-		t.Errorf("first signal = %d, want SignallingAvailable (%d)", signals[0], telephony.SignallingAvailable)
+		t.Errorf("first signal = %v, want SignallingAvailable (%v)", signals[0], telephony.SignallingAvailable)
 	}
 	if signals[1] != telephony.SignallingRinging {
-		t.Errorf("second signal = %d, want SignallingRinging (%d)", signals[1], telephony.SignallingRinging)
+		t.Errorf("second signal = %v, want SignallingRinging (%v)", signals[1], telephony.SignallingRinging)
 	}
 
 	// Verify responder ringing callback fired

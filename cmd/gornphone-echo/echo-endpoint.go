@@ -296,7 +296,7 @@ func (tep *EchoEndpoint) answer(link *rns.Link) bool {
 
 	// Replace packet callback to feed LinkSource AND handle signalling.
 	link.SetPacketCallback(func(data []byte, packet *rns.Packet) {
-		tep.logDebugf("Echo received packet (len=%d)", len(data))
+		tep.logDebugf("Echo received packet (len=%v)", len(data))
 		linkSrc.ReceivePacket(data)
 		tep.handleSignallingData(data, link, tep.identity)
 	})
@@ -363,7 +363,7 @@ func (tep *EchoEndpoint) handleSignallingData(data []byte, link *rns.Link, ident
 			tep.logf("Received SignallingCalling")
 
 		default:
-			tep.logf("Received signal: %d", signalVal)
+			tep.logf("Received signal: %v", signalVal)
 		}
 	}
 }

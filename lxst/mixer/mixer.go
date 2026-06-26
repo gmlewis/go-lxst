@@ -290,12 +290,12 @@ func (m *Mixer) HandleFrame(frame [][]float32, fromSource sources.Source) error 
 	m.insertLock.Lock()
 
 	if _, ok := m.incomingFrames[fromSource]; !ok {
-		log.Printf("Mixer.HandleFrame: registering new source %T (channels=%d, samples=%d, mixer=%x)", fromSource, func() int {
-			if len(frame) > 0 {
-				return len(frame[0])
-			}
-			return 0
-		}(), len(frame))
+		var channels int
+		if len(frame) > 0 {
+			channels = len(frame[0])
+		}
+		log.Printf("Mixer.HandleFrame: registering new source %T (channels=%v, samples=%v, mixer=%v)",
+			fromSource, channels, len(frame), m.id)
 		maxFrames := MixerMaxFrames
 		m.incomingFrames[fromSource] = &sourceQueue{
 			frames:    make([][][]float32, 0),
@@ -363,7 +363,7 @@ func (m *Mixer) mixerJobWithThread(thread *mixerThreadInfo) {
 	codec := m.codec
 	m.mu.Unlock()
 
-	log.Printf("Mixer.mixerJob: starting (samplerate=%d, samplesPerFrame=%d, frameTime=%.4f, sink=%v, codec=%T, mixer=%x)",
+	log.Printf("Mixer.mixerJob: starting (samplerate=%v, samplesPerFrame=%v, frameTime=%.4f, sink=%v, codec=%T, mixer=%v)",
 		samplerate, samplesPerFrame, frameTime, !sinkNil, codec, m.id)
 
 	for {
@@ -399,12 +399,11 @@ func (m *Mixer) mixerJobWithThread(thread *mixerThreadInfo) {
 						continue
 					}
 
-					log.Printf("Mixer.digestJob: source=%T frame samples=%d channels=%d mixer=%x", src, len(nextFrame), func() int {
-						if len(nextFrame) > 0 {
-							return len(nextFrame[0])
-						}
-						return 0
-					}())
+					var channels int
+					if len(nextFrame) > 0 {
+						channels = len(nextFrame[0])
+					}
+					log.Printf("Mixer.digestJob: source=%T frame samples=%v channels=%v mixer=%v", src, len(nextFrame), channels, m.id)
 
 					g := m.mixingGain()
 
@@ -432,7 +431,7 @@ func (m *Mixer) mixerJobWithThread(thread *mixerThreadInfo) {
 			m.insertLock.Unlock()
 
 			if sourceCount > 0 {
-				log.Printf("Mixer.digestJob: processing %d source(s), mixedFrame samples=%d", sourceCount, len(mixedFrame))
+				log.Printf("Mixer.digestJob: processing %v source(s), mixedFrame samples=%v mixer=%v", sourceCount, len(mixedFrame), m.id)
 				for i := range mixedFrame {
 					for j := range mixedFrame[i] {
 						if mixedFrame[i][j] > 1.0 {
@@ -456,7 +455,7 @@ func (m *Mixer) mixerJobWithThread(thread *mixerThreadInfo) {
 							log.Printf("Mixer.digestJob: HandleEncodedFrame failed: %v", err)
 						}
 					} else if len(encoded) == 0 {
-						log.Printf("Mixer.digestJob: codec.Encode returned empty (codec=%T, samples=%d)", codec, len(mixedFrame))
+						log.Printf("Mixer.digestJob: codec.Encode returned empty (codec=%T, samples=%v)", codec, len(mixedFrame))
 					}
 				} else if sink != nil && sink.CanReceive(m) {
 					if err := sink.HandleFrame(mixedFrame, m); err != nil {

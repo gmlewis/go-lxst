@@ -299,7 +299,7 @@ func splitHostPort(addr string) (string, string, error) {
 
 func atoi(s string) (int, error) {
 	var n int
-	_, err := fmt.Sscanf(s, "%d", &n)
+	_, err := fmt.Sscanf(s, "%v", &n)
 	return n, err
 }
 

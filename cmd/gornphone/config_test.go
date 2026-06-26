@@ -196,25 +196,25 @@ func TestParseConfig(t *testing.T) {
 				t.Errorf("AllowPhonebook = %v, want %v", got.Telephone.AllowPhonebook, tt.want.Telephone.AllowPhonebook)
 			}
 			if len(got.Telephone.AllowedList) != len(tt.want.Telephone.AllowedList) {
-				t.Errorf("AllowedList len = %d, want %d", len(got.Telephone.AllowedList), len(tt.want.Telephone.AllowedList))
+				t.Errorf("AllowedList len = %v, want %v", len(got.Telephone.AllowedList), len(tt.want.Telephone.AllowedList))
 			} else {
 				for i, v := range got.Telephone.AllowedList {
 					if v != tt.want.Telephone.AllowedList[i] {
-						t.Errorf("AllowedList[%d] = %q, want %q", i, v, tt.want.Telephone.AllowedList[i])
+						t.Errorf("AllowedList[%v] = %q, want %q", i, v, tt.want.Telephone.AllowedList[i])
 					}
 				}
 			}
 			if len(got.Telephone.BlockedList) != len(tt.want.Telephone.BlockedList) {
-				t.Errorf("BlockedList len = %d, want %d", len(got.Telephone.BlockedList), len(tt.want.Telephone.BlockedList))
+				t.Errorf("BlockedList len = %v, want %v", len(got.Telephone.BlockedList), len(tt.want.Telephone.BlockedList))
 			} else {
 				for i, v := range got.Telephone.BlockedList {
 					if v != tt.want.Telephone.BlockedList[i] {
-						t.Errorf("BlockedList[%d] = %q, want %q", i, v, tt.want.Telephone.BlockedList[i])
+						t.Errorf("BlockedList[%v] = %q, want %q", i, v, tt.want.Telephone.BlockedList[i])
 					}
 				}
 			}
 			if len(got.Phonebook) != len(tt.want.Phonebook) {
-				t.Errorf("Phonebook len = %d, want %d", len(got.Phonebook), len(tt.want.Phonebook))
+				t.Errorf("Phonebook len = %v, want %v", len(got.Phonebook), len(tt.want.Phonebook))
 			} else {
 				for k, v := range tt.want.Phonebook {
 					gotEntry, ok := got.Phonebook[k]
@@ -237,7 +237,7 @@ func TestParseConfig(t *testing.T) {
 				t.Errorf("Hardware.Display = %q, want %q", got.Hardware.Display, tt.want.Hardware.Display)
 			}
 			if got.Hardware.KeypadHookPin != tt.want.Hardware.KeypadHookPin {
-				t.Errorf("Hardware.KeypadHookPin = %d, want %d", got.Hardware.KeypadHookPin, tt.want.Hardware.KeypadHookPin)
+				t.Errorf("Hardware.KeypadHookPin = %v, want %v", got.Hardware.KeypadHookPin, tt.want.Hardware.KeypadHookPin)
 			}
 		})
 	}
@@ -316,7 +316,7 @@ func TestSaveConfig(t *testing.T) {
 		t.Errorf("AllowedCallers = %q, want %q", loaded.Telephone.AllowedCallers, "all")
 	}
 	if len(loaded.Phonebook) != 1 {
-		t.Fatalf("Phonebook len = %d, want 1", len(loaded.Phonebook))
+		t.Fatalf("Phonebook len = %v, want 1", len(loaded.Phonebook))
 	}
 	alice, ok := loaded.Phonebook["Alice"]
 	if !ok {

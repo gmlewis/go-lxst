@@ -183,7 +183,7 @@ func (es *EchoSource) HandleEncodedFrame(data []byte, fromSource sources.Source)
 // generateLoop runs in a background goroutine, generating tone frames
 // and emitting delayed echo frames at the target frame rate.
 func (es *EchoSource) generateLoop() {
-	log.Printf("EchoSource.generateLoop: starting (freq=%.1f, gain=%.2f, frameMs=%.1f, sampleRate=%.0f, channels=%d, sink=%v)",
+	log.Printf("EchoSource.generateLoop: starting (freq=%.1f, gain=%.2f, frameMs=%.1f, sampleRate=%.0f, channels=%v, sink=%v)",
 		es.frequency, es.gain, es.frameMs, es.sampleRate, es.channels, es.sink != nil)
 
 	frameDuration := time.Duration(es.frameMs * float64(time.Millisecond))

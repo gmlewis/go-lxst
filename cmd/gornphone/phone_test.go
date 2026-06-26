@@ -22,7 +22,7 @@ func TestNewPhone(t *testing.T) {
 		t.Errorf("IsAvailable() = false, want true")
 	}
 	if phone.State() != StateAvailable {
-		t.Errorf("State() = %d, want %d", phone.State(), StateAvailable)
+		t.Errorf("State() = %v, want %v", phone.State(), StateAvailable)
 	}
 }
 
@@ -40,7 +40,7 @@ func TestPhoneStateTransitions(t *testing.T) {
 		t.Errorf("after Dial(), CallIsConnecting() = false, want true")
 	}
 	if phone.State() != StateConnecting {
-		t.Errorf("State() = %d, want %d", phone.State(), StateConnecting)
+		t.Errorf("State() = %v, want %v", phone.State(), StateConnecting)
 	}
 
 	phone.CallEstablished()
@@ -307,7 +307,7 @@ func TestPhoneStatusString(t *testing.T) {
 		phone.SetState(tt.state)
 		got := phone.StatusString()
 		if got != tt.want {
-			t.Errorf("StatusString() for state %d = %q, want %q", tt.state, got, tt.want)
+			t.Errorf("StatusString() for state %v = %q, want %q", tt.state, got, tt.want)
 		}
 	}
 }

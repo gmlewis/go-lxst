@@ -19,22 +19,22 @@ func TestNullCodec_EncodeDecode_Roundtrip(t *testing.T) {
 
 	encoded := codec.Encode(input)
 	if len(encoded) != 16 { // 2 samples * 2 channels * 4 bytes
-		t.Errorf("Expected 16 bytes, got %d", len(encoded))
+		t.Errorf("Expected 16 bytes, got %v", len(encoded))
 	}
 
 	decoded := codec.Decode(encoded, 2)
 	if len(decoded) != 2 {
-		t.Errorf("Expected 2 samples, got %d", len(decoded))
+		t.Errorf("Expected 2 samples, got %v", len(decoded))
 	}
 	if len(decoded[0]) != 2 {
-		t.Errorf("Expected 2 channels, got %d", len(decoded[0]))
+		t.Errorf("Expected 2 channels, got %v", len(decoded[0]))
 	}
 
 	// Check values match (within float32 precision)
 	for i := range input {
 		for c := range input[i] {
 			if decoded[i][c] != input[i][c] {
-				t.Errorf("Mismatch at [%d][%d]: got %f, want %f", i, c, decoded[i][c], input[i][c])
+				t.Errorf("Mismatch at [%v][%v]: got %f, want %f", i, c, decoded[i][c], input[i][c])
 			}
 		}
 	}
@@ -46,12 +46,12 @@ func TestNullCodec_EmptyFrame(t *testing.T) {
 
 	encoded := codec.Encode([][]float32{})
 	if len(encoded) != 0 {
-		t.Errorf("Expected empty bytes, got %d", len(encoded))
+		t.Errorf("Expected empty bytes, got %v", len(encoded))
 	}
 
 	decoded := codec.Decode([]byte{}, 1)
 	if len(decoded) != 0 {
-		t.Errorf("Expected empty frames, got %d", len(decoded))
+		t.Errorf("Expected empty frames, got %v", len(decoded))
 	}
 }
 
@@ -69,11 +69,11 @@ func TestNullCodec_SingleChannel(t *testing.T) {
 	decoded := codec.Decode(encoded, 1)
 
 	if len(decoded) != 3 {
-		t.Errorf("Expected 3 samples, got %d", len(decoded))
+		t.Errorf("Expected 3 samples, got %v", len(decoded))
 	}
 	for i := range input {
 		if decoded[i][0] != input[i][0] {
-			t.Errorf("Mismatch at [%d]: got %f, want %f", i, decoded[i][0], input[i][0])
+			t.Errorf("Mismatch at [%v]: got %f, want %f", i, decoded[i][0], input[i][0])
 		}
 	}
 }

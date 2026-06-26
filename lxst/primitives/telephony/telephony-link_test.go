@@ -30,7 +30,7 @@ func TestIncomingLinkEstablished_IdleNotBusy(t *testing.T) {
 		t.Errorf("Expected SignallingAvailable (0x%02x), got 0x%02x", SignallingAvailable, signalled)
 	}
 	if signalledCount != 1 {
-		t.Errorf("Expected 1 signal, got %d", signalledCount)
+		t.Errorf("Expected 1 signal, got %v", signalledCount)
 	}
 	if teardownCalled {
 		t.Error("Teardown should not be called when not busy")
@@ -125,7 +125,7 @@ func TestCallerIdentified_Allowed(t *testing.T) {
 		t.Errorf("Expected SignallingRinging (0x%02x), got 0x%02x", SignallingRinging, signalled)
 	}
 	if signalledCount != 1 {
-		t.Errorf("Expected 1 signal, got %d", signalledCount)
+		t.Errorf("Expected 1 signal, got %v", signalledCount)
 	}
 	if teardownCalled {
 		t.Error("Teardown should not be called for allowed caller")
@@ -137,7 +137,7 @@ func TestCallerIdentified_Allowed(t *testing.T) {
 		t.Error("Incoming should be true after CallerIdentified")
 	}
 	if ringingCalled.Load() != 1 {
-		t.Errorf("Expected ringing callback to be called once, got %d", ringingCalled.Load())
+		t.Errorf("Expected ringing callback to be called once, got %v", ringingCalled.Load())
 	}
 }
 
@@ -371,7 +371,7 @@ func TestSetBlockedList(t *testing.T) {
 
 	bl := tel.BlockedList()
 	if len(bl) != 2 {
-		t.Errorf("Expected 2 blocked entries, got %d", len(bl))
+		t.Errorf("Expected 2 blocked entries, got %v", len(bl))
 	}
 }
 
@@ -383,6 +383,6 @@ func TestSetAllowList(t *testing.T) {
 
 	al := tel.AllowList()
 	if len(al) != 3 {
-		t.Errorf("Expected 3 allow entries, got %d", len(al))
+		t.Errorf("Expected 3 allow entries, got %v", len(al))
 	}
 }

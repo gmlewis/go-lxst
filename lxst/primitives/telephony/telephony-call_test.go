@@ -28,7 +28,7 @@ func TestAnswer_RingingState(t *testing.T) {
 		t.Errorf("Expected Established state after Answer, got %v", tel.State())
 	}
 	if establishedCalled.Load() != 1 {
-		t.Errorf("Expected established callback to be called once, got %d", establishedCalled.Load())
+		t.Errorf("Expected established callback to be called once, got %v", establishedCalled.Load())
 	}
 }
 
@@ -77,7 +77,7 @@ func TestHangup_FromEstablished(t *testing.T) {
 		t.Errorf("Expected Idle state after Hangup, got %v", tel.State())
 	}
 	if endedCalled.Load() != 1 {
-		t.Errorf("Expected ended callback to be called once, got %d", endedCalled.Load())
+		t.Errorf("Expected ended callback to be called once, got %v", endedCalled.Load())
 	}
 }
 
@@ -97,7 +97,7 @@ func TestHangup_FromRinging(t *testing.T) {
 		t.Errorf("Expected Idle state after Hangup, got %v", tel.State())
 	}
 	if endedCalled.Load() != 1 {
-		t.Errorf("Expected ended callback to be called once, got %d", endedCalled.Load())
+		t.Errorf("Expected ended callback to be called once, got %v", endedCalled.Load())
 	}
 }
 
@@ -116,7 +116,7 @@ func TestHangup_WithBusyReason(t *testing.T) {
 		t.Errorf("Expected Idle state after HangupWithReason, got %v", tel.State())
 	}
 	if busyCalled.Load() != 1 {
-		t.Errorf("Expected busy callback to be called once, got %d", busyCalled.Load())
+		t.Errorf("Expected busy callback to be called once, got %v", busyCalled.Load())
 	}
 }
 
@@ -136,7 +136,7 @@ func TestHangup_WithRejectedReason(t *testing.T) {
 		t.Errorf("Expected Idle state after HangupWithReason(REJECTED), got %v", tel.State())
 	}
 	if rejectedCalled.Load() != 1 {
-		t.Errorf("Expected rejected callback to be called once, got %d", rejectedCalled.Load())
+		t.Errorf("Expected rejected callback to be called once, got %v", rejectedCalled.Load())
 	}
 }
 
@@ -155,7 +155,7 @@ func TestHangup_WithNoReason(t *testing.T) {
 		t.Errorf("Expected Idle state after HangupWithReason(0), got %v", tel.State())
 	}
 	if endedCalled.Load() != 1 {
-		t.Errorf("Expected ended callback to be called once, got %d", endedCalled.Load())
+		t.Errorf("Expected ended callback to be called once, got %v", endedCalled.Load())
 	}
 }
 
@@ -205,7 +205,7 @@ func TestSetConnectTimeout(t *testing.T) {
 
 	tel.SetConnectTimeout(10)
 	if tel.ConnectTimeout() != 10 {
-		t.Errorf("Expected ConnectTimeout 10, got %d", tel.ConnectTimeout())
+		t.Errorf("Expected ConnectTimeout 10, got %v", tel.ConnectTimeout())
 	}
 }
 
@@ -214,7 +214,7 @@ func TestSetAnnounceInterval(t *testing.T) {
 
 	tel.SetAnnounceInterval(3600)
 	if tel.AnnounceInterval() != 3600 {
-		t.Errorf("Expected AnnounceInterval 3600, got %d", tel.AnnounceInterval())
+		t.Errorf("Expected AnnounceInterval 3600, got %v", tel.AnnounceInterval())
 	}
 }
 
@@ -224,7 +224,7 @@ func TestSetAnnounceInterval_Minimum(t *testing.T) {
 	// Setting below minimum should clamp to minimum
 	tel.SetAnnounceInterval(100)
 	if tel.AnnounceInterval() < AnnounceIntervalMin {
-		t.Errorf("AnnounceInterval should be at least %d, got %d", AnnounceIntervalMin, tel.AnnounceInterval())
+		t.Errorf("AnnounceInterval should be at least %v, got %v", AnnounceIntervalMin, tel.AnnounceInterval())
 	}
 }
 
@@ -307,7 +307,7 @@ func TestLinkClosed(t *testing.T) {
 		t.Errorf("Expected Idle state after LinkClosed, got %v", tel.State())
 	}
 	if endedCalled.Load() != 1 {
-		t.Errorf("Expected ended callback to be called once, got %d", endedCalled.Load())
+		t.Errorf("Expected ended callback to be called once, got %v", endedCalled.Load())
 	}
 }
 
@@ -326,7 +326,7 @@ func TestPacketizerFailure(t *testing.T) {
 		t.Errorf("Expected Idle state after PacketizerFailure, got %v", tel.State())
 	}
 	if endedCalled.Load() != 1 {
-		t.Errorf("Expected ended callback to be called once, got %d", endedCalled.Load())
+		t.Errorf("Expected ended callback to be called once, got %v", endedCalled.Load())
 	}
 }
 

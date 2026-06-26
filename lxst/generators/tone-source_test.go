@@ -42,7 +42,7 @@ func TestToneSource_DefaultValues(t *testing.T) {
 		t.Errorf("Expected default frame ms %f, got %f", ToneSourceDefaultFrameMs, ts.TargetFrameMs())
 	}
 	if ts.Channels() != 1 {
-		t.Errorf("Expected default 1 channel, got %d", ts.Channels())
+		t.Errorf("Expected default 1 channel, got %v", ts.Channels())
 	}
 }
 
@@ -89,7 +89,7 @@ func TestToneSource_SamplesPerFrame(t *testing.T) {
 
 	expectedSPF := int(math.Ceil(20.0 / 1000.0 * float64(ToneSourceDefaultSampleRate)))
 	if ts.SamplesPerFrame() != expectedSPF {
-		t.Errorf("Expected %d samples per frame, got %d", expectedSPF, ts.SamplesPerFrame())
+		t.Errorf("Expected %v samples per frame, got %v", expectedSPF, ts.SamplesPerFrame())
 	}
 }
 
@@ -98,7 +98,7 @@ func TestToneSource_MultiChannel(t *testing.T) {
 
 	ts := NewToneSource(440.0, 0.1, true, 20.0, 80.0, nil, nil, 2)
 	if ts.Channels() != 2 {
-		t.Errorf("Expected 2 channels, got %d", ts.Channels())
+		t.Errorf("Expected 2 channels, got %v", ts.Channels())
 	}
 }
 
@@ -117,7 +117,7 @@ func TestToneSource_CodecConstraints(t *testing.T) {
 	}
 
 	if ts.SampleRate() != 8000 {
-		t.Errorf("Expected sample rate 8000 (Opus VOICE_LOW), got %d", ts.SampleRate())
+		t.Errorf("Expected sample rate 8000 (Opus VOICE_LOW), got %v", ts.SampleRate())
 	}
 }
 
@@ -130,12 +130,12 @@ func TestToneSource_Generate(t *testing.T) {
 	frame := ts.generate()
 
 	if len(frame) != ts.SamplesPerFrame() {
-		t.Errorf("Expected %d samples, got %d", ts.SamplesPerFrame(), len(frame))
+		t.Errorf("Expected %v samples, got %v", ts.SamplesPerFrame(), len(frame))
 	}
 
 	for _, s := range frame {
 		if len(s) != 1 {
-			t.Errorf("Expected 1 channel per sample, got %d", len(s))
+			t.Errorf("Expected 1 channel per sample, got %v", len(s))
 		}
 		if math.Abs(float64(s[0])) > 1.0 {
 			t.Errorf("Sample amplitude %f exceeds 1.0", s[0])

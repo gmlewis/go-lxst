@@ -29,7 +29,7 @@ type LinuxI2C struct {
 // NewLinuxI2C creates a new Linux I2C driver for the specified bus.
 func NewLinuxI2C(bus int) *LinuxI2C {
 	return &LinuxI2C{
-		busPath: filepath.Join(i2cBasePath, fmt.Sprintf("i2c-%d", bus)),
+		busPath: filepath.Join(i2cBasePath, fmt.Sprintf("i2c-%v", bus)),
 		bus:     bus,
 	}
 }
@@ -71,7 +71,7 @@ func (d *LinuxI2C) open() error {
 	var err error
 	d.fd, err = os.OpenFile(d.busPath, os.O_RDWR, 0o600)
 	if err != nil {
-		return fmt.Errorf("opening I2C bus %d: %w", d.bus, err)
+		return fmt.Errorf("opening I2C bus %v: %w", d.bus, err)
 	}
 	return nil
 }

@@ -137,10 +137,10 @@ func TestPackageExports_Codec2ModeConstants(t *testing.T) {
 	for _, m := range modes {
 		c, err := NewCodec2(m)
 		if err != nil {
-			t.Errorf("NewCodec2(%d) failed: %v", m, err)
+			t.Errorf("NewCodec2(%v) failed: %v", m, err)
 		}
 		if c == nil {
-			t.Errorf("NewCodec2(%d) returned nil", m)
+			t.Errorf("NewCodec2(%v) returned nil", m)
 		}
 	}
 }

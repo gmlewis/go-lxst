@@ -62,7 +62,7 @@ func TestListSounds(t *testing.T) {
 
 	names := ListSounds()
 	if len(names) < 2 {
-		t.Errorf("ListSounds returned %d names, expected at least 2", len(names))
+		t.Errorf("ListSounds returned %v names, expected at least 2", len(names))
 	}
 
 	found := map[string]bool{}

@@ -98,13 +98,13 @@ func TestOpusFileSource_Load(t *testing.T) {
 	}
 
 	if src.SampleRate() != 8000 {
-		t.Errorf("Expected sample rate 8000, got %d", src.SampleRate())
+		t.Errorf("Expected sample rate 8000, got %v", src.SampleRate())
 	}
 	if src.Channels() != 1 {
-		t.Errorf("Expected 1 channel, got %d", src.Channels())
+		t.Errorf("Expected 1 channel, got %v", src.Channels())
 	}
 	if src.SampleCount() <= 0 {
-		t.Errorf("Expected positive sample count, got %d", src.SampleCount())
+		t.Errorf("Expected positive sample count, got %v", src.SampleCount())
 	}
 }
 
@@ -119,10 +119,10 @@ func TestOpusFileSource_StereoLoad(t *testing.T) {
 	}
 
 	if src.SampleRate() != 48000 {
-		t.Errorf("Expected sample rate 48000, got %d", src.SampleRate())
+		t.Errorf("Expected sample rate 48000, got %v", src.SampleRate())
 	}
 	if src.Channels() != 2 {
-		t.Errorf("Expected 2 channels, got %d", src.Channels())
+		t.Errorf("Expected 2 channels, got %v", src.Channels())
 	}
 }
 
@@ -179,7 +179,7 @@ func TestOpusFileSource_SamplesPerFrame(t *testing.T) {
 
 	expectedSPF := 160
 	if src.SamplesPerFrame() != expectedSPF {
-		t.Errorf("Expected %d samples per frame, got %d", expectedSPF, src.SamplesPerFrame())
+		t.Errorf("Expected %v samples per frame, got %v", expectedSPF, src.SamplesPerFrame())
 	}
 }
 

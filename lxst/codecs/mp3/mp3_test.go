@@ -54,13 +54,13 @@ func TestMP3Decoder_ReadFrames(t *testing.T) {
 	}
 
 	if src.SampleRate() <= 0 {
-		t.Errorf("Expected positive sample rate, got %d", src.SampleRate())
+		t.Errorf("Expected positive sample rate, got %v", src.SampleRate())
 	}
 	if src.Channels() <= 0 {
-		t.Errorf("Expected positive channels, got %d", src.Channels())
+		t.Errorf("Expected positive channels, got %v", src.Channels())
 	}
 	if src.SampleCount() <= 0 {
-		t.Errorf("Expected positive sample count, got %d", src.SampleCount())
+		t.Errorf("Expected positive sample count, got %v", src.SampleCount())
 	}
 	if src.LengthMs() <= 0 {
 		t.Errorf("Expected positive length, got %f ms", src.LengthMs())
@@ -84,7 +84,7 @@ func TestMP3Decoder_SamplesPerFrame(t *testing.T) {
 
 	spf := src.SamplesPerFrame()
 	if spf <= 0 {
-		t.Errorf("Expected positive samples per frame, got %d", spf)
+		t.Errorf("Expected positive samples per frame, got %v", spf)
 	}
 }
 
@@ -111,7 +111,7 @@ func TestMP3Decoder_ReadAll(t *testing.T) {
 	for i, s := range samples {
 		for ch, v := range s {
 			if v > 1.0 || v < -1.0 {
-				t.Errorf("Sample [%d][%d] out of range: %f", i, ch, v)
+				t.Errorf("Sample [%v][%v] out of range: %f", i, ch, v)
 			}
 		}
 	}

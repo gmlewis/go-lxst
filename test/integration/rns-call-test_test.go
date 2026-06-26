@@ -38,9 +38,9 @@ loglevel = 4
     type = UDPInterface
     enabled = Yes
     listen_ip = 127.0.0.1
-    listen_port = %d
+    listen_port = %v
     forward_ip = 127.0.0.1
-    forward_port = %d
+    forward_port = %v
 `, instanceName, listenPort, forwardPort)
 
 	configPath := filepath.Join(dir, "config")
@@ -194,10 +194,10 @@ func TestRNSLinkEstablishmentAndDataFlow(t *testing.T) {
 		pkt := rns.NewPacket(linkA, []byte{byte(i), 0x01, 0x02, 0x03})
 		pkt.CreateReceipt = false
 		if err := pkt.Pack(); err != nil {
-			t.Fatalf("Pack packet %d failed: %v", i, err)
+			t.Fatalf("Pack packet %v failed: %v", i, err)
 		}
 		if err := linkA.SendPacket(pkt); err != nil {
-			t.Fatalf("SendPacket(A) %d failed: %v", i, err)
+			t.Fatalf("SendPacket(A) %v failed: %v", i, err)
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
@@ -215,11 +215,11 @@ func TestRNSLinkEstablishmentAndDataFlow(t *testing.T) {
 			bMu.Lock()
 			final := bDataRcvd
 			bMu.Unlock()
-			t.Fatalf("B only received %d/%d data packets", final, testPackets)
+			t.Fatalf("B only received %v/%v data packets", final, testPackets)
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	logger.Info("All %d data packets received by B!", testPackets)
+	logger.Info("All %v data packets received by B!", testPackets)
 
 	// Verify link is still active.
 	if linkA.GetStatus() != rns.LinkActive {

@@ -59,10 +59,10 @@ func TestEchoSource_GenerateToneFrame(t *testing.T) {
 
 	// frame is [samples][channels]
 	if len(frame) != 2880 {
-		t.Fatalf("expected 2880 samples, got %d", len(frame))
+		t.Fatalf("expected 2880 samples, got %v", len(frame))
 	}
 	if len(frame[0]) != 1 {
-		t.Fatalf("expected 1 channel, got %d", len(frame[0]))
+		t.Fatalf("expected 1 channel, got %v", len(frame[0]))
 	}
 
 	// Check that the tone is non-zero (sine wave).
@@ -114,7 +114,7 @@ func TestEchoSource_HandleFrame_BuffersForDelay(t *testing.T) {
 	// Immediately, no echo frames should be ready (delay=200ms).
 	echoFrames := getReadyEchoFramesDirect(es)
 	if len(echoFrames) > 0 {
-		t.Errorf("expected no ready echo frames immediately, got %d", len(echoFrames))
+		t.Errorf("expected no ready echo frames immediately, got %v", len(echoFrames))
 	}
 
 	// Wait for the delay to pass.
@@ -124,10 +124,10 @@ func TestEchoSource_HandleFrame_BuffersForDelay(t *testing.T) {
 	echoFrames = getReadyEchoFramesDirect(es)
 	// frame was [100 samples][1 channel], so spreading gives 100 []float32 slices
 	if len(echoFrames) != 100 {
-		t.Fatalf("expected 100 ready echo frame slices, got %d", len(echoFrames))
+		t.Fatalf("expected 100 ready echo frame slices, got %v", len(echoFrames))
 	}
 	if len(echoFrames[0]) != 1 {
-		t.Errorf("expected 1 channel per sample, got %d", len(echoFrames[0]))
+		t.Errorf("expected 1 channel per sample, got %v", len(echoFrames[0]))
 	}
 }
 
@@ -172,16 +172,16 @@ func TestMixFrames(t *testing.T) {
 	mixed := mixFrames(tone, echo)
 
 	if len(mixed) != 3 {
-		t.Fatalf("expected 3 samples, got %d", len(mixed))
+		t.Fatalf("expected 3 samples, got %v", len(mixed))
 	}
 	if len(mixed[0]) != 1 {
-		t.Fatalf("expected 1 channel, got %d", len(mixed[0]))
+		t.Fatalf("expected 1 channel, got %v", len(mixed[0]))
 	}
 
 	expected := []float32{0.3, 0.5, 0.7}
 	for i, v := range mixed {
 		if absFloat(v[0]-expected[i]) > 1e-5 {
-			t.Errorf("sample %d: expected %v, got %v", i, expected[i], v[0])
+			t.Errorf("sample %v: expected %v, got %v", i, expected[i], v[0])
 		}
 	}
 }
@@ -211,13 +211,13 @@ func TestMixFrames_DifferentLengths(t *testing.T) {
 	mixed := mixFrames(tone, echo)
 
 	if len(mixed) != 4 {
-		t.Fatalf("expected 4 samples (max length), got %d", len(mixed))
+		t.Fatalf("expected 4 samples (max length), got %v", len(mixed))
 	}
 
 	expected := []float32{0.3, 0.5, 0.3, 0.4}
 	for i, v := range mixed {
 		if absFloat(v[0]-expected[i]) > 1e-5 {
-			t.Errorf("sample %d: expected %v, got %v", i, expected[i], v[0])
+			t.Errorf("sample %v: expected %v, got %v", i, expected[i], v[0])
 		}
 	}
 }
@@ -243,7 +243,7 @@ func TestToInt(t *testing.T) {
 	for _, tt := range tests {
 		got := toInt(tt.input)
 		if got != tt.want {
-			t.Errorf("toInt(%v %T) = %d, want %d", tt.input, tt.input, got, tt.want)
+			t.Errorf("toInt(%v %T) = %v, want %v", tt.input, tt.input, got, tt.want)
 		}
 	}
 }
@@ -268,7 +268,7 @@ func TestParseHostPort(t *testing.T) {
 			t.Errorf("parseHostPort(%q) host = %q, want %q", tt.input, host, tt.wantHost)
 		}
 		if port != tt.wantPort {
-			t.Errorf("parseHostPort(%q) port = %d, want %d", tt.input, port, tt.wantPort)
+			t.Errorf("parseHostPort(%q) port = %v, want %v", tt.input, port, tt.wantPort)
 		}
 	}
 }

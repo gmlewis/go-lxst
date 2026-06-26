@@ -80,7 +80,7 @@ type Codec2 struct {
 // NewCodec2 creates a new Codec2 codec with the given mode.
 func NewCodec2(mode int) (*Codec2, error) {
 	if !isValidMode(mode) {
-		return nil, fmt.Errorf("%w: %d", ErrUnsupportedMode, mode)
+		return nil, fmt.Errorf("%w: %v", ErrUnsupportedMode, mode)
 	}
 
 	c := &Codec2{
@@ -111,7 +111,7 @@ func isValidMode(mode int) bool {
 
 func (c *Codec2) SetMode(mode int) error {
 	if !isValidMode(mode) {
-		return fmt.Errorf("%w: %d", ErrUnsupportedMode, mode)
+		return fmt.Errorf("%w: %v", ErrUnsupportedMode, mode)
 	}
 	c.mode = mode
 	c.modeHeader = MODE_HEADERS[mode]

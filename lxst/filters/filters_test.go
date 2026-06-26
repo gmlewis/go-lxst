@@ -28,10 +28,10 @@ func TestHighPass_HandleFrame(t *testing.T) {
 	out := hp.HandleFrame(frame, 48000)
 
 	if len(out) != 480 {
-		t.Errorf("Expected 480 samples, got %d", len(out))
+		t.Errorf("Expected 480 samples, got %v", len(out))
 	}
 	if len(out[0]) != 2 {
-		t.Errorf("Expected 2 channels, got %d", len(out[0]))
+		t.Errorf("Expected 2 channels, got %v", len(out[0]))
 	}
 
 	// Test alpha recalculation on samplerate change
@@ -58,14 +58,14 @@ func TestHighPass_FirstFrame(t *testing.T) {
 	out := hp.HandleFrame(frame, 48000)
 
 	if len(out) != 3 {
-		t.Errorf("Expected 3 samples, got %d", len(out))
+		t.Errorf("Expected 3 samples, got %v", len(out))
 	}
 
 	// Check state is preserved for next frame
 	// Second call should use previous frame's last input
 	out2 := hp.HandleFrame(frame, 48000)
 	if len(out2) != 3 {
-		t.Errorf("Expected 3 samples on second call, got %d", len(out2))
+		t.Errorf("Expected 3 samples on second call, got %v", len(out2))
 	}
 }
 
@@ -110,10 +110,10 @@ func TestLowPass_HandleFrame(t *testing.T) {
 	out := lp.HandleFrame(frame, 48000)
 
 	if len(out) != 480 {
-		t.Errorf("Expected 480 samples, got %d", len(out))
+		t.Errorf("Expected 480 samples, got %v", len(out))
 	}
 	if len(out[0]) != 2 {
-		t.Errorf("Expected 2 channels, got %d", len(out[0]))
+		t.Errorf("Expected 2 channels, got %v", len(out[0]))
 	}
 }
 
@@ -152,10 +152,10 @@ func TestBandPass_HandleFrame(t *testing.T) {
 	out := bp.HandleFrame(frame, 48000)
 
 	if len(out) != 3 {
-		t.Errorf("Expected 3 samples, got %d", len(out))
+		t.Errorf("Expected 3 samples, got %v", len(out))
 	}
 	if len(out[0]) != 2 {
-		t.Errorf("Expected 2 channels, got %d", len(out[0]))
+		t.Errorf("Expected 2 channels, got %v", len(out[0]))
 	}
 }
 
@@ -171,7 +171,7 @@ func TestBandPass_ComposesHPLP(t *testing.T) {
 
 	out := bp.HandleFrame(frame, 48000)
 	if len(out) != 100 {
-		t.Errorf("Expected 100 samples, got %d", len(out))
+		t.Errorf("Expected 100 samples, got %v", len(out))
 	}
 }
 
@@ -188,10 +188,10 @@ func TestAGC_HandleFrame(t *testing.T) {
 	out := agc.HandleFrame(frame, 48000)
 
 	if len(out) != 480 {
-		t.Errorf("Expected 480 samples, got %d", len(out))
+		t.Errorf("Expected 480 samples, got %v", len(out))
 	}
 	if len(out[0]) != 2 {
-		t.Errorf("Expected 2 channels, got %d", len(out[0]))
+		t.Errorf("Expected 2 channels, got %v", len(out[0]))
 	}
 
 	// Python reference: input 0.1 -> output ~0.093 (AGC attenuates toward -12dB target slowly)
@@ -217,7 +217,7 @@ func TestAGC_PeakLimiting(t *testing.T) {
 	for i := range out {
 		for ch := 0; ch < 2; ch++ {
 			if math.Abs(float64(out[i][ch])) > 0.75 {
-				t.Errorf("Peak limiting failed at [%d][%d]: %f", i, ch, out[i][ch])
+				t.Errorf("Peak limiting failed at [%v][%v]: %f", i, ch, out[i][ch])
 			}
 		}
 	}

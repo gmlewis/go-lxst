@@ -44,7 +44,7 @@ func TestParity_HighPass_CNative(t *testing.T) {
 	for i, exp := range expectedFirst {
 		for ch := 0; ch < 2; ch++ {
 			if !approxEqual(float64(out[i][ch]), exp[ch], 0.001) {
-				t.Errorf("HighPass frame1[%d][%d]: got %v, want %v", i, ch, out[i][ch], exp[ch])
+				t.Errorf("HighPass frame1[%v][%v]: got %v, want %v", i, ch, out[i][ch], exp[ch])
 			}
 		}
 	}
@@ -61,7 +61,7 @@ func TestParity_HighPass_CNative(t *testing.T) {
 		idx := 475 + i
 		for ch := 0; ch < 2; ch++ {
 			if !approxEqual(float64(out[idx][ch]), exp[ch], 0.001) {
-				t.Errorf("HighPass frame1 last[%d][%d]: got %v, want %v", idx, ch, out[idx][ch], exp[ch])
+				t.Errorf("HighPass frame1 last[%v][%v]: got %v, want %v", idx, ch, out[idx][ch], exp[ch])
 			}
 		}
 	}
@@ -84,7 +84,7 @@ func TestParity_HighPass_SecondFrame(t *testing.T) {
 	for i, exp := range expectedFirst {
 		for ch := 0; ch < 2; ch++ {
 			if !approxEqual(float64(out2[i][ch]), exp[ch], 0.001) {
-				t.Errorf("HighPass frame2[%d][%d]: got %v, want %v", i, ch, out2[i][ch], exp[ch])
+				t.Errorf("HighPass frame2[%v][%v]: got %v, want %v", i, ch, out2[i][ch], exp[ch])
 			}
 		}
 	}
@@ -106,7 +106,7 @@ func TestParity_LowPass_CNative(t *testing.T) {
 	for i, exp := range expectedFirst {
 		for ch := 0; ch < 2; ch++ {
 			if !approxEqual(float64(out[i][ch]), exp[ch], 0.001) {
-				t.Errorf("LowPass frame1[%d][%d]: got %v, want %v", i, ch, out[i][ch], exp[ch])
+				t.Errorf("LowPass frame1[%v][%v]: got %v, want %v", i, ch, out[i][ch], exp[ch])
 			}
 		}
 	}
@@ -129,7 +129,7 @@ func TestParity_LowPass_SecondFrame(t *testing.T) {
 	for i, exp := range expectedFirst {
 		for ch := 0; ch < 2; ch++ {
 			if !approxEqual(float64(out2[i][ch]), exp[ch], 0.001) {
-				t.Errorf("LowPass frame2[%d][%d]: got %v, want %v", i, ch, out2[i][ch], exp[ch])
+				t.Errorf("LowPass frame2[%v][%v]: got %v, want %v", i, ch, out2[i][ch], exp[ch])
 			}
 		}
 	}
@@ -151,7 +151,7 @@ func TestParity_BandPass_CNative(t *testing.T) {
 	for i, exp := range expectedFirst {
 		for ch := 0; ch < 2; ch++ {
 			if !approxEqual(float64(out[i][ch]), exp[ch], 0.001) {
-				t.Errorf("BandPass frame1[%d][%d]: got %v, want %v", i, ch, out[i][ch], exp[ch])
+				t.Errorf("BandPass frame1[%v][%v]: got %v, want %v", i, ch, out[i][ch], exp[ch])
 			}
 		}
 	}
@@ -174,7 +174,7 @@ func TestParity_BandPass_SecondFrame(t *testing.T) {
 	for i, exp := range expectedFirst {
 		for ch := 0; ch < 2; ch++ {
 			if !approxEqual(float64(out2[i][ch]), exp[ch], 0.002) {
-				t.Errorf("BandPass frame2[%d][%d]: got %v, want %v", i, ch, out2[i][ch], exp[ch])
+				t.Errorf("BandPass frame2[%v][%v]: got %v, want %v", i, ch, out2[i][ch], exp[ch])
 			}
 		}
 	}
@@ -196,7 +196,7 @@ func TestParity_AGC_SineInput(t *testing.T) {
 	for i, exp := range expectedFirst {
 		for ch := 0; ch < 2; ch++ {
 			if !approxEqual(float64(out[i][ch]), exp[ch], 0.001) {
-				t.Errorf("AGC sine frame1[%d][%d]: got %v, want %v", i, ch, out[i][ch], exp[ch])
+				t.Errorf("AGC sine frame1[%v][%v]: got %v, want %v", i, ch, out[i][ch], exp[ch])
 			}
 		}
 	}
@@ -219,7 +219,7 @@ func TestParity_AGC_SecondFrame(t *testing.T) {
 	for i, exp := range expectedFirst {
 		for ch := 0; ch < 2; ch++ {
 			if !approxEqual(float64(out2[i][ch]), exp[ch], 0.001) {
-				t.Errorf("AGC sine frame2[%d][%d]: got %v, want %v", i, ch, out2[i][ch], exp[ch])
+				t.Errorf("AGC sine frame2[%v][%v]: got %v, want %v", i, ch, out2[i][ch], exp[ch])
 			}
 		}
 	}
@@ -237,7 +237,7 @@ func TestParity_AGC_ConstantLowInput(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		for ch := 0; ch < 2; ch++ {
 			if !approxEqual(float64(out[i][ch]), expected, 0.001) {
-				t.Errorf("AGC low[%d][%d]: got %v, want %v", i, ch, out[i][ch], expected)
+				t.Errorf("AGC low[%v][%v]: got %v, want %v", i, ch, out[i][ch], expected)
 			}
 		}
 	}
@@ -254,7 +254,7 @@ func TestParity_AGC_PeakLimiting(t *testing.T) {
 	for i := 0; i < len(out); i++ {
 		for ch := 0; ch < 2; ch++ {
 			if math.Abs(float64(out[i][ch])) > 0.75+0.001 {
-				t.Errorf("AGC peak limit failed at [%d][%d]: got %v, max 0.75", i, ch, out[i][ch])
+				t.Errorf("AGC peak limit failed at [%v][%v]: got %v, max 0.75", i, ch, out[i][ch])
 			}
 		}
 	}
@@ -262,7 +262,7 @@ func TestParity_AGC_PeakLimiting(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		for ch := 0; ch < 2; ch++ {
 			if !approxEqual(float64(out[i][ch]), 0.75, 0.001) {
-				t.Errorf("AGC high[%d][%d]: got %v, want ~0.75", i, ch, out[i][ch])
+				t.Errorf("AGC high[%v][%v]: got %v, want ~0.75", i, ch, out[i][ch])
 			}
 		}
 	}

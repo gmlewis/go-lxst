@@ -46,7 +46,7 @@ func TestFileRecorder_FramesWaiting(t *testing.T) {
 
 	fr := NewFileRecorder("/tmp/test.opus", "", opusPkg.PROFILE_VOICE_LOW, 0.0, 0.125, 0.075)
 	if fr.FramesWaiting() != 0 {
-		t.Errorf("Expected 0 frames waiting, got %d", fr.FramesWaiting())
+		t.Errorf("Expected 0 frames waiting, got %v", fr.FramesWaiting())
 	}
 }
 

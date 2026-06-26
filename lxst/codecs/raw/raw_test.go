@@ -58,18 +58,18 @@ func TestRaw_EncodeDecode_Roundtrip(t *testing.T) {
 
 			decoded := codec.Decode(encoded, tc.channels)
 			if len(decoded) != frames {
-				t.Errorf("Expected %d frames, got %d", frames, len(decoded))
+				t.Errorf("Expected %v frames, got %v", frames, len(decoded))
 			}
 
 			// Verify values
 			for i := 0; i < frames; i++ {
 				if len(decoded[i]) != tc.channels {
-					t.Errorf("Frame %d: expected %d channels, got %d", i, tc.channels, len(decoded[i]))
+					t.Errorf("Frame %v: expected %v channels, got %v", i, tc.channels, len(decoded[i]))
 					continue
 				}
 				for c := 0; c < tc.channels; c++ {
 					if decoded[i][c] != input[i][c] {
-						t.Errorf("Mismatch at [%d][%d]: got %f, want %f", i, c, decoded[i][c], input[i][c])
+						t.Errorf("Mismatch at [%v][%v]: got %f, want %f", i, c, decoded[i][c], input[i][c])
 					}
 				}
 			}
@@ -90,15 +90,15 @@ func TestRaw_EncodeDecode_AutoChannels(t *testing.T) {
 	decoded := codec.Decode(encoded, 0)
 
 	if len(decoded) != 2 {
-		t.Errorf("Expected 2 frames, got %d", len(decoded))
+		t.Errorf("Expected 2 frames, got %v", len(decoded))
 	}
 	if len(decoded[0]) != 3 {
-		t.Errorf("Expected 3 channels, got %d", len(decoded[0]))
+		t.Errorf("Expected 3 channels, got %v", len(decoded[0]))
 	}
 	for i := range input {
 		for c := range input[i] {
 			if decoded[i][c] != input[i][c] {
-				t.Errorf("Mismatch at [%d][%d]: got %f, want %f", i, c, decoded[i][c], input[i][c])
+				t.Errorf("Mismatch at [%v][%v]: got %f, want %f", i, c, decoded[i][c], input[i][c])
 			}
 		}
 	}
@@ -118,15 +118,15 @@ func TestRaw_ChannelPadding_Upmix(t *testing.T) {
 	decoded := codec.Decode(encoded, 4)
 
 	if len(decoded[0]) != 4 {
-		t.Errorf("Expected 4 channels, got %d", len(decoded[0]))
+		t.Errorf("Expected 4 channels, got %v", len(decoded[0]))
 	}
 	// Check padding: channels 2,3 should be copies of channel 1
 	for i := range input {
 		if decoded[i][2] != input[i][1] {
-			t.Errorf("Frame %d ch 2: expected %f (copy of ch1), got %f", i, input[i][1], decoded[i][2])
+			t.Errorf("Frame %v ch 2: expected %f (copy of ch1), got %f", i, input[i][1], decoded[i][2])
 		}
 		if decoded[i][3] != input[i][1] {
-			t.Errorf("Frame %d ch 3: expected %f (copy of ch1), got %f", i, input[i][1], decoded[i][3])
+			t.Errorf("Frame %v ch 3: expected %f (copy of ch1), got %f", i, input[i][1], decoded[i][3])
 		}
 	}
 }
@@ -145,13 +145,13 @@ func TestRaw_ChannelPadding_Downmix(t *testing.T) {
 	decoded := codec.Decode(encoded, 2)
 
 	if len(decoded[0]) != 2 {
-		t.Errorf("Expected 2 channels, got %d", len(decoded[0]))
+		t.Errorf("Expected 2 channels, got %v", len(decoded[0]))
 	}
 	// Check truncation: first 2 channels preserved
 	for i := range input {
 		for c := 0; c < 2; c++ {
 			if decoded[i][c] != input[i][c] {
-				t.Errorf("Mismatch at [%d][%d]: got %f, want %f", i, c, decoded[i][c], input[i][c])
+				t.Errorf("Mismatch at [%v][%v]: got %f, want %f", i, c, decoded[i][c], input[i][c])
 			}
 		}
 	}
@@ -183,7 +183,7 @@ func TestRaw_BitdepthMapping(t *testing.T) {
 				t.Errorf("dtype: got %s, want %s", codec.dtype, tc.expectedD)
 			}
 			if codec.headerBD != tc.expectedH {
-				t.Errorf("headerBD: got %d, want %d", codec.headerBD, tc.expectedH)
+				t.Errorf("headerBD: got %v, want %v", codec.headerBD, tc.expectedH)
 			}
 		})
 	}
@@ -243,7 +243,7 @@ func TestRaw_Float16Encoding(t *testing.T) {
 	for i := range input {
 		// float16 has reduced precision, so allow small delta
 		if math.Abs(float64(decoded[i][0]-input[i][0])) > 0.001 {
-			t.Errorf("Frame %d: got %f, want %f", i, decoded[i][0], input[i][0])
+			t.Errorf("Frame %v: got %f, want %f", i, decoded[i][0], input[i][0])
 		}
 	}
 }

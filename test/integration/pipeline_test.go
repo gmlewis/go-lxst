@@ -71,10 +71,10 @@ func TestIntegration_ToneSource_Generation(t *testing.T) {
 	}
 
 	if ts.SampleRate() != 48000 {
-		t.Errorf("Expected sample rate 48000, got %d", ts.SampleRate())
+		t.Errorf("Expected sample rate 48000, got %v", ts.SampleRate())
 	}
 	if ts.Channels() != 1 {
-		t.Errorf("Expected 1 channel, got %d", ts.Channels())
+		t.Errorf("Expected 1 channel, got %v", ts.Channels())
 	}
 
 	// Start the source with a collecting sink
@@ -93,17 +93,17 @@ func TestIntegration_ToneSource_Generation(t *testing.T) {
 
 	frames := sink.collected()
 	if len(frames) < 2 {
-		t.Fatalf("Expected at least 2 frames, got %d", len(frames))
+		t.Fatalf("Expected at least 2 frames, got %v", len(frames))
 	}
 
 	// Verify each frame has correct dimensions
 	for i, f := range frames {
 		if len(f) != ts2.SamplesPerFrame() {
-			t.Errorf("Frame %d: expected %d samples, got %d", i, ts2.SamplesPerFrame(), len(f))
+			t.Errorf("Frame %v: expected %v samples, got %v", i, ts2.SamplesPerFrame(), len(f))
 		}
 		for _, s := range f {
 			if len(s) != 1 {
-				t.Errorf("Frame %d: expected 1 channel, got %d", i, len(s))
+				t.Errorf("Frame %v: expected 1 channel, got %v", i, len(s))
 			}
 		}
 	}
@@ -138,7 +138,7 @@ func TestIntegration_ToneSource_WithEasing(t *testing.T) {
 
 	frames := sink.collected()
 	if len(frames) < 2 {
-		t.Fatalf("Expected at least 2 frames, got %d", len(frames))
+		t.Fatalf("Expected at least 2 frames, got %v", len(frames))
 	}
 
 	// First frame should have lower amplitude due to easing in
@@ -366,16 +366,16 @@ func TestIntegration_Processing_Pipeline(t *testing.T) {
 	// Convert to mono
 	mono := processing.ConvertChannels(frame, 1)
 	if len(mono) != len(frame) {
-		t.Errorf("ConvertChannels should preserve sample count: got %d, want %d", len(mono), len(frame))
+		t.Errorf("ConvertChannels should preserve sample count: got %v, want %v", len(mono), len(frame))
 	}
 	if len(mono[0]) != 1 {
-		t.Errorf("ConvertChannels to 1 should produce 1 channel: got %d", len(mono[0]))
+		t.Errorf("ConvertChannels to 1 should produce 1 channel: got %v", len(mono[0]))
 	}
 
 	// Resample
 	downsampled := processing.Resample(frame, 48000, 16000)
 	if len(downsampled) != 160 {
-		t.Errorf("Resample 48k->16k should produce 160 samples, got %d", len(downsampled))
+		t.Errorf("Resample 48k->16k should produce 160 samples, got %v", len(downsampled))
 	}
 
 	// VAD on non-silent signal
@@ -441,7 +441,7 @@ func TestIntegration_NullCodecPipeline(t *testing.T) {
 	decoded := codec.Decode(encoded, 2)
 
 	if len(decoded) != len(filtered) {
-		t.Fatalf("NullCodec roundtrip: got %d samples, want %d", len(decoded), len(filtered))
+		t.Fatalf("NullCodec roundtrip: got %v samples, want %v", len(decoded), len(filtered))
 	}
 
 	// NullCodec should be lossless
@@ -449,7 +449,7 @@ func TestIntegration_NullCodecPipeline(t *testing.T) {
 		for ch := 0; ch < 2; ch++ {
 			diff := math.Abs(float64(decoded[i][ch]) - float64(filtered[i][ch]))
 			if diff > 0.001 {
-				t.Errorf("NullCodec roundtrip mismatch at [%d][%d]: got %f, want %f (diff %f)",
+				t.Errorf("NullCodec roundtrip mismatch at [%v][%v]: got %f, want %f (diff %f)",
 					i, ch, decoded[i][ch], filtered[i][ch], diff)
 			}
 		}
@@ -484,7 +484,7 @@ func TestIntegration_FullFilterChain(t *testing.T) {
 
 	// Verify output dimensions
 	if len(result) != frameSize {
-		t.Errorf("Expected %d samples, got %d", frameSize, len(result))
+		t.Errorf("Expected %v samples, got %v", frameSize, len(result))
 	}
 
 	// Verify AGC amplifies the quiet signal

@@ -33,7 +33,7 @@ func TestFilter_HighPass_Parity(t *testing.T) {
 
 	result := hp.HandleFrame(frame, sampleRate)
 	if len(result) != frameSize {
-		t.Fatalf("Expected %d samples, got %d", frameSize, len(result))
+		t.Fatalf("Expected %v samples, got %v", frameSize, len(result))
 	}
 
 	// Result should have similar amplitude to input for 1000Hz (well above 300Hz cutoff)
@@ -68,7 +68,7 @@ func TestFilter_LowPass_Parity(t *testing.T) {
 
 	result := lp.HandleFrame(frame, sampleRate)
 	if len(result) != frameSize {
-		t.Fatalf("Expected %d samples, got %d", frameSize, len(result))
+		t.Fatalf("Expected %v samples, got %v", frameSize, len(result))
 	}
 
 	inputEnergy := float64(0)
@@ -101,7 +101,7 @@ func TestFilter_BandPass_Parity(t *testing.T) {
 
 	result := bp.HandleFrame(frame, sampleRate)
 	if len(result) != frameSize {
-		t.Fatalf("Expected %d samples, got %d", frameSize, len(result))
+		t.Fatalf("Expected %v samples, got %v", frameSize, len(result))
 	}
 
 	inputEnergy := float64(0)
@@ -134,7 +134,7 @@ func TestFilter_AGC_Parity(t *testing.T) {
 
 	result := agc.HandleFrame(frame, sampleRate)
 	if len(result) != frameSize {
-		t.Fatalf("Expected %d samples, got %d", frameSize, len(result))
+		t.Fatalf("Expected %v samples, got %v", frameSize, len(result))
 	}
 
 	// After processing many frames, AGC should amplify quiet signals

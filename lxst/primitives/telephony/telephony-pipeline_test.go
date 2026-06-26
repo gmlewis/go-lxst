@@ -623,7 +623,7 @@ func TestOpenPipelines_CreatesFiltersWithAGC(t *testing.T) {
 
 	f := tel.Filters()
 	if len(f) != 2 {
-		t.Errorf("Expected 2 filters with AGC, got %d", len(f))
+		t.Errorf("Expected 2 filters with AGC, got %v", len(f))
 	}
 }
 
@@ -641,7 +641,7 @@ func TestOpenPipelines_CreatesFiltersWithoutAGC(t *testing.T) {
 
 	f := tel.Filters()
 	if len(f) != 1 {
-		t.Errorf("Expected 1 filter without AGC, got %d", len(f))
+		t.Errorf("Expected 1 filter without AGC, got %v", len(f))
 	}
 }
 
@@ -667,14 +667,14 @@ func TestFiltersAccessors(t *testing.T) {
 	tel := NewTelephone(RingTime, WaitTime, 0, AllowAll, 0.0, 0.0)
 
 	if len(tel.Filters()) != 0 {
-		t.Errorf("Expected no filters initially, got %d", len(tel.Filters()))
+		t.Errorf("Expected no filters initially, got %v", len(tel.Filters()))
 	}
 
 	f := []filters.Filter{filters.NewBandPass(250, 8500)}
 	tel.SetFilters(f)
 
 	if len(tel.Filters()) != 1 {
-		t.Errorf("Expected 1 filter after SetFilters, got %d", len(tel.Filters()))
+		t.Errorf("Expected 1 filter after SetFilters, got %v", len(tel.Filters()))
 	}
 }
 

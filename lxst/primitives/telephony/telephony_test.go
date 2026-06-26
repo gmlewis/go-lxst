@@ -34,7 +34,7 @@ func TestProfileIndex(t *testing.T) {
 	for _, tt := range tests {
 		got := ProfileIndex(tt.profile)
 		if got != tt.want {
-			t.Errorf("ProfileIndex(0x%02x) = %d, want %d", tt.profile, got, tt.want)
+			t.Errorf("ProfileIndex(0x%02x) = %v, want %v", tt.profile, got, tt.want)
 		}
 	}
 }
@@ -210,7 +210,7 @@ func TestAvailableProfiles(t *testing.T) {
 	t.Parallel()
 
 	if len(AvailableProfiles) != 8 {
-		t.Errorf("Expected 8 available profiles, got %d", len(AvailableProfiles))
+		t.Errorf("Expected 8 available profiles, got %v", len(AvailableProfiles))
 	}
 }
 
@@ -218,7 +218,7 @@ func TestAutoStatusCodes(t *testing.T) {
 	t.Parallel()
 
 	if len(AutoStatusCodes) != 5 {
-		t.Errorf("Expected 5 auto status codes, got %d", len(AutoStatusCodes))
+		t.Errorf("Expected 5 auto status codes, got %v", len(AutoStatusCodes))
 	}
 }
 

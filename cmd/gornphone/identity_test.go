@@ -95,12 +95,12 @@ func TestIdentityToFileRoundTrip(t *testing.T) {
 	}
 
 	if len(data1) != len(data2) {
-		t.Errorf("key data length mismatch: %d != %d", len(data1), len(data2))
+		t.Errorf("key data length mismatch: %v != %v", len(data1), len(data2))
 	}
 
 	for i := range data1 {
 		if data1[i] != data2[i] {
-			t.Errorf("key data mismatch at byte %d", i)
+			t.Errorf("key data mismatch at byte %v", i)
 			break
 		}
 	}
@@ -125,11 +125,11 @@ func TestIdentityHashConsistency(t *testing.T) {
 	}
 
 	if len(hash1) != len(id2.Hash) {
-		t.Fatalf("hash length mismatch: %d != %d", len(hash1), len(id2.Hash))
+		t.Fatalf("hash length mismatch: %v != %v", len(hash1), len(id2.Hash))
 	}
 	for i := range hash1 {
 		if hash1[i] != id2.Hash[i] {
-			t.Errorf("hash mismatch at byte %d: %x != %x", i, hash1[i], id2.Hash[i])
+			t.Errorf("hash mismatch at byte %v: %x != %x", i, hash1[i], id2.Hash[i])
 			break
 		}
 	}

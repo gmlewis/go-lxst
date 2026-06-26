@@ -367,7 +367,7 @@ func (tep *TelephoneEndpoint) incomingLinkEstablished(link *rns.Link) {
 	}
 
 	link.SetPacketCallback(func(data []byte, packet *rns.Packet) {
-		tep.logDebugf("Responder received packet (len=%d)", len(data))
+		tep.logDebugf("Responder received packet (len=%v)", len(data))
 		tep.handleSignallingData(data, link, tep.identity)
 	})
 }
@@ -422,7 +422,7 @@ func (tep *TelephoneEndpoint) outgoingLinkEstablished(link *rns.Link) {
 
 	if link != nil {
 		link.SetPacketCallback(func(data []byte, packet *rns.Packet) {
-			log.Printf("Caller packet callback fired (len=%d)", len(data))
+			log.Printf("Caller packet callback fired (len=%v)", len(data))
 			// Try the AudioPipeline's link source first; fall back to
 			// creating a caller-specific one wired to the Telephone's
 			// receive mixer.
@@ -587,7 +587,7 @@ func (tep *TelephoneEndpoint) handleSignallingData(data []byte, link *rns.Link, 
 					ls := tep.getLinkSource()
 					if ls != nil {
 						link.SetPacketCallback(func(data []byte, packet *rns.Packet) {
-							log.Printf("Caller received packet (len=%d)", len(data))
+							log.Printf("Caller received packet (len=%v)", len(data))
 							ls.ReceivePacket(data)
 							tep.handleSignallingData(data, link, tep.identity)
 						})
@@ -647,7 +647,7 @@ func (tep *TelephoneEndpoint) handleSignallingData(data []byte, link *rns.Link, 
 			tep.logDebugf("Received SignallingCalling")
 
 		default:
-			tep.logDebugf("Received unknown signalling: %d", signalVal)
+			tep.logDebugf("Received unknown signalling: %v", signalVal)
 		}
 	}
 }
@@ -666,7 +666,7 @@ func (tep *TelephoneEndpoint) sendSignalling(link *rns.Link, signal int) {
 	}
 
 	if link == nil {
-		tep.logf("sendSignalling: link is nil, cannot send signal %d", signal)
+		tep.logf("sendSignalling: link is nil, cannot send signal %v", signal)
 		return
 	}
 
@@ -678,7 +678,7 @@ func (tep *TelephoneEndpoint) sendSignalling(link *rns.Link, signal int) {
 	}
 	p := rns.NewPacket(link, packed)
 	p.CreateReceipt = false
-	tep.logDebugf("sendSignalling: sending signal %d (len=%d)", signal, len(packed))
+	tep.logDebugf("sendSignalling: sending signal %v (len=%v)", signal, len(packed))
 	if err := p.Pack(); err != nil {
 		tep.logf("sendSignalling: pack packet failed: %v", err)
 		return
@@ -776,7 +776,7 @@ func (tep *TelephoneEndpoint) Call(identityHash string, timeout time.Duration) e
 	// Set packet callback BEFORE Establish so it's registered
 	// when packets start arriving.
 	link.SetPacketCallback(func(data []byte, packet *rns.Packet) {
-		log.Printf("Caller pre-establish packet callback fired (len=%d)", len(data))
+		log.Printf("Caller pre-establish packet callback fired (len=%v)", len(data))
 		ls := tep.getLinkSource()
 		if ls == nil {
 			ls = tep.getOrCreateCallerLinkSource()
@@ -892,13 +892,13 @@ func (tep *TelephoneEndpoint) getOrCreateCallerLinkSource() *network.LinkSource 
 	}
 
 	ls := network.NewLinkSource(nil, rm)
-		if tel != nil {
-			if codec := tel.TransmitCodec(); codec != nil {
-				ls.SetCodec(codec)
-			}
+	if tel != nil {
+		if codec := tel.TransmitCodec(); codec != nil {
+			ls.SetCodec(codec)
 		}
-		tep.callerLinkSource = ls
-		return ls
+	}
+	tep.callerLinkSource = ls
+	return ls
 }
 
 // Hangup terminates the current active call and stops all audio pipelines.
@@ -1012,7 +1012,7 @@ func (tep *TelephoneEndpoint) Answer() bool {
 
 	if ls != nil {
 		link.SetPacketCallback(func(data []byte, packet *rns.Packet) {
-			tep.logDebugf("Responder received packet (len=%d)", len(data))
+			tep.logDebugf("Responder received packet (len=%v)", len(data))
 
 			ls.ReceivePacket(data)
 
@@ -1020,7 +1020,7 @@ func (tep *TelephoneEndpoint) Answer() bool {
 		})
 	} else {
 		link.SetPacketCallback(func(data []byte, packet *rns.Packet) {
-			tep.logDebugf("Responder received packet (len=%d)", len(data))
+			tep.logDebugf("Responder received packet (len=%v)", len(data))
 			tep.handleSignallingData(data, link, identity)
 		})
 	}

@@ -219,7 +219,7 @@ func paErrorString(rc int32) string {
 	if portaudioLib.loaded && portaudioLib.paGetErrorText != nil {
 		return portaudioLib.paGetErrorText(rc)
 	}
-	return fmt.Sprintf("portaudio error %d", rc)
+	return fmt.Sprintf("portaudio error %v", rc)
 }
 
 // PortAudioBackend implements AudioBackend using libportaudio via purego.
@@ -538,7 +538,7 @@ func (pa *PortAudioBackend) GetPlayer(samplesPerFrame int, lowLatency bool) (Aud
 	defer pa.playerMu.Unlock()
 
 	if pa.player != nil {
-		log.Printf("PortAudioBackend.GetPlayer: player already in use (spf=%d, lowLatency=%v, backend=%p)", samplesPerFrame, lowLatency, pa)
+		log.Printf("PortAudioBackend.GetPlayer: player already in use (spf=%v, lowLatency=%v, backend=%p)", samplesPerFrame, lowLatency, pa)
 		return nil, ErrPortAudioPlayerInUse
 	}
 

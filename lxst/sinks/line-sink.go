@@ -56,7 +56,7 @@ func NewLineSink(preferredDevice string, autodigest bool, lowLatency bool, sampl
 		sampleRate = 48000
 	}
 	backend := platforms.NewBackendWithDevice(sampleRate, 2, 32, preferredDevice)
-	log.Printf("LineSink.NewLineSink: preferredDevice=%v, autodigest=%v, sampleRate=%d, backend=%T (%p)", preferredDevice, autodigest, sampleRate, backend, backend)
+	log.Printf("LineSink.NewLineSink: preferredDevice=%v, autodigest=%v, sampleRate=%v, backend=%T (%p)", preferredDevice, autodigest, sampleRate, backend, backend)
 
 	ls := &LineSink{
 		preferredDevice:     preferredDevice,
@@ -97,7 +97,7 @@ func (ls *LineSink) HandleFrame(frame [][]float32, fromSource sources.Source) er
 		if ls.samplerate > 0 {
 			ls.frameTime = float64(ls.samplesPerFrame) / float64(ls.samplerate)
 		}
-		log.Printf("LineSink.HandleFrame: first frame detected: samples=%d, channels=%d, backendRate=%d, frameTime=%.4f",
+		log.Printf("LineSink.HandleFrame: first frame detected: samples=%v, channels=%v, backendRate=%v, frameTime=%.4f",
 			ls.samplesPerFrame, len(frame[0]), ls.samplerate, ls.frameTime)
 	}
 	dequeLen := len(ls.frameDeque)
@@ -229,10 +229,10 @@ func (ls *LineSink) digestJobWithThread(thread *digestThreadInfo) {
 
 	player, err := ls.backend.GetPlayer(backendSPF, lowLatency)
 	if err != nil {
-		log.Printf("LineSink.digestJob: GetPlayer failed (spf=%d, lowLatency=%v, backend=%T (%p)): %v", backendSPF, lowLatency, ls.backend, ls.backend, err)
+		log.Printf("LineSink.digestJob: GetPlayer failed (spf=%v, lowLatency=%v, backend=%T (%p)): %v", backendSPF, lowLatency, ls.backend, ls.backend, err)
 		return
 	}
-	log.Printf("LineSink.digestJob: GetPlayer succeeded (spf=%d, backend=%T (%p))", backendSPF, ls.backend, ls.backend)
+	log.Printf("LineSink.digestJob: GetPlayer succeeded (spf=%v, backend=%T (%p))", backendSPF, ls.backend, ls.backend)
 	ls.mu.Lock()
 	ls.player = player
 	ls.mu.Unlock()

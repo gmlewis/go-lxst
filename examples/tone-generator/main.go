@@ -47,7 +47,7 @@ func main() {
 	fmt.Printf("  Gain:      %.2f (linear)\n", *gain)
 	fmt.Printf("  Duration:  %.1f s\n", *duration)
 	fmt.Printf("  Frame:     %.1f ms\n", *frameMs)
-	fmt.Printf("  Channels:  %d\n", *channels)
+	fmt.Printf("  Channels:  %v\n", *channels)
 
 	var codec codecs.Codec
 	if *codec2Mode != 0 {
@@ -57,7 +57,7 @@ func main() {
 			os.Exit(1)
 		}
 		codec = c2
-		fmt.Printf("  Codec:     Codec2 mode %d\n", *codec2Mode)
+		fmt.Printf("  Codec:     Codec2 mode %v\n", *codec2Mode)
 	} else {
 		codec = codecs.NullCodec{}
 		fmt.Printf("  Codec:     NullCodec (raw PCM)\n")
@@ -114,7 +114,7 @@ func listAudioDevices() {
 	fmt.Println("Listing audio devices:")
 	backend := sinks.NewLineSink("", true, false, 0)
 	speakers := backend.AvailableSpeakers()
-	fmt.Printf("  Speakers (%d):\n", len(speakers))
+	fmt.Printf("  Speakers (%v):\n", len(speakers))
 	for _, s := range speakers {
 		fmt.Printf("    - %s\n", s)
 	}

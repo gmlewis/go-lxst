@@ -36,16 +36,16 @@ func TestOpus_Profiles(t *testing.T) {
 			t.Parallel()
 			o, err := NewOpus(tc.profile)
 			if err != nil {
-				t.Fatalf("NewOpus failed for profile %d: %v", tc.profile, err)
+				t.Fatalf("NewOpus failed for profile %v: %v", tc.profile, err)
 			}
 			if o.PreferredSampleRate() != tc.expectedSampleRate {
-				t.Errorf("Sample rate: got %d, want %d", o.PreferredSampleRate(), tc.expectedSampleRate)
+				t.Errorf("Sample rate: got %v, want %v", o.PreferredSampleRate(), tc.expectedSampleRate)
 			}
 			if o.channels != tc.expectedChannels {
-				t.Errorf("Channels: got %d, want %d", o.channels, tc.expectedChannels)
+				t.Errorf("Channels: got %v, want %v", o.channels, tc.expectedChannels)
 			}
 			if o.bitrateCeiling != tc.expectedBitrateCeil {
-				t.Errorf("Bitrate ceiling: got %d, want %d", o.bitrateCeiling, tc.expectedBitrateCeil)
+				t.Errorf("Bitrate ceiling: got %v, want %v", o.bitrateCeiling, tc.expectedBitrateCeil)
 			}
 		})
 	}
@@ -87,7 +87,7 @@ func TestOpus_MaxBytesPerFrame(t *testing.T) {
 	result := MaxBytesPerFrame(6000, 20.0)
 	expected := int(math.Ceil((6000.0 / 8.0) * (20.0 / 1000.0)))
 	if result != expected {
-		t.Errorf("MaxBytesPerFrame(6000, 20) = %d, want %d", result, expected)
+		t.Errorf("MaxBytesPerFrame(6000, 20) = %v, want %v", result, expected)
 	}
 }
 
@@ -95,13 +95,13 @@ func TestOpus_ValidFrameMs(t *testing.T) {
 	t.Parallel()
 
 	if len(ValidFrameMs) != 6 {
-		t.Errorf("Expected 6 valid frame sizes, got %d", len(ValidFrameMs))
+		t.Errorf("Expected 6 valid frame sizes, got %v", len(ValidFrameMs))
 	}
 
 	expected := []float64{2.5, 5, 10, 20, 40, 60}
 	for i, v := range ValidFrameMs {
 		if v != expected[i] {
-			t.Errorf("ValidFrameMs[%d] = %f, want %f", i, v, expected[i])
+			t.Errorf("ValidFrameMs[%v] = %f, want %f", i, v, expected[i])
 		}
 	}
 }
@@ -113,7 +113,7 @@ func TestOpus_PreferredSampleRate(t *testing.T) {
 		t.Skipf("Opus not available: %v", err)
 	}
 	if o.PreferredSampleRate() != 8000 {
-		t.Errorf("PreferredSampleRate = %d, want 8000", o.PreferredSampleRate())
+		t.Errorf("PreferredSampleRate = %v, want 8000", o.PreferredSampleRate())
 	}
 }
 
@@ -122,12 +122,12 @@ func TestOpus_ProfileConfig(t *testing.T) {
 
 	sr, ch, br, app := ProfileConfig(PROFILE_VOICE_LOW)
 	if sr != 8000 || ch != 1 || br != 6000 || app != AppVoip {
-		t.Errorf("ProfileConfig(VOICE_LOW) = (%d, %d, %d, %d), want (8000, 1, 6000, %d)", sr, ch, br, app, AppVoip)
+		t.Errorf("ProfileConfig(VOICE_LOW) = (%v, %v, %v, %v), want (8000, 1, 6000, %v)", sr, ch, br, app, AppVoip)
 	}
 
 	sr, ch, br, app = ProfileConfig(PROFILE_AUDIO_MAX)
 	if sr != 48000 || ch != 2 || br != 128000 || app != AppAudio {
-		t.Errorf("ProfileConfig(AUDIO_MAX) = (%d, %d, %d, %d), want (48000, 2, 128000, %d)", sr, ch, br, app, AppAudio)
+		t.Errorf("ProfileConfig(AUDIO_MAX) = (%v, %v, %v, %v), want (48000, 2, 128000, %v)", sr, ch, br, app, AppAudio)
 	}
 }
 
@@ -158,7 +158,7 @@ func TestOpus_BitrateCeiling(t *testing.T) {
 				t.Skipf("Opus not available: %v", err)
 			}
 			if o.bitrateCeiling != tc.expected {
-				t.Errorf("Profile %d: bitrateCeiling = %d, want %d", tc.profile, o.bitrateCeiling, tc.expected)
+				t.Errorf("Profile %v: bitrateCeiling = %v, want %v", tc.profile, o.bitrateCeiling, tc.expected)
 			}
 		})
 	}
@@ -172,12 +172,12 @@ func TestGetProfileConfig(t *testing.T) {
 		t.Fatal("GetProfileConfig should return true for valid profile")
 	}
 	if cfg.SampleRate != 48000 {
-		t.Errorf("SampleRate = %d, want 48000", cfg.SampleRate)
+		t.Errorf("SampleRate = %v, want 48000", cfg.SampleRate)
 	}
 	if cfg.Channels != 1 {
-		t.Errorf("Channels = %d, want 1", cfg.Channels)
+		t.Errorf("Channels = %v, want 1", cfg.Channels)
 	}
 	if cfg.BitrateCeiling != 16000 {
-		t.Errorf("BitrateCeiling = %d, want 16000", cfg.BitrateCeiling)
+		t.Errorf("BitrateCeiling = %v, want 16000", cfg.BitrateCeiling)
 	}
 }

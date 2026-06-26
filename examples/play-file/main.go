@@ -59,7 +59,7 @@ func main() {
 			os.Exit(1)
 		}
 		codec = c2
-		fmt.Printf("  Codec: Codec2 mode %d\n", *codec2Mode)
+		fmt.Printf("  Codec: Codec2 mode %v\n", *codec2Mode)
 	} else {
 		codec = codecs.NullCodec{}
 		fmt.Printf("  Codec: NullCodec (raw PCM)\n")

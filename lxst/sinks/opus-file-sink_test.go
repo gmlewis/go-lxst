@@ -84,7 +84,7 @@ func TestOpusFileSink_HandleFrame_SetsSamplesPerFrame(t *testing.T) {
 	}
 
 	if fs.SamplesPerFrame() != 0 {
-		t.Errorf("Expected initial samples_per_frame=0, got %d", fs.SamplesPerFrame())
+		t.Errorf("Expected initial samples_per_frame=0, got %v", fs.SamplesPerFrame())
 	}
 
 	frame := make([][]float32, 160)
@@ -99,7 +99,7 @@ func TestOpusFileSink_HandleFrame_SetsSamplesPerFrame(t *testing.T) {
 	}
 
 	if fs.SamplesPerFrame() != 160 {
-		t.Errorf("Expected samples_per_frame=160, got %d", fs.SamplesPerFrame())
+		t.Errorf("Expected samples_per_frame=160, got %v", fs.SamplesPerFrame())
 	}
 }
 
@@ -115,7 +115,7 @@ func TestOpusFileSink_FramesWaiting(t *testing.T) {
 	}
 
 	if fs.FramesWaiting() != 0 {
-		t.Errorf("Expected 0 frames waiting, got %d", fs.FramesWaiting())
+		t.Errorf("Expected 0 frames waiting, got %v", fs.FramesWaiting())
 	}
 
 	frame := make([][]float32, 160)
@@ -126,7 +126,7 @@ func TestOpusFileSink_FramesWaiting(t *testing.T) {
 	_ = fs.HandleFrame(frame, nil)
 
 	if fs.FramesWaiting() != 1 {
-		t.Errorf("Expected 1 frame waiting, got %d", fs.FramesWaiting())
+		t.Errorf("Expected 1 frame waiting, got %v", fs.FramesWaiting())
 	}
 }
 
@@ -142,7 +142,7 @@ func TestOpusFileSink_Profile(t *testing.T) {
 	}
 
 	if fs.Profile() != opusPkg.PROFILE_VOICE_LOW {
-		t.Errorf("Expected profile %d, got %d", opusPkg.PROFILE_VOICE_LOW, fs.Profile())
+		t.Errorf("Expected profile %v, got %v", opusPkg.PROFILE_VOICE_LOW, fs.Profile())
 	}
 }
 
@@ -158,7 +158,7 @@ func TestOpusFileSink_OutputSamplerate(t *testing.T) {
 	}
 
 	if fs.OutputSamplerate() != 8000 {
-		t.Errorf("Expected output sample rate 8000 for VOICE_LOW, got %d", fs.OutputSamplerate())
+		t.Errorf("Expected output sample rate 8000 for VOICE_LOW, got %v", fs.OutputSamplerate())
 	}
 }
 
@@ -175,7 +175,7 @@ func TestOpusFileSink_ChannelAdjustment(t *testing.T) {
 
 	// VOICE_LOW has 1 channel
 	if fs.Channels() != 1 {
-		t.Errorf("Expected 1 channel for VOICE_LOW, got %d", fs.Channels())
+		t.Errorf("Expected 1 channel for VOICE_LOW, got %v", fs.Channels())
 	}
 }
 

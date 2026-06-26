@@ -49,7 +49,7 @@ func TestLineSink_New(t *testing.T) {
 		t.Error("LineSink should not be running initially")
 	}
 	if ls.SampleRate() <= 0 {
-		t.Errorf("Expected positive sample rate, got %d", ls.SampleRate())
+		t.Errorf("Expected positive sample rate, got %v", ls.SampleRate())
 	}
 }
 
@@ -60,7 +60,7 @@ func TestLineSink_CanReceive(t *testing.T) {
 
 	for i := 0; i < ls.bufferMaxHeight; i++ {
 		if !ls.CanReceive(nil) {
-			t.Errorf("Should be able to receive at buffer height %d/%d", i, ls.bufferMaxHeight)
+			t.Errorf("Should be able to receive at buffer height %v/%v", i, ls.bufferMaxHeight)
 		}
 		ls.frameDeque = append(ls.frameDeque, [][]float32{{0.5, 0.5}})
 	}
@@ -86,12 +86,12 @@ func TestLineSink_HandleFrame(t *testing.T) {
 	}
 
 	if ls.SamplesPerFrame() != 2 {
-		t.Errorf("Expected samples_per_frame=2, got %d", ls.SamplesPerFrame())
+		t.Errorf("Expected samples_per_frame=2, got %v", ls.SamplesPerFrame())
 	}
 
 	ls.insertLock.Lock()
 	if len(ls.frameDeque) != 1 {
-		t.Errorf("Expected 1 frame in deque, got %d", len(ls.frameDeque))
+		t.Errorf("Expected 1 frame in deque, got %v", len(ls.frameDeque))
 	}
 	ls.insertLock.Unlock()
 }
@@ -101,7 +101,7 @@ func TestLineSink_HandleFrame_SetsSamplesPerFrame(t *testing.T) {
 
 	ls := NewLineSink("", false, false, 0)
 	if ls.SamplesPerFrame() != 0 {
-		t.Errorf("Expected initial samples_per_frame=0, got %d", ls.SamplesPerFrame())
+		t.Errorf("Expected initial samples_per_frame=0, got %v", ls.SamplesPerFrame())
 	}
 
 	// Frame format is [samples][channels]: 160 samples, 1 channel.
@@ -117,7 +117,7 @@ func TestLineSink_HandleFrame_SetsSamplesPerFrame(t *testing.T) {
 	}
 
 	if ls.SamplesPerFrame() != 160 {
-		t.Errorf("Expected samples_per_frame=160, got %d", ls.SamplesPerFrame())
+		t.Errorf("Expected samples_per_frame=160, got %v", ls.SamplesPerFrame())
 	}
 }
 
@@ -169,7 +169,7 @@ func TestLineSink_ChannelReduction(t *testing.T) {
 	ls.channels = 2
 
 	if ls.Channels() != 2 {
-		t.Errorf("Expected 2 channels, got %d", ls.Channels())
+		t.Errorf("Expected 2 channels, got %v", ls.Channels())
 	}
 }
 

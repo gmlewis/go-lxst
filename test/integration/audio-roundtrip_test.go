@@ -107,13 +107,13 @@ func TestOpusFileSource_Roundtrip_Load(t *testing.T) {
 	}
 
 	if src.SampleRate() != 8000 {
-		t.Errorf("Expected sample rate 8000, got %d", src.SampleRate())
+		t.Errorf("Expected sample rate 8000, got %v", src.SampleRate())
 	}
 	if src.Channels() != 1 {
-		t.Errorf("Expected 1 channel, got %d", src.Channels())
+		t.Errorf("Expected 1 channel, got %v", src.Channels())
 	}
 	if src.SampleCount() <= 0 {
-		t.Errorf("Expected positive sample count, got %d", src.SampleCount())
+		t.Errorf("Expected positive sample count, got %v", src.SampleCount())
 	}
 
 	expectedLengthMs := (float64(src.SampleCount()) / float64(src.SampleRate())) * 1000.0
@@ -133,10 +133,10 @@ func TestOpusFileSource_Roundtrip_Stereo(t *testing.T) {
 	}
 
 	if src.SampleRate() != 48000 {
-		t.Errorf("Expected sample rate 48000, got %d", src.SampleRate())
+		t.Errorf("Expected sample rate 48000, got %v", src.SampleRate())
 	}
 	if src.Channels() != 2 {
-		t.Errorf("Expected 2 channels, got %d", src.Channels())
+		t.Errorf("Expected 2 channels, got %v", src.Channels())
 	}
 }
 
@@ -157,13 +157,13 @@ func TestNullCodec_Roundtrip(t *testing.T) {
 
 	decoded := codec.Decode(encoded, 1)
 	if len(decoded) != len(frame) {
-		t.Fatalf("Decode returned wrong length: got %d, want %d", len(decoded), len(frame))
+		t.Fatalf("Decode returned wrong length: got %v, want %v", len(decoded), len(frame))
 	}
 
 	for i := range decoded {
 		diff := math.Abs(float64(decoded[i][0]) - float64(frame[i][0]))
 		if diff > 0.001 {
-			t.Errorf("Sample %d: got %f, want %f (diff %f)", i, decoded[i][0], frame[i][0], diff)
+			t.Errorf("Sample %v: got %f, want %f (diff %f)", i, decoded[i][0], frame[i][0], diff)
 		}
 	}
 }
@@ -188,14 +188,14 @@ func TestNullCodec_Roundtrip_Stereo(t *testing.T) {
 
 	decoded := codec.Decode(encoded, 2)
 	if len(decoded) != len(frame) {
-		t.Fatalf("Decode returned wrong length: got %d, want %d", len(decoded), len(frame))
+		t.Fatalf("Decode returned wrong length: got %v, want %v", len(decoded), len(frame))
 	}
 
 	for i := range decoded {
 		for ch := 0; ch < 2; ch++ {
 			diff := math.Abs(float64(decoded[i][ch]) - float64(frame[i][ch]))
 			if diff > 0.001 {
-				t.Errorf("Sample %d ch %d: got %f, want %f", i, ch, decoded[i][ch], frame[i][ch])
+				t.Errorf("Sample %v ch %v: got %f, want %f", i, ch, decoded[i][ch], frame[i][ch])
 			}
 		}
 	}
@@ -218,13 +218,13 @@ func TestFilterPipeline_Roundtrip(t *testing.T) {
 	// Apply HighPass to remove DC offset
 	result := hp.HandleFrame(frame, sampleRate)
 	if len(result) != frameSize {
-		t.Fatalf("HighPass changed frame size: got %d, want %d", len(result), frameSize)
+		t.Fatalf("HighPass changed frame size: got %v, want %v", len(result), frameSize)
 	}
 
 	// Apply LowPass
 	result = lp.HandleFrame(result, sampleRate)
 	if len(result) != frameSize {
-		t.Fatalf("LowPass changed frame size: got %d, want %d", len(result), frameSize)
+		t.Fatalf("LowPass changed frame size: got %v, want %v", len(result), frameSize)
 	}
 
 	// DC offset should be reduced after HighPass
@@ -250,7 +250,7 @@ func TestResample_Passthrough(t *testing.T) {
 	// Same rate = passthrough
 	result := codecs.Resample(frame, 16, 1, 8000, 8000, false)
 	if len(result) != len(frame) {
-		t.Errorf("Passthrough resample changed length: got %d, want %d", len(result), len(frame))
+		t.Errorf("Passthrough resample changed length: got %v, want %v", len(result), len(frame))
 	}
 }
 
@@ -264,7 +264,7 @@ func TestResampleBytes_Passthrough(t *testing.T) {
 
 	result := codecs.ResampleBytes(data, 16, 1, 8000, 8000, false)
 	if len(result) != len(data) {
-		t.Errorf("Passthrough resample changed length: got %d, want %d", len(result), len(data))
+		t.Errorf("Passthrough resample changed length: got %v, want %v", len(result), len(data))
 	}
 }
 
