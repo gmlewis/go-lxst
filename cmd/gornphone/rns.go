@@ -835,8 +835,13 @@ func (tep *TelephoneEndpoint) Hangup() {
 
 	tep.logf("TelephoneEndpoint.Hangup: link=%v, tel=%v", link != nil, tel != nil)
 
-	// Stop audio pipelines first to prevent further send attempts on a
-	// link that is about to be torn down.
+	// Tear down the link first so that any pending sends in the mixer
+	// goroutine fail immediately, allowing StopPipelines to complete.
+	if link != nil {
+		link.Teardown()
+	}
+
+	// Stop audio pipelines to prevent further send attempts.
 	if ap != nil {
 		ap.Stop()
 	}
@@ -845,10 +850,6 @@ func (tep *TelephoneEndpoint) Hangup() {
 		tep.logf("TelephoneEndpoint.Hangup: tel state=%v before hangup", tel.State())
 		tel.Hangup()
 		tep.logf("TelephoneEndpoint.Hangup: tel state=%v after hangup", tel.State())
-	}
-
-	if link != nil {
-		link.Teardown()
 	}
 }
 

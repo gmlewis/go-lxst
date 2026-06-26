@@ -181,6 +181,12 @@ func (tep *EchoEndpoint) incomingLinkEstablished(link *rns.Link) {
 	link.SetPacketCallback(func(data []byte, packet *rns.Packet) {
 		tep.handleSignallingData(data, link, tep.identity)
 	})
+
+	// Stop audio pipelines when the link closes (e.g. remote hangup).
+	link.SetLinkClosedCallback(func(l *rns.Link) {
+		tep.logf("Link closed, hanging up")
+		tep.hangup()
+	})
 }
 
 func (tep *EchoEndpoint) callerIdentified(hashHex string, link *rns.Link) {

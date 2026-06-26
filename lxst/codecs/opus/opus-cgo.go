@@ -225,13 +225,10 @@ func (o *Opus) Decode(frameBytes []byte, channelsHint int) [][]float32 {
 		o.decoderConfigured = true
 	}
 
-	frameSize := o.sourceSampleRate / 50
-	if frameSize < 120 {
-		frameSize = 120
-	}
-	if frameSize > 960 {
-		frameSize = 960
-	}
+	// Use a generous maximum frameSize so the decoder can handle any
+	// encoded frame duration (up to 120ms at 48kHz = 5760 samples).
+	// The actual decoded output will be trimmed to the real frame size.
+	frameSize := 5760
 	decoded, err := o.opusDecoder.Decode(frameBytes, frameSize, false)
 	if err != nil {
 		decoded, err = o.opusDecoder.Decode(frameBytes, 960, false)

@@ -185,9 +185,6 @@ func (p *Packetizer) HandleEncodedFrame(data []byte, fromSource sources.Source) 
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	log.Printf("Packetizer.HandleEncodedFrame: called (dataLen=%d, sendFunc=%v, transmitFailure=%v, codec=%T)",
-		len(data), p.sendFunc != nil, p.transmitFailure, p.codec)
-
 	if p.sendFunc == nil {
 		log.Printf("Packetizer.HandleEncodedFrame: sendFunc is nil, dropping frame")
 		return nil
@@ -203,6 +200,9 @@ func (p *Packetizer) HandleEncodedFrame(data []byte, fromSource sources.Source) 
 	if p.transmitFailure {
 		return nil
 	}
+
+	log.Printf("Packetizer.HandleEncodedFrame: called (dataLen=%d, sendFunc=%v, transmitFailure=%v, codec=%T)",
+		len(data), p.sendFunc != nil, p.transmitFailure, p.codec)
 
 	var header byte
 	if p.codec != nil {
