@@ -8,6 +8,7 @@ package main
 import (
 	"encoding/hex"
 	"fmt"
+	"log"
 	"strings"
 	"sync"
 	"time"
@@ -565,21 +566,20 @@ func (tep *TelephoneEndpoint) handleSignallingData(data []byte, link *rns.Link, 
 				tep.mu.Unlock()
 
 				if link != nil {
-					rm := tel.ReceiveMixer()
-					if rm != nil {
-						ls := network.NewLinkSource(nil, rm)
-						if ap := tep.audioPipeline; ap != nil {
-							ls.SetCodec(ap.ReceiveCodec())
-						}
-						rm.SetSourceMaxFrames(ls, 2)
-
+					// Use the AudioPipeline's already-started link
+					// source. Creating a new LinkSource with the
+					// Telephone's receive mixer would be dead because
+					// tel.StartPipelines() is only called in the
+					// responder's Answer flow, not the caller's.
+					ls := tep.getLinkSource()
+					if ls != nil {
 						link.SetPacketCallback(func(data []byte, packet *rns.Packet) {
 							log.Printf("Caller received packet (len=%d)", len(data))
 							ls.ReceivePacket(data)
 							tep.handleSignallingData(data, link, tep.identity)
 						})
 					} else {
-						tep.logf("SignallingEstablished: receive mixer is nil, cannot set up link source")
+						tep.logf("SignallingEstablished: no link source available")
 					}
 				}
 			}
@@ -823,6 +823,17 @@ func (tep *TelephoneEndpoint) ActiveLink() *rns.Link {
 	tep.mu.Lock()
 	defer tep.mu.Unlock()
 	return tep.activeLink
+}
+
+// getLinkSource returns the active LinkSource from the audio pipeline.
+func (tep *TelephoneEndpoint) getLinkSource() *network.LinkSource {
+	tep.mu.Lock()
+	ap := tep.audioPipeline
+	tep.mu.Unlock()
+	if ap != nil {
+		return ap.LinkSource()
+	}
+	return nil
 }
 
 // Hangup terminates the current active call and stops all audio pipelines.
