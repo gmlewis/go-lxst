@@ -4,17 +4,41 @@ A complete Go port of the [LXST](https://github.com/markqvist/LXST) real-time au
 
 ## Features
 
-- **Pure Go** — no CGO required; builds with `go build ./...`
+- **Pure Go** — no CGO required for default build; builds with `go build ./...`
 - **Cross-platform** — works on Linux, macOS, Windows, and Android
-- **Audio codecs** — Opus, Codec2, Raw PCM, FLAC, MP3, Vorbis
+- **Audio codecs** — Opus (CGO required for encode/decode), Codec2 (stub), Raw PCM, FLAC, MP3, Vorbis
 - **Real-time filters** — HighPass, LowPass, BandPass, AGC (parity-verified against C reference)
 - **Signal processing** — RMS, Peak, VAD, Normalize, Resample, Channel conversion
-- **Audio I/O** — oto backend (pure Go); optional malgo backend via CGO
+- **Audio I/O** — PortAudio via purego (recording + playback, requires system `libportaudio`); oto fallback (playback only); malgo optional via CGO
 - **Pipeline architecture** — Source → Filter → Codec → Sink with staged routing
 - **Audio mixing** — N-source mixer with per-source gain control
 - **Tone generation** — Configurable frequency, gain, and easing
 - **Embedded sounds** — Built-in ringer and soft tones
 - **Hardware support** — Mock keypad/display interfaces (GPIO/I2C planned)
+
+### CGO Requirements
+
+The library itself compiles without CGO. However, `gornphone` and
+`gornphone-echo` **require CGO** (`CGO_ENABLED=1`) to function — the Opus
+codec (used by all audio profiles) needs the C `libopus` library via CGO.
+Without CGO, Opus silently returns empty data: calls connect but transfer
+no audio. Codec2 profiles are currently stubs regardless of CGO.
+
+```bash
+# Building the CLI tools with CGO enabled:
+CGO_ENABLED=1 go install github.com/gmlewis/go-lxst/cmd/gornphone@latest
+CGO_ENABLED=1 go install github.com/gmlewis/go-lxst/cmd/gornphone-echo@latest
+```
+
+Install `libopus` on your system first:
+
+```bash
+# macOS
+brew install opus
+
+# Debian/Ubuntu
+sudo apt install libopus-dev
+```
 
 ## Installation
 
@@ -26,14 +50,37 @@ go get github.com/gmlewis/go-lxst
 
 ### gornphone CLI
 
-Install directly from GitHub — no clone needed:
+Requires CGO and `libopus`. Install from GitHub — no clone needed:
 
 ```bash
-go install github.com/gmlewis/go-lxst/cmd/gornphone@latest
+CGO_ENABLED=1 go install github.com/gmlewis/go-lxst/cmd/gornphone@latest
 ```
 
 This puts the `gornphone` binary on your `$GOPATH/bin` (or `$GOBIN`). Make
 sure that directory is on your `PATH`.
+
+### gornphone-echo (audio echo test service)
+
+A headless echo/debugging service that auto-answers calls, generates a
+sine-wave test tone, and echoes back all received audio. No audio hardware
+needed — runs entirely in memory. Useful for testing call setup, signalling,
+and audio pipeline correctness. Also requires CGO and `libopus`.
+
+```bash
+CGO_ENABLED=1 go install github.com/gmlewis/go-lxst/cmd/gornphone-echo@latest
+```
+
+```bash
+# Echo server (auto-answers, echoes audio with 0.5s delay, 440Hz tone)
+gornphone-echo
+
+# Custom settings
+gornphone-echo -freq 1000 -gain 0.2 -delay 0.3
+
+# Standalone mode (two instances on same machine)
+gornphone-echo --standalone --listen :4242
+gornphone-echo --standalone --connect localhost:4242
+```
 
 ## Quick Start
 
@@ -115,13 +162,13 @@ func main() {
 | `lxst/sources` | LineSource, OpusFileSource, Loopback |
 | `lxst/sinks` | LineSink, OpusFileSink |
 | `lxst/codecs` | Codec interface, Resample utilities |
-| `lxst/codecs/opus` | Opus codec (CGO for encoding, pure-Go stub for metadata) |
+| `lxst/codecs/opus` | Opus codec (CGO via gopus for encode/decode; stub without CGO) |
 | `lxst/codecs/raw` | Raw PCM codec |
 | `lxst/codecs/codec2` | Codec2 codec (stub, CGO needed for full impl) |
 | `lxst/codecs/flac` | FLAC file decoder (pure Go) |
 | `lxst/codecs/mp3` | MP3 file decoder (pure Go) |
 | `lxst/codecs/vorbis` | Vorbis file decoder (pure Go) |
-| `lxst/platforms` | oto audio backend (malgo available via CGO) |
+| `lxst/platforms` | Audio backends: PortAudio (purego), oto (pure Go fallback), Null; malgo via CGO |
 | `lxst/sounds` | Embedded audio resources (ringer, soft) |
 | `lxst/call` | Telephony call endpoint management |
 | `lxst/network` | Reticulum audio streaming |
@@ -407,9 +454,9 @@ for more detail:
 
 ### Bluetooth Audio on macOS
 
-On macOS with Bluetooth earbuds, the oto backend uses CoreAudio which
-automatically routes to the system's default audio device. To select
-specific devices:
+On macOS with Bluetooth earbuds, the PortAudio backend (loaded via purego)
+uses CoreAudio which automatically routes to the system's default audio
+device. To select specific devices:
 
 ```bash
 # List available devices
