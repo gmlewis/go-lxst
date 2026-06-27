@@ -89,7 +89,6 @@ type FLACFileSource struct {
 	timed           bool
 	shouldRun       bool
 	ingestThread    *flacThreadInfo
-	readLock        sync.Mutex
 	nextFrame       time.Time
 	codec           codecs.Codec
 	sink            sources.LocalSource
@@ -209,25 +208,26 @@ func (src *FLACFileSource) Start() error {
 		done: make(chan struct{}),
 	}
 	src.ingestThread.wg.Add(1)
-	go src.ingestJob()
+	go src.ingestJob(src.ingestThread)
 
 	return nil
 }
 
 func (src *FLACFileSource) Stop() error {
 	src.mu.Lock()
-	defer src.mu.Unlock()
-
 	if !src.shouldRun {
+		src.mu.Unlock()
 		return nil
 	}
 
 	src.shouldRun = false
+	thread := src.ingestThread
+	src.ingestThread = nil
+	src.mu.Unlock()
 
-	if src.ingestThread != nil {
-		close(src.ingestThread.done)
-		src.ingestThread.wg.Wait()
-		src.ingestThread = nil
+	if thread != nil {
+		close(thread.done)
+		thread.wg.Wait()
 	}
 
 	return nil
@@ -239,11 +239,8 @@ func (src *FLACFileSource) Running() bool {
 	return src.shouldRun
 }
 
-func (src *FLACFileSource) ingestJob() {
-	defer src.ingestThread.wg.Done()
-
-	src.readLock.Lock()
-	defer src.readLock.Unlock()
+func (src *FLACFileSource) ingestJob(thread *flacThreadInfo) {
+	defer thread.wg.Done()
 
 	src.nextFrame = time.Now()
 	fi := 0
@@ -252,21 +249,22 @@ func (src *FLACFileSource) ingestJob() {
 
 	for {
 		select {
-		case <-src.ingestThread.done:
+		case <-thread.done:
 			return
 		default:
 		}
 
-		if !src.shouldRun {
-			return
-		}
-
 		src.mu.Lock()
-		canReceive := src.sink != nil && src.sink.CanReceive(src)
+		shouldRun := src.shouldRun
+		sink := src.sink
 		timedOK := !src.timed || time.Now().After(src.nextFrame)
 		src.mu.Unlock()
 
-		if canReceive && timedOK {
+		if !shouldRun {
+			return
+		}
+
+		if sink != nil && sink.CanReceive(src) && timedOK {
 			src.nextFrame = time.Now().Add(time.Duration(src.frameTime * float64(time.Second)))
 			fi++
 			fs := (fi - 1) * spf
@@ -281,7 +279,9 @@ func (src *FLACFileSource) ingestJob() {
 					fi = 0
 					continue
 				} else {
+					src.mu.Lock()
 					src.shouldRun = false
+					src.mu.Unlock()
 					return
 				}
 			} else {
@@ -291,11 +291,11 @@ func (src *FLACFileSource) ingestJob() {
 			if len(frame) > 0 {
 				if src.codec != nil {
 					encoded := src.codec.Encode(frame)
-					if len(encoded) > 0 && src.sink != nil && src.sink.CanReceive(src) {
-						_ = src.sink.HandleFrame(frame, src)
+					if len(encoded) > 0 {
+						_ = sink.HandleFrame(frame, src)
 					}
-				} else if src.sink != nil {
-					_ = src.sink.HandleFrame(frame, src)
+				} else {
+					_ = sink.HandleFrame(frame, src)
 				}
 			}
 		} else {
