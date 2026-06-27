@@ -23,12 +23,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gmlewis/go-lxst/lxst"
 	"github.com/gmlewis/go-lxst/lxst/primitives/telephony"
 	"github.com/gmlewis/go-reticulum/rns"
 	"github.com/gmlewis/go-reticulum/rns/interfaces"
 )
 
-var version = "0.1.0"
+var version = lxst.VERSION
 
 type verbosity int
 
