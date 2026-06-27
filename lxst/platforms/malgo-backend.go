@@ -376,7 +376,7 @@ func (mp *malgoPlayer) Play(frame [][]float32) error {
 		for ch := 0; ch < numChannels; ch++ {
 			val := frame[i][ch]
 			bits := *(*uint32)(unsafe.Pointer(&val))
-			offset := (i*numChannels+ch)*bytesPerSample
+			offset := (i*numChannels + ch) * bytesPerSample
 			buf[offset] = byte(bits)
 			buf[offset+1] = byte(bits >> 8)
 			buf[offset+2] = byte(bits >> 16)
