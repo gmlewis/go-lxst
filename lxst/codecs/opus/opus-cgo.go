@@ -10,6 +10,7 @@ package opus
 import (
 	"errors"
 	"fmt"
+	"math"
 
 	layeh_gopus "layeh.com/gopus"
 )
@@ -170,6 +171,18 @@ func (o *Opus) Encode(frame [][]float32) []byte {
 		channels = o.inputChannels
 	}
 
+	// Resample from the source sample rate to the codec's native
+	// output rate, matching Python Opus.encode which uses
+	// resample_bytes when self.source.samplerate != self.output_samplerate.
+	nativeRate := o.profileSampleRate(o.profile)
+	if o.sourceSampleRate > 0 && o.sourceSampleRate != nativeRate {
+		frame = resampleLinear(frame, o.sourceSampleRate, nativeRate)
+		samples = len(frame)
+		if samples == 0 {
+			return []byte{}
+		}
+	}
+
 	// Interleave samples: [s0ch0, s0ch1, s1ch0, s1ch1, ...]
 	inputSamples := make([]int16, samples*channels)
 	for i := 0; i < samples; i++ {
@@ -184,7 +197,8 @@ func (o *Opus) Encode(frame [][]float32) []byte {
 		}
 	}
 
-	frameDurationMs := float64(samples) / float64(o.sourceSampleRate) * 1000.0
+	// After resampling, samples are at the codec's native rate.
+	frameDurationMs := float64(samples) / float64(nativeRate) * 1000.0
 	o.updateBitrate(frameDurationMs)
 
 	if !o.encoderConfigured {
@@ -259,3 +273,39 @@ func (o *Opus) Channels() int            { return o.channels }
 
 func (o *Opus) SetSourceSampleRate(rate int) { o.sourceSampleRate = rate }
 func (o *Opus) SetSinkSampleRate(rate int)   { o.sinkSampleRate = rate }
+
+// resampleLinear resamples a [samples][channels] float32 frame from
+// inputRate to outputRate using linear interpolation. This avoids the
+// import cycle that would arise from importing the codecs package.
+func resampleLinear(frame [][]float32, inputRate, outputRate int) [][]float32 {
+	if inputRate == outputRate || len(frame) == 0 || outputRate <= 0 {
+		return frame
+	}
+
+	inputLen := len(frame)
+	outputLen := int(math.Round(float64(inputLen) * float64(outputRate) / float64(inputRate)))
+	if outputLen <= 0 {
+		return [][]float32{}
+	}
+
+	ch := len(frame[0])
+	ratio := float64(inputRate) / float64(outputRate)
+
+	result := make([][]float32, outputLen)
+	for i := 0; i < outputLen; i++ {
+		srcPos := float64(i) * ratio
+		srcIdx := int(srcPos)
+		frac := float32(srcPos - float64(srcIdx))
+
+		result[i] = make([]float32, ch)
+		if srcIdx+1 < inputLen {
+			for c := 0; c < ch; c++ {
+				result[i][c] = frame[srcIdx][c] + frac*(frame[srcIdx+1][c]-frame[srcIdx][c])
+			}
+		} else if srcIdx < inputLen {
+			copy(result[i], frame[srcIdx])
+		}
+	}
+
+	return result
+}

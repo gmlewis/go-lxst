@@ -155,21 +155,101 @@ func (n *NullCodecBuffered) FrameMaxMs() float64      { return 0 }
 func (n *NullCodecBuffered) ValidFrameMs() []float64  { return nil }
 func (n *NullCodecBuffered) Channels() int            { return 0 }
 
-// Uses pydub internally in Python; Go port uses gonum or simple linear interpolation.
-func ResampleBytes(sampleBytes []byte, bitdepth, channels, inputRate, outputRate int, normalize bool) []byte {
-	// Simple pass-through for now - full implementation needs gonum DSP
-	if inputRate == outputRate {
-		return sampleBytes
-	}
-	// TODO: Implement proper resampling using gonum
-	return sampleBytes
-}
-
-// Resample resamples float32 samples from input_rate to output_rate.
+// Resample resamples float32 samples from inputRate to outputRate using
+// linear interpolation. The input is [samples][channels] float32. Returns
+// a new frame with the resampled sample count. When inputRate == outputRate
+// the original frame is returned unchanged.
+//
+// Linear interpolation is sufficient for voice-quality audio and avoids
+// the overhead of an external DSP dependency. For high-fidelity
+// applications, a higher-quality resampler (e.g. gonum DSP) may be
+// substituted.
 func Resample(inputSamples [][]float32, bitdepth, channels, inputRate, outputRate int, normalize bool) [][]float32 {
-	if inputRate == outputRate {
+	if inputRate == outputRate || len(inputSamples) == 0 || outputRate <= 0 {
 		return inputSamples
 	}
-	// TODO: Implement proper resampling using gonum
-	return inputSamples
+
+	inputLen := len(inputSamples)
+	outputLen := int(math.Round(float64(inputLen) * float64(outputRate) / float64(inputRate)))
+	if outputLen <= 0 {
+		return [][]float32{}
+	}
+
+	ch := channels
+	if ch == 0 && len(inputSamples[0]) > 0 {
+		ch = len(inputSamples[0])
+	}
+	if ch == 0 {
+		return [][]float32{}
+	}
+
+	result := make([][]float32, outputLen)
+	ratio := float64(inputRate) / float64(outputRate)
+
+	for i := 0; i < outputLen; i++ {
+		srcPos := float64(i) * ratio
+		srcIdx := int(srcPos)
+		frac := float32(srcPos - float64(srcIdx))
+
+		result[i] = make([]float32, ch)
+
+		if srcIdx+1 < inputLen {
+			for c := 0; c < ch && c < len(inputSamples[srcIdx]) && c < len(inputSamples[srcIdx+1]); c++ {
+				result[i][c] = inputSamples[srcIdx][c] + frac*(inputSamples[srcIdx+1][c]-inputSamples[srcIdx][c])
+			}
+		} else if srcIdx < inputLen {
+			for c := 0; c < ch && c < len(inputSamples[srcIdx]); c++ {
+				result[i][c] = inputSamples[srcIdx][c]
+			}
+		}
+	}
+
+	return result
+}
+
+// ResampleBytes resamples raw PCM byte data from inputRate to outputRate.
+// The input is interleaved int16 samples as bytes. Returns the resampled
+// bytes. When inputRate == outputRate the original bytes are returned
+// unchanged.
+func ResampleBytes(sampleBytes []byte, bitdepth, channels, inputRate, outputRate int, normalize bool) []byte {
+	if inputRate == outputRate || len(sampleBytes) == 0 || outputRate <= 0 {
+		return sampleBytes
+	}
+
+	bytesPerSample := bitdepth / 8
+	if bytesPerSample <= 0 {
+		bytesPerSample = 2 // default to int16
+	}
+
+	totalSamples := len(sampleBytes) / (bytesPerSample * channels)
+	if totalSamples == 0 {
+		return sampleBytes
+	}
+
+	// Convert bytes to float32 frame [samples][channels].
+	frame := make([][]float32, totalSamples)
+	for i := 0; i < totalSamples; i++ {
+		frame[i] = make([]float32, channels)
+		for c := 0; c < channels; c++ {
+			idx := (i*channels + c) * bytesPerSample
+			if idx+bytesPerSample <= len(sampleBytes) {
+				frame[i][c] = math.Float32frombits(binary.LittleEndian.Uint32(sampleBytes[idx : idx+4]))
+			}
+		}
+	}
+
+	resampled := Resample(frame, bitdepth, channels, inputRate, outputRate, normalize)
+
+	// Convert back to bytes.
+	outLen := len(resampled) * channels * bytesPerSample
+	result := make([]byte, outLen)
+	idx := 0
+	for i := range resampled {
+		for c := 0; c < channels && c < len(resampled[i]); c++ {
+			binary.LittleEndian.PutUint32(result[idx:], math.Float32bits(resampled[i][c]))
+			idx += bytesPerSample
+		}
+	}
+
+	return result
 }

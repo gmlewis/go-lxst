@@ -314,6 +314,16 @@ func (m *Mixer) HandleFrame(frame [][]float32, fromSource sources.Source) error 
 				m.samplerate = src.SampleRate()
 				m.samplesPerFrame = int(math.Ceil((m.targetFrameMs / 1000.0) * float64(m.samplerate)))
 				m.frameTime = float64(m.samplesPerFrame) / float64(m.samplerate)
+
+				// Tell the codec the actual source sample rate
+				// so it can resample to the codec's native rate
+				// before encoding, matching Python's
+				// self.source.samplerate reference.
+				if m.codec != nil {
+					if setter, ok := m.codec.(interface{ SetSourceSampleRate(int) }); ok {
+						setter.SetSourceSampleRate(m.samplerate)
+					}
+				}
 			}
 		}
 		m.mu.Unlock()

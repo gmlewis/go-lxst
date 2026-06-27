@@ -365,3 +365,46 @@ func TestTrimSpace(t *testing.T) {
 		}
 	}
 }
+
+func TestPhoneProcessInCall_Hangup(t *testing.T) {
+	t.Parallel()
+
+	cfg := DefaultConfig()
+	phone := NewPhone(cfg, nil)
+	phone.Dial("aabbccdd11223344aabbccdd11223344")
+	phone.CallEstablished()
+	if !phone.IsInCall() {
+		t.Fatal("phone should be in call")
+	}
+
+	// Pressing Enter during a call should hang up and return true
+	// (continue running so the user gets the prompt back).
+	ok := phone.ProcessInput("")
+	if !ok {
+		t.Error("ProcessInput('') in call should return true (continue)")
+	}
+	if !phone.IsAvailable() {
+		t.Error("Phone should be Available after hangup")
+	}
+}
+
+func TestPhoneProcessInCall_Quit(t *testing.T) {
+	t.Parallel()
+
+	cfg := DefaultConfig()
+	phone := NewPhone(cfg, nil)
+	phone.Dial("aabbccdd11223344aabbccdd11223344")
+	phone.CallEstablished()
+	if !phone.IsInCall() {
+		t.Fatal("phone should be in call")
+	}
+
+	// Typing "q" during a call should hang up AND quit.
+	ok := phone.ProcessInput("q")
+	if ok {
+		t.Error("ProcessInput('q') in call should return false (quit)")
+	}
+	if !phone.IsAvailable() {
+		t.Error("Phone should be Available after hangup")
+	}
+}

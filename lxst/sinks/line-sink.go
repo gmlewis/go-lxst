@@ -166,7 +166,13 @@ func (ls *LineSink) Stop() error {
 	}
 
 	if thread != nil {
-		thread.wg.Wait()
+		done := make(chan struct{})
+		go func() { thread.wg.Wait(); close(done) }()
+		select {
+		case <-done:
+		case <-time.After(2 * time.Second):
+			log.Printf("LineSink.Stop: timed out waiting for digest goroutine to exit")
+		}
 	}
 	return nil
 }

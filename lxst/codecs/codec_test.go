@@ -5,7 +5,10 @@
 
 package codecs
 
-import "testing"
+import (
+	"math"
+	"testing"
+)
 
 func TestNullCodec_EncodeDecode_Roundtrip(t *testing.T) {
 	t.Parallel()
@@ -80,6 +83,7 @@ func TestNullCodec_SingleChannel(t *testing.T) {
 
 func TestResampleBytes_SameRate(t *testing.T) {
 	t.Parallel()
+	// With matching rates, the function returns the input unchanged.
 	data := []byte{1, 2, 3, 4, 5, 6, 7, 8}
 	result := ResampleBytes(data, 16, 2, 48000, 48000, false)
 	if string(result) != string(data) {
@@ -93,6 +97,82 @@ func TestResample_SameRate(t *testing.T) {
 	result := Resample(input, 16, 2, 48000, 48000, false)
 	if len(result) != 2 || result[0][0] != 0.1 {
 		t.Error("Expected same samples when sample rates match")
+	}
+}
+
+func TestResample_Downsample(t *testing.T) {
+	t.Parallel()
+
+	// Downsample from 48000 to 24000: 960 samples → 480 samples.
+	inputLen := 960
+	input := make([][]float32, inputLen)
+	for i := range input {
+		input[i] = []float32{float32(i) / float32(inputLen)}
+	}
+
+	result := Resample(input, 16, 1, 48000, 24000, false)
+	if len(result) != 480 {
+		t.Errorf("Expected 480 output samples, got %v", len(result))
+	}
+
+	// The first sample should be approximately the same as the input.
+	if math.Abs(float64(result[0][0])-float64(input[0][0])) > 0.01 {
+		t.Errorf("First sample mismatch: got %v, want ~%v", result[0][0], input[0][0])
+	}
+}
+
+func TestResample_Upsample(t *testing.T) {
+	t.Parallel()
+
+	// Upsample from 8000 to 48000: 160 samples → 960 samples.
+	inputLen := 160
+	input := make([][]float32, inputLen)
+	for i := range input {
+		input[i] = []float32{float32(i) / float32(inputLen)}
+	}
+
+	result := Resample(input, 16, 1, 8000, 48000, false)
+	if len(result) != 960 {
+		t.Errorf("Expected 960 output samples, got %v", len(result))
+	}
+}
+
+func TestResample_PreservesChannels(t *testing.T) {
+	t.Parallel()
+
+	// 2-channel input, downsampling should preserve 2 channels.
+	input := make([][]float32, 100)
+	for i := range input {
+		input[i] = []float32{0.1, 0.2}
+	}
+
+	result := Resample(input, 16, 2, 48000, 24000, false)
+	if len(result) != 50 {
+		t.Errorf("Expected 50 samples, got %v", len(result))
+	}
+	for i := range result {
+		if len(result[i]) != 2 {
+			t.Fatalf("Expected 2 channels at sample %v, got %v", i, len(result[i]))
+		}
+	}
+}
+
+func TestResample_EmptyInput(t *testing.T) {
+	t.Parallel()
+
+	result := Resample(nil, 16, 1, 48000, 24000, false)
+	if len(result) != 0 {
+		t.Errorf("Expected empty result for nil input, got %v", len(result))
+	}
+}
+
+func TestResample_ZeroOutputRate(t *testing.T) {
+	t.Parallel()
+
+	input := [][]float32{{0.1}, {0.2}}
+	result := Resample(input, 16, 1, 48000, 0, false)
+	if len(result) != 2 {
+		t.Errorf("Expected unchanged input for zero output rate, got %v", len(result))
 	}
 }
 

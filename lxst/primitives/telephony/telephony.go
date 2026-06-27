@@ -1638,6 +1638,11 @@ func (tel *Telephone) StopPipelines() {
 			log.Printf("transmitPipeline.Stop failed: %v", err)
 		}
 	}
+	if tel.audioOutput != nil {
+		if err := tel.audioOutput.Stop(); err != nil {
+			log.Printf("audioOutput.Stop failed: %v", err)
+		}
+	}
 }
 
 // SetRingingCallback sets the callback invoked when an incoming call is ringing.

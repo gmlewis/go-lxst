@@ -182,6 +182,8 @@ func (es *EchoSource) HandleEncodedFrame(data []byte, fromSource sources.Source)
 
 // generateLoop runs in a background goroutine, generating tone frames
 // and emitting delayed echo frames at the target frame rate.
+// The tone is sent in periodic bursts (0.5s on, 2s off) so the echo
+// can be cleanly analyzed without a continuous signal.
 func (es *EchoSource) generateLoop() {
 	log.Printf("EchoSource.generateLoop: starting (freq=%.1f, gain=%.2f, frameMs=%.1f, sampleRate=%.0f, channels=%v, sink=%v)",
 		es.frequency, es.gain, es.frameMs, es.sampleRate, es.channels, es.sink != nil)
@@ -196,8 +198,15 @@ func (es *EchoSource) generateLoop() {
 		samplesPerFrame = int(es.sampleRate * 0.06) // 60ms default
 	}
 
+	// Tone burst timing: 0.5s on, 2s off (2.5s total cycle).
+	const toneOnDuration = 500 * time.Millisecond
+	const toneOffDuration = 2000 * time.Millisecond
+	const toneCycleDuration = toneOnDuration + toneOffDuration
+
 	ticker := time.NewTicker(frameDuration)
 	defer ticker.Stop()
+
+	var elapsed time.Duration
 
 	for {
 		es.mu.Lock()
@@ -209,8 +218,17 @@ func (es *EchoSource) generateLoop() {
 
 		<-ticker.C
 
-		// Generate tone frame.
-		toneFrame := es.generateToneFrame(samplesPerFrame)
+		// Determine if the tone should be active in this frame.
+		toneActive := elapsed%toneCycleDuration < toneOnDuration
+		elapsed += frameDuration
+
+		// Generate tone frame (or silence if in the off period).
+		var toneFrame [][]float32
+		if toneActive {
+			toneFrame = es.generateToneFrame(samplesPerFrame)
+		} else {
+			toneFrame = es.generateSilenceFrame(samplesPerFrame)
+		}
 
 		// Get any echo frames that are ready to emit.
 		echoFrames := es.getReadyEchoFrames(samplesPerFrame)
@@ -263,6 +281,19 @@ func (es *EchoSource) generateToneFrame(samplesPerFrame int) [][]float32 {
 	es.phase = phase
 	es.mu.Unlock()
 
+	return frame
+}
+
+// generateSilenceFrame produces a frame of silence (zeros) with the
+// same dimensions as a tone frame, for use during the tone-off period.
+func (es *EchoSource) generateSilenceFrame(samplesPerFrame int) [][]float32 {
+	es.mu.Lock()
+	channels := es.channels
+	es.mu.Unlock()
+	frame := make([][]float32, samplesPerFrame)
+	for i := range frame {
+		frame[i] = make([]float32, channels)
+	}
 	return frame
 }
 

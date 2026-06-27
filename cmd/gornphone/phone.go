@@ -384,6 +384,12 @@ func (p *Phone) processRingingInput(input string) bool {
 }
 
 func (p *Phone) processInCallInput(input string) bool {
+	input = trimSpace(input)
+	if input == "q" || input == "quit" || input == "exit" {
+		fmt.Printf("Hanging up call with %v\n", formatHash(p.callerHash))
+		p.Hangup()
+		return false
+	}
 	fmt.Printf("Hanging up call with %v\n", formatHash(p.callerHash))
 	p.Hangup()
 	return true

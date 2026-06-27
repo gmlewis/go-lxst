@@ -113,7 +113,7 @@ func main() {
 	fmt.Printf("Frame time: %.0fms\n", frameMs)
 	fmt.Printf("Codec: %T\n", codec)
 	fmt.Printf("Echo delay: %v\n", delay)
-	fmt.Printf("Tone: %.1f Hz, gain %.2f\n", *freqFlag, *gainFlag)
+	fmt.Printf("Tone: %.1f Hz, gain %.2f (0.5s on, 2s off)\n", *freqFlag, *gainFlag)
 	fmt.Println()
 
 	identity, err := loadOrCreateIdentity(*configDir + "/identity")
@@ -122,9 +122,15 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Printf("Identity hash: <%v>\n", identity.HexHash)
-	fmt.Println()
 
 	logPath := fmt.Sprintf("%v/gornphone-echo-%v.log", logTempDir(), time.Now().UnixMilli())
+
+	// Redirect Go's log package to the log file so that debug
+	// log.Printf calls from the mixer, network, sinks, and sources
+	// don't pollute the terminal. Only application-level messages
+	// printed via fmt go to stdout/stderr.
+	log.SetOutput(&reopeningWriter{path: logPath})
+
 	rnsLogger := rns.NewLogger()
 	rnsLogger.SetLogFilePath(logPath)
 	rnsLogger.SetLogCallback(func(logString string) {
@@ -143,6 +149,9 @@ func main() {
 		}
 	})
 	rnsLogger.SetLogDest(rns.LogCallback)
+
+	fmt.Printf("RNS log:       %v\n", logPath)
+	fmt.Println()
 
 	// Map -v flags to RNS log levels:
 	//   (none) = Notice (3)
@@ -388,4 +397,19 @@ func setRNSConfigDirective(content, key, value string) string {
 		lines = append([]string{"[reticulum]", "  " + key + " = " + value, ""}, lines...)
 	}
 	return strings.Join(lines, "\n")
+}
+
+// reopeningWriter is an io.Writer that opens the file on each Write
+// call, matching the RNS logger's approach and surviving log rotation.
+type reopeningWriter struct {
+	path string
+}
+
+func (w *reopeningWriter) Write(p []byte) (n int, err error) {
+	f, err := os.OpenFile(w.path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		return 0, err
+	}
+	defer func() { _ = f.Close() }()
+	return f.Write(p)
 }
