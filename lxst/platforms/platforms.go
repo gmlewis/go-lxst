@@ -64,7 +64,14 @@ func NewBackendWithDevice(sampleRate, channels, bitDepth int, preferredDevice st
 		return paBackend
 	}
 	if err != nil {
-		log.Printf("platforms: portaudio backend unavailable (%v), falling back to oto", err)
+		log.Printf("platforms: portaudio backend unavailable (%v), falling back to malgo/oto", err)
+	}
+
+	// Malgo (miniaudio) provides full input+output on all platforms
+	// via CGO: WASAPI on Windows, CoreAudio on macOS, ALSA/PulseAudio
+	// on Linux. Only available when built with CGO.
+	if mb := tryMalgoBackend(sampleRate, channels, bitDepth); mb != nil {
+		return mb
 	}
 
 	// Oto is a pure-Go fallback. It only supports playback (output);
