@@ -70,6 +70,9 @@ type malgoPlayer struct {
 	samplesPerFrame int
 	device          *malgo.Device
 	closed          bool
+	bufMu           sync.Mutex
+	playBuf         []byte
+	playCond        *sync.Cond
 }
 
 // NewMalgoBackend creates a new malgo-based audio backend.
@@ -258,6 +261,7 @@ func (mb *MalgoBackend) GetPlayer(samplesPerFrame int, lowLatency bool) (AudioPl
 		channels:        mb.channels,
 		samplesPerFrame: samplesPerFrame,
 	}
+	pl.playCond = sync.NewCond(&pl.bufMu)
 
 	deviceConfig := malgo.DefaultDeviceConfig(malgo.Playback)
 	deviceConfig.Playback.Format = malgo.FormatF32
@@ -265,6 +269,17 @@ func (mb *MalgoBackend) GetPlayer(samplesPerFrame int, lowLatency bool) (AudioPl
 	deviceConfig.SampleRate = uint32(mb.sampleRate)
 
 	onData := func(pOutputSample, pInputSamples []byte, framecount uint32) {
+		pl.bufMu.Lock()
+		if len(pl.playBuf) > 0 && !pl.closed {
+			n := copy(pOutputSample, pl.playBuf)
+			pl.playBuf = pl.playBuf[n:]
+			pl.bufMu.Unlock()
+			return
+		}
+		pl.bufMu.Unlock()
+		for i := range pOutputSample {
+			pOutputSample[i] = 0
+		}
 	}
 
 	callbacks := malgo.DeviceCallbacks{
@@ -341,8 +356,8 @@ func (mr *malgoRecorder) Close() error {
 // malgoPlayer implementation
 
 func (mp *malgoPlayer) Play(frame [][]float32) error {
-	mp.backend.mu.Lock()
-	defer mp.backend.mu.Unlock()
+	mp.bufMu.Lock()
+	defer mp.bufMu.Unlock()
 
 	if mp.closed {
 		return ErrMalgoNotPlaying
@@ -361,7 +376,7 @@ func (mp *malgoPlayer) Play(frame [][]float32) error {
 		for ch := 0; ch < numChannels; ch++ {
 			val := frame[i][ch]
 			bits := *(*uint32)(unsafe.Pointer(&val))
-			offset := (i*numChannels + ch) * bytesPerSample
+			offset := (i*numChannels+ch)*bytesPerSample
 			buf[offset] = byte(bits)
 			buf[offset+1] = byte(bits >> 8)
 			buf[offset+2] = byte(bits >> 16)
@@ -369,14 +384,20 @@ func (mp *malgoPlayer) Play(frame [][]float32) error {
 		}
 	}
 
+	mp.playBuf = append(mp.playBuf, buf...)
+	mp.playCond.Signal()
 	return nil
 }
 
 func (mp *malgoPlayer) Close() error {
+	mp.bufMu.Lock()
+	defer mp.bufMu.Unlock()
+
 	if !mp.closed {
+		mp.closed = true
+		mp.playCond.Signal()
 		_ = mp.device.Stop()
 		mp.device.Uninit()
-		mp.closed = true
 	}
 	return nil
 }
