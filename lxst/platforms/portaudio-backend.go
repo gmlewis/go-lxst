@@ -121,14 +121,14 @@ type paStreamInfo struct {
 func loadPortAudio() {
 	portaudioLib.once.Do(func() {
 		libName := portAudioLibraryName()
-		handle, err := purego.Dlopen(libName, purego.RTLD_NOW|purego.RTLD_GLOBAL)
+		handle, err := openLibrary(libName)
 		if err != nil {
 			// Try well-known absolute paths for platforms where the
 			// library is not in the default dynamic-linker search path
 			// (e.g. Homebrew on Apple Silicon installs to
 			// /opt/homebrew/lib which is not searched by default).
 			for _, candidate := range portAudioLibraryPaths() {
-				if h, e := purego.Dlopen(candidate, purego.RTLD_NOW|purego.RTLD_GLOBAL); e == nil {
+				if h, e := openLibrary(candidate); e == nil {
 					handle = h
 					err = nil
 					break
