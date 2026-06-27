@@ -386,6 +386,14 @@ func (ls *LineSource) GetSampleRate() int {
 	return ls.samplerate
 }
 
+// SampleRate returns the sample rate, satisfying the interface used by
+// the Mixer to auto-detect a source's sample rate.
+func (ls *LineSource) SampleRate() int {
+	ls.mu.Lock()
+	defer ls.mu.Unlock()
+	return ls.samplerate
+}
+
 // GetChannels returns the number of channels
 func (ls *LineSource) GetChannels() int {
 	ls.mu.Lock()

@@ -297,33 +297,39 @@ func (es *EchoSource) generateSilenceFrame(samplesPerFrame int) [][]float32 {
 	return frame
 }
 
-// getReadyEchoFrames returns echo frames whose emit time has passed.
-// It flattens them into a single frame capped at maxSamples to match
-// the tone frame size, preventing oversized frames from reaching the
-// Opus encoder.
+// getReadyEchoFrames returns echo frames whose emit time has passed,
+// capped at maxSamples. Any leftover samples are re-buffered for the
+// next tick so no audio is lost.
 func (es *EchoSource) getReadyEchoFrames(maxSamples int) [][]float32 {
 	now := time.Now()
-	var result [][]float32
+	var ready [][]float32
 
 	es.echoBufferMu.Lock()
 	remaining := es.echoBuffer[:0]
 	for _, tf := range es.echoBuffer {
 		if !tf.emitTime.After(now) {
-			result = append(result, tf.frame...)
+			ready = append(ready, tf.frame...)
 		} else {
 			remaining = append(remaining, tf)
+		}
+	}
+
+	// If we have more samples than maxSamples, save the excess
+	// back into the buffer for the next tick.
+	if len(ready) > maxSamples {
+		excess := ready[maxSamples:]
+		ready = ready[:maxSamples]
+		if len(excess) > 0 {
+			remaining = append(remaining, timedFrame{
+				frame:    excess,
+				emitTime: now, // already ready, emit next tick
+			})
 		}
 	}
 	es.echoBuffer = remaining
 	es.echoBufferMu.Unlock()
 
-	// Cap to maxSamples to prevent oversized frames from exceeding
-	// the Opus encoder's expected frame duration.
-	if len(result) > maxSamples {
-		result = result[:maxSamples]
-	}
-
-	return result
+	return ready
 }
 
 // mixFrames mixes a tone frame with echo frames by summing samples.
